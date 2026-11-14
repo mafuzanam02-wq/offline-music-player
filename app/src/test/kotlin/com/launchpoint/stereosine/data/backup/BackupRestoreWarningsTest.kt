@@ -34,7 +34,7 @@ class BackupRestoreWarningsTest {
 
     @Test
     fun `restore result can report partial settings warning without losing data result`() {
-        val result = WavdropBackupImportApplyResult(
+        val result = StereoSineBackupImportApplyResult(
             matchedTracks = 1,
             unmatchedTracks = 0,
             statsUpdated = 1,
@@ -52,7 +52,7 @@ class BackupRestoreWarningsTest {
 
     @Test
     fun `launcher icon restore result is represented separately from other settings`() {
-        val result = WavdropBackupImportApplyResult(
+        val result = StereoSineBackupImportApplyResult(
             matchedTracks = 0,
             unmatchedTracks = 0,
             statsUpdated = 0,

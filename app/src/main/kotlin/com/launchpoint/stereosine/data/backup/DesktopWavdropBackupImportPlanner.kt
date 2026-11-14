@@ -62,7 +62,7 @@ data class DesktopBackupImportPlan(
     val playlistSongsSkippedCount: Int get() = playlistPlans.sumOf { it.skippedUnmatched }
     val listenEventsInBackup: Int get() = listenEventPlan.eventsInBackup
 
-    fun toApplyResult(): WavdropBackupImportApplyResult = WavdropBackupImportApplyResult(
+    fun toApplyResult(): StereoSineBackupImportApplyResult = StereoSineBackupImportApplyResult(
         matchedTracks            = matchedCount,
         unmatchedTracks          = unmatchedCount,
         ambiguousTracks          = ambiguousCount,

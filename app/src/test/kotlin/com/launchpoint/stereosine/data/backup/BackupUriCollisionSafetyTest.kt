@@ -27,10 +27,10 @@ class BackupUriCollisionSafetyTest {
         BackupTrackStats(songId, uri, plays, 0, 1_000L, 9_000_000L, fav, 1_000L)
 
     private fun backup(songs: List<BackupSong>, stats: List<BackupTrackStats> = songs.map { stat(it.id) }) =
-        WavdropBackup("2026-01-01T00:00:00Z", songs, stats, emptyList())
+        StereoSineBackup("2026-01-01T00:00:00Z", songs, stats, emptyList())
 
-    private fun match(b: WavdropBackup, vararg locals: Song) = WavdropBackupStatsMatcher.match(b, locals.toList())
-    private fun resolvedIds(b: WavdropBackup, vararg locals: Song) = WavdropBackupStatsMatcher.resolveBackupSongIds(b, locals.toList())
+    private fun match(b: StereoSineBackup, vararg locals: Song) = StereoSineBackupStatsMatcher.match(b, locals.toList())
+    private fun resolvedIds(b: StereoSineBackup, vararg locals: Song) = StereoSineBackupStatsMatcher.resolveBackupSongIds(b, locals.toList())
 
     // ── 1. accepted ───────────────────────────────────────────────────────────
 
@@ -62,10 +62,10 @@ class BackupUriCollisionSafetyTest {
         val ids = listOf(1_000_000_033L, 1_000_000_034L, 1_000_000_035L)
         val backup = backup(ids.map { bsong(it, title = "Foreign $it", artist = "F", album = "F", duration = 250_000L + it % 7) })
         val locals = ids.map { local(it, title = "Mine $it", duration = 120_000L) }
-        val r = WavdropBackupStatsMatcher.match(backup, locals)
+        val r = StereoSineBackupStatsMatcher.match(backup, locals)
         assertTrue(r.matchedRows.isEmpty())
         assertEquals(3, r.unmatchedCount)
-        assertTrue(WavdropBackupStatsMatcher.resolveBackupSongIds(backup, locals).isEmpty())
+        assertTrue(StereoSineBackupStatsMatcher.resolveBackupSongIds(backup, locals).isEmpty())
     }
 
     // ── 5. missing descriptor ─────────────────────────────────────────────────

@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.launchpoint.stereosine.BuildConfig
-import com.launchpoint.stereosine.data.backup.WavdropBackupParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackupParser
 import com.launchpoint.stereosine.data.local.DATABASE_FILE_NAME
 import java.text.NumberFormat
 import java.util.Locale
@@ -77,7 +77,7 @@ fun SettingsDiagnosticsScreen(
                 AboutInfoRow(label = "Database", value = DATABASE_FILE_NAME)
                 AboutInfoRow(
                     label = "Backup version",
-                    value = WavdropBackupParser.SUPPORTED_VERSION.toString(),
+                    value = StereoSineBackupParser.SUPPORTED_VERSION.toString(),
                 )
             }
             item { SectionDivider() }

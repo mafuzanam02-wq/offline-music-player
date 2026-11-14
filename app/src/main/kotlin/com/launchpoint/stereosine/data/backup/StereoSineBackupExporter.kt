@@ -3,9 +3,9 @@ package com.launchpoint.stereosine.data.backup
 import org.json.JSONArray
 import org.json.JSONObject
 
-object WavdropBackupExporter {
+object StereoSineBackupExporter {
 
-    fun toJson(backup: WavdropBackup): String = JSONObject().apply {
+    fun toJson(backup: StereoSineBackup): String = JSONObject().apply {
         put("app", "Wavdrop")
         put("format", "wavdrop_backup")
         put("version", 1)
@@ -17,7 +17,7 @@ object WavdropBackupExporter {
         backup.appVersionName?.let { put("appVersionName", it) }
         // Section counts + payload checksum, both recomputed and validated at parse time.
         put("manifest", manifestObject(BackupManifest.of(backup)))
-        put("payloadSha256", WavdropBackupIntegrity.payloadFingerprint(backup))
+        put("payloadSha256", StereoSineBackupIntegrity.payloadFingerprint(backup))
         put("songs", songsArray(backup.songs))
         put("trackStats", trackStatsArray(backup.trackStats))
         put("importBaselines", baselinesArray(backup.importBaselines))

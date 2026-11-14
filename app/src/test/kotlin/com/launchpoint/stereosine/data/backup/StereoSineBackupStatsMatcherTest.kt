@@ -4,7 +4,7 @@ import com.launchpoint.stereosine.data.model.Song
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class WavdropBackupStatsMatcherTest {
+class StereoSineBackupStatsMatcherTest {
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -70,7 +70,7 @@ class WavdropBackupStatsMatcherTest {
     private fun backup(
         songs: List<BackupSong>      = emptyList(),
         stats: List<BackupTrackStats> = emptyList(),
-    ) = WavdropBackup(
+    ) = StereoSineBackup(
         exportedAt      = "2026-01-01T00:00:00Z",
         songs           = songs,
         trackStats      = stats,
@@ -86,7 +86,7 @@ class WavdropBackupStatsMatcherTest {
         val s    = stat(songId = 1L, uri = uri)
         val b    = backup(songs = listOf(backupSong(1L, uri)), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(0, result.unmatchedCount)
@@ -105,7 +105,7 @@ class WavdropBackupStatsMatcherTest {
         val s         = stat(songId = 10L, uri = oldUri)
         val b         = backup(songs = listOf(bSong), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(0, result.unmatchedCount)
@@ -122,7 +122,7 @@ class WavdropBackupStatsMatcherTest {
         val s     = stat(songId = 2L, uri = oldUri)
         val b     = backup(songs = listOf(bSong), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(0, result.unmatchedCount)
@@ -138,7 +138,7 @@ class WavdropBackupStatsMatcherTest {
         val s     = stat(songId = 3L, uri = oldUri)
         val b     = backup(songs = listOf(bSong), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(0, result.unmatchedCount)
@@ -153,7 +153,7 @@ class WavdropBackupStatsMatcherTest {
         val s       = stat(songId = 2L, uri = "content://media/2")
         val b       = backup(songs = listOf(bSong), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(libSong))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(libSong))
 
         assertEquals(0, result.matchedRows.size)
         assertEquals(1, result.unmatchedCount)
@@ -167,7 +167,7 @@ class WavdropBackupStatsMatcherTest {
         val s       = stat(songId = 99L, uri = "content://media/99")
         val b       = backup(songs = emptyList(), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(libSong))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(libSong))
 
         assertEquals(0, result.matchedRows.size)
         assertEquals(1, result.unmatchedCount)
@@ -186,7 +186,7 @@ class WavdropBackupStatsMatcherTest {
 
         val b = backup(songs = listOf(bSong1, backupSong(2L, uri2)), stats = listOf(stat1, stat2))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song1))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song1))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(1, result.unmatchedCount)
@@ -200,7 +200,7 @@ class WavdropBackupStatsMatcherTest {
         val song = song(id = 1L, uri = "content://media/1")
         val b    = backup(songs = emptyList(), stats = emptyList())
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(0, result.matchedRows.size)
         assertEquals(0, result.unmatchedCount)
@@ -212,7 +212,7 @@ class WavdropBackupStatsMatcherTest {
         val s     = stat(songId = 1L, uri = "content://media/1")
         val b     = backup(songs = listOf(bSong), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, emptyList())
+        val result = StereoSineBackupStatsMatcher.match(b, emptyList())
 
         assertEquals(0, result.matchedRows.size)
         assertEquals(1, result.unmatchedCount)
@@ -228,7 +228,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(1L, "content://media/OLD", "S", "A", "Al", duration = 200_000L)
         val b     = backup(listOf(bSong), listOf(stat(1L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(1, result.diagnostics.matchedByTagsDuration)
@@ -240,7 +240,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(1L, "content://media/OLD", "S", "A", "Al", duration = 201_500L)
         val b     = backup(listOf(bSong), listOf(stat(1L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(0, result.unmatchedCount)
@@ -253,7 +253,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(9L, "content://media/OLD", "S", "A", "Al", duration = 240_000L)
         val b     = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(short, long))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(short, long))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(long, result.matchedRows[0].first)
@@ -268,7 +268,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(9L, "content://media/OLD", "S", "A", "Al")
         val b     = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(copy1, copy2))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(copy1, copy2))
 
         assertEquals(0, result.matchedRows.size)
         assertEquals(1, result.unmatchedCount)
@@ -282,7 +282,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(9L, "content://media/OLD", "S", "A", "Al", folderPath = "Music/New")
         val b     = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(copy1, copy2))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(copy1, copy2))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(copy2, result.matchedRows[0].first)
@@ -297,7 +297,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(9L, "content://media/OLD", "My Track", "Old Artist", "Old Album")
         val b     = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(1, result.diagnostics.matchedByTitleDuration)
@@ -309,7 +309,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(9L, "content://media/OLD", "S", "A", "Al", duration = 180_000L)
         val b     = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(1, result.diagnostics.matchedByTagsOnly)
@@ -327,7 +327,7 @@ class WavdropBackupStatsMatcherTest {
         val statB   = stat(11L, "content://media/OLD", plays = 99)
         val b       = backup(listOf(bSongA, bSongB), listOf(statA, statB))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(current))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(current))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(7, result.matchedRows[0].second.playCount) // URI match wins
@@ -345,7 +345,7 @@ class WavdropBackupStatsMatcherTest {
             listOf(stat(1L, "content://media/OLD1"), stat(2L, "content://media/OLD2")),
         )
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(current))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(current))
 
         assertEquals(2, result.diagnostics.statsInBackup)
         assertEquals(1, result.matchedCount)
@@ -363,7 +363,7 @@ class WavdropBackupStatsMatcherTest {
         val s     = stat(songId = 42L, uri = uri, plays = 17, skips = 3)
         val b     = backup(songs = listOf(bSong), stats = listOf(s))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(song))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(song))
 
         assertEquals(1, result.matchedRows.size)
         val (_, matchedStat) = result.matchedRows[0]
@@ -391,7 +391,7 @@ class WavdropBackupStatsMatcherTest {
         )
         val b = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(current))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(current))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(current, result.matchedRows[0].first)
@@ -418,7 +418,7 @@ class WavdropBackupStatsMatcherTest {
         )
         val b = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(current))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(current))
 
         assertEquals(0, result.matchedRows.size)
         assertEquals(1, result.unmatchedCount)
@@ -431,7 +431,7 @@ class WavdropBackupStatsMatcherTest {
         val bSong = backupSong(9L, "content://media/OLD", "Jolè", "Artist", "Album")
         val b     = backup(listOf(bSong), listOf(stat(9L, "content://media/OLD")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(copy1, copy2))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(copy1, copy2))
 
         assertEquals(0, result.matchedRows.size)
         assertEquals(1, result.unmatchedCount)

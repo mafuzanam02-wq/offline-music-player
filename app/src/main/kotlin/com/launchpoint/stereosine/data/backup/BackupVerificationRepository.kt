@@ -55,7 +55,7 @@ class BackupVerificationRepository @Inject constructor(
         val latest = runCatching {
             folder.listFiles()
                 .filter { it.isFile && isBackupFileName(it.name) }
-                .maxByOrNull { it.lastModified() }
+                .let { files -> BackupFileNames.preferNewer(files, { it.name }, { it.lastModified() }) }
         }.getOrNull()
             ?: return BackupVerificationResult(
                 status   = VerificationStatus.NO_BACKUP_FOUND,
@@ -68,7 +68,7 @@ class BackupVerificationRepository @Inject constructor(
 
         // Content decides the parser, never the file name: legacy JSON and WDBK go through the same unified reader
         // that real restore uses.
-        val parseResult = when (val doc = WavdropBackupDocumentReader.readUri(context, latest.uri)) {
+        val parseResult = when (val doc = StereoSineBackupDocumentReader.readUri(context, latest.uri)) {
             is BackupDocumentReadResult.Rejected -> return failed(
                 fileName, fileSize, fileTime,
                 when (doc.reason) {
@@ -79,8 +79,8 @@ class BackupVerificationRepository @Inject constructor(
                 },
             )
             // A Desktop JSON file is not an Android backup; the Android parser rejects it as before.
-            is BackupDocumentReadResult.DesktopJson -> WavdropBackupParser.parse(doc.text)
-            is BackupDocumentReadResult.Wavdrop -> doc.result
+            is BackupDocumentReadResult.DesktopJson -> StereoSineBackupParser.parse(doc.text)
+            is BackupDocumentReadResult.StereoSine -> doc.result
         }
         val backup = parseResult.backup
             ?: return failed(fileName, fileSize, fileTime, verificationMessageFor(parseResult.error))
@@ -91,15 +91,15 @@ class BackupVerificationRepository @Inject constructor(
     /** Maps parser errors to plain-language verification messages. */
     private fun verificationMessageFor(error: String?): String = when {
         error == null -> "The backup file could not be read."
-        error.startsWith("Unsupported backup version") || error == WavdropBackupParser.NEWER_VERSION_ERROR ->
+        error.startsWith("Unsupported backup version") || error == StereoSineBackupParser.NEWER_VERSION_ERROR ->
             "This backup was created by a newer version of StereoSine. Update the app to use it."
-        error.startsWith("Backup integrity check failed") -> WavdropBackupParser.INTEGRITY_ERROR
+        error.startsWith("Backup integrity check failed") -> StereoSineBackupParser.INTEGRITY_ERROR
         error == BackupInputReader.TOO_LARGE_MESSAGE -> BackupInputReader.TOO_LARGE_MESSAGE
         else -> "The backup file is damaged and cannot be restored."
     }
 
     private fun summarise(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         fileName: String?,
         fileSizeBytes: Long?,
         fileModifiedMillis: Long?,
@@ -140,7 +140,7 @@ class BackupVerificationRepository @Inject constructor(
             fileSizeBytes         = fileSizeBytes,
             backupTimestampMillis = timestamp,
             timestampIsFileTime   = embedded == null && timestamp != null,
-            schemaVersion        = WavdropBackupParser.SUPPORTED_VERSION,
+            schemaVersion        = StereoSineBackupParser.SUPPORTED_VERSION,
             trackCount            = backup.songs.size,
             playlistCount         = backup.playlists.size,
             favoriteCount         = backup.trackStats.count { it.isFavorite },
@@ -166,17 +166,10 @@ class BackupVerificationRepository @Inject constructor(
     )
 
     internal companion object {
-        private const val TAG = "WavdropBackup"
+        private const val TAG = "StereoSineBackup"
 
-        internal fun isBackupFileName(name: String?): Boolean {
-            val lower = name?.lowercase() ?: return false
-            // Accepts the current ".wdbk" container and legacy ".json" backups (the extension only selects CANDIDATES;
-            // the unified reader decides by content). ".tmp" exclusion: auto-backup writes a temp file alongside the real backup;
-            // a leftover temp must never be verified as the latest backup.
-            return lower.startsWith("wavdrop-backup") &&
-                (lower.endsWith(".wdbk") || lower.endsWith(".json")) &&
-                !lower.contains(".tmp")
-        }
+        /** Accepts `stereosine-backup*` and legacy `wavdrop-backup*` candidates; see [BackupFileNames.isBackupFileName]. */
+        internal fun isBackupFileName(name: String?): Boolean = BackupFileNames.isBackupFileName(name)
 
     }
 }

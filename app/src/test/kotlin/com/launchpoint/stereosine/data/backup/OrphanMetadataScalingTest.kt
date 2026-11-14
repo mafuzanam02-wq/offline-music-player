@@ -25,12 +25,12 @@ class OrphanMetadataScalingTest {
 
     private data class Meta(val key: String, val title: String, val artist: String, val album: String, val uri: String?)
 
-    private fun plan(b: WavdropBackup) = QuarantinePlanner.plan(b, fp, emptySet(), emptySet())
+    private fun plan(b: StereoSineBackup) = QuarantinePlanner.plan(b, fp, emptySet(), emptySet())
 
-    private fun metas(b: WavdropBackup) = plan(b).newCandidates.map { Meta(it.originKey, it.title, it.artist, it.album, it.sourceUri) }
+    private fun metas(b: StereoSineBackup) = plan(b).newCandidates.map { Meta(it.originKey, it.title, it.artist, it.album, it.sourceUri) }
 
     /** The semantics 17C shipped, written the naive way: one full scan of every list per orphan. The reference for equivalence. */
-    private fun naive(b: WavdropBackup): List<Meta> {
+    private fun naive(b: StereoSineBackup): List<Meta> {
         val described = b.songs.map { it.id }.toSet()
         val ids = (b.trackStats.map { it.songId } + b.listenEvents.map { it.songId } + b.lyricsOverrides.map { it.songId } +
             b.importBaselines.map { it.songId } + b.playlists.flatMap { p -> p.songs.map { it.songId } })
@@ -59,7 +59,7 @@ class OrphanMetadataScalingTest {
         backupPlaylistSong(id, pos).copy(title = title, contentUri = uri)
 
     /** `n` orphans with ids from 1000 cycling through every record distribution, plus descriptor songs, plus the hand-made edge cases. */
-    private fun big(n: Int): WavdropBackup {
+    private fun big(n: Int): StereoSineBackup {
         val stats = ArrayList<BackupTrackStats>(); val events = ArrayList<BackupListenEvent>(); val lyrics = ArrayList<BackupLyricsOverride>()
         val plSongs = ArrayList<BackupPlaylistSong>()
         for (i in 0 until n) {

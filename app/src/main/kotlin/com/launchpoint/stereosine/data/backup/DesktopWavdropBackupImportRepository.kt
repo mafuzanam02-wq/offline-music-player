@@ -28,7 +28,7 @@ class DesktopWavdropBackupImportRepository @Inject constructor(
             currentStats = trackStatsDao.getAllStatsSnapshot(),
         )
 
-    suspend fun applyImport(backup: DesktopWavdropBackup): WavdropBackupImportApplyResult =
+    suspend fun applyImport(backup: DesktopWavdropBackup): StereoSineBackupImportApplyResult =
         db.withTransaction {
             val currentSongs = currentSongs()
             val existingEventFingerprints = if (backup.listenEvents.isNotEmpty()) {
@@ -118,7 +118,7 @@ class DesktopWavdropBackupImportRepository @Inject constructor(
             val favoritesUnmatched = plan.unmatchedSongs.count { it.favorite } +
                 plan.ambiguousSongs.count { it.favorite }
 
-            WavdropBackupImportApplyResult(
+            StereoSineBackupImportApplyResult(
                 matchedTracks            = plan.matchedCount,
                 unmatchedTracks          = plan.unmatchedCount,
                 ambiguousTracks          = plan.ambiguousCount,

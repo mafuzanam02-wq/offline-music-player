@@ -29,7 +29,7 @@ object RecoveryRestorePlanner {
         val matchedRows: List<Pair<Song, BackupTrackStats>>,
         val unmatchedStatsRows: Int,
         val resolvedBySongId: Map<Long, Song>,
-        val diagnostics: WavdropBackupMatchDiagnostics,
+        val diagnostics: StereoSineBackupMatchDiagnostics,
         val stats: List<TrackStatsEntity>,
         val eventPlan: ListenEventRestorePlanner.Plan,
         val lyrics: List<LyricsOverrideEntity>,
@@ -55,12 +55,12 @@ object RecoveryRestorePlanner {
      * legacy null-id rows keep full source multiplicity (they are never compared). The caller reads it before any destructive write.
      */
     fun plan(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         currentSongs: List<Song>,
         survivingEventIds: Map<String, ListenEventRestorePlanner.EventPayload> = emptyMap(),
     ): Plan {
-        val match = WavdropBackupStatsMatcher.match(backup, currentSongs)
-        val songResolution = WavdropBackupStatsMatcher.resolveBackupSongs(backup, currentSongs)
+        val match = StereoSineBackupStatsMatcher.match(backup, currentSongs)
+        val songResolution = StereoSineBackupStatsMatcher.resolveBackupSongs(backup, currentSongs)
         val resolvedBySongId = songResolution.resolved
         val linkResolver = BackupSongLinkResolver(currentSongs, resolvedBySongId, songResolution.rejectedLocalIds)
         val backupSongById = backup.songs.associateBy { it.id }

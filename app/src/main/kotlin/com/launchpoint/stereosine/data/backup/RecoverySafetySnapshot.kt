@@ -69,7 +69,7 @@ interface SafetySnapshotIo {
  * Builds the pre-Recovery safety snapshot in the app-private recovery-safety directory, with no dependency on a selected SAF
  * folder, external storage, network or cloud.
  *
- * The snapshot is an ordinary current-format (v2) StereoSine backup produced by [WavdropBackupRepository.buildBackupJson] (the same
+ * The snapshot is an ordinary current-format (v2) StereoSine backup produced by [StereoSineBackupRepository.buildBackupJson] (the same
  * exporter as "Back up now"): no second format, no Room entity dumps, importable through the normal parser.
  *
  * Steps, inside [BackupExecutionSerializer] so it never races "Back up now", automatic backup or another snapshot:
@@ -140,7 +140,7 @@ class RecoverySafetySnapshotCreator(
                 createdAtMs          = nowMs(),
                 sizeBytes            = json.toByteArray(Charsets.UTF_8).size.toLong(),
                 backupId             = backup.backupId,
-                integrityFingerprint = WavdropBackupIntegrityV2.fingerprint(backup),
+                integrityFingerprint = StereoSineBackupIntegrityV2.fingerprint(backup),
                 verification         = BackupIntegrityStatus.VERIFIED,
                 songCount            = backup.songs.size,
                 statsCount           = backup.trackStats.size,
@@ -151,7 +151,7 @@ class RecoverySafetySnapshotCreator(
     }
 
     private sealed interface Verification {
-        data class Ok(val backup: WavdropBackup) : Verification
+        data class Ok(val backup: StereoSineBackup) : Verification
         data class Bad(val stage: SafetySnapshotFailureStage, val detail: String) : Verification
     }
 
@@ -168,7 +168,7 @@ class RecoverySafetySnapshotCreator(
         if (!BackupSaveValidator.isSavedBackupValid(readBack)) {
             return Verification.Bad(SafetySnapshotFailureStage.VALIDATE, BackupSaveValidator.VALIDATION_FAILED_MESSAGE)
         }
-        val parsed = WavdropBackupParser.parse(readBack)
+        val parsed = StereoSineBackupParser.parse(readBack)
         val backup = parsed.backup
         if (backup == null ||
             parsed.integrityStatus != BackupIntegrityStatus.VERIFIED ||
@@ -190,7 +190,7 @@ class RecoverySafetySnapshotCreator(
 @Singleton
 class RecoverySafetySnapshotService @Inject constructor(
     @ApplicationContext context: Context,
-    backupRepository: WavdropBackupRepository,
+    backupRepository: StereoSineBackupRepository,
     serializer: BackupExecutionSerializer,
 ) : SafetySnapshotProvider {
     private val creator = RecoverySafetySnapshotCreator(

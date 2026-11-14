@@ -24,7 +24,7 @@ class BackupInputReaderTest {
 
     // ── Fixtures ──────────────────────────────────────────────────────────────
 
-    private fun v2Backup() = WavdropBackup(
+    private fun v2Backup() = StereoSineBackup(
         exportedAt           = "",
         exportedAtMs         = 1_782_230_400_000L,
         backupId             = "00000000-0000-0000-0000-000000000001",
@@ -45,7 +45,7 @@ class BackupInputReaderTest {
         importBaselines      = emptyList(),
     )
 
-    private fun v2Json(): String = WavdropBackupExporterV2.toJson(v2Backup())
+    private fun v2Json(): String = StereoSineBackupExporterV2.toJson(v2Backup())
 
     private fun desktopOverlayV2Json(): String =
         JSONObject(v2Json()).apply {
@@ -67,7 +67,7 @@ class BackupInputReaderTest {
         val read = BackupInputReader.readBounded(stream(json))
 
         assertEquals("Bounded read must be byte-identical", json, read)
-        val result = WavdropBackupParser.parse(read)
+        val result = StereoSineBackupParser.parse(read)
         assertNotNull("v2 parse failed: ${result.error}", result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
         assertEquals("Jolé Cañón", result.backup!!.songs.single().title)
@@ -81,7 +81,7 @@ class BackupInputReaderTest {
         val read = BackupInputReader.readBounded(stream(json))
 
         assertEquals(json, read)
-        val result = WavdropBackupParser.parse(read)
+        val result = StereoSineBackupParser.parse(read)
         assertNotNull("desktop-overlay v2 parse failed: ${result.error}", result.backup)
         assertEquals(1, result.backup!!.desktopOverlay!!.schemaVersion)
     }

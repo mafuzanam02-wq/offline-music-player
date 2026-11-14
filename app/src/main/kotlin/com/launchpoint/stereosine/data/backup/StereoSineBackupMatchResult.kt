@@ -2,17 +2,17 @@ package com.launchpoint.stereosine.data.backup
 
 import com.launchpoint.stereosine.data.model.Song
 
-data class WavdropBackupMatchResult(
+data class StereoSineBackupMatchResult(
     val matchedRows: List<Pair<Song, BackupTrackStats>>,
     /** Rows not applied: truly unmatched + ambiguous + collision-dropped. */
     val unmatchedCount: Int,
-    val diagnostics: WavdropBackupMatchDiagnostics = WavdropBackupMatchDiagnostics(),
+    val diagnostics: StereoSineBackupMatchDiagnostics = StereoSineBackupMatchDiagnostics(),
 ) {
     val matchedCount: Int get() = matchedRows.size
 }
 
 /** Per-tier breakdown explaining how each backup stats row was (or wasn't) matched. */
-data class WavdropBackupMatchDiagnostics(
+data class StereoSineBackupMatchDiagnostics(
     val statsInBackup: Int = 0,
     val matchedByUri: Int = 0,
     val matchedByPath: Int = 0,

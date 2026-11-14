@@ -11,7 +11,7 @@ import org.junit.Test
  * P2-A: Unmatched History Quarantine Foundation.
  *
  * All tests operate on [QuarantinePlanner] (pure function, no DB) and
- * [WavdropMergePreviewAnalyzer] with quarantine-aware arguments.
+ * [StereoSineMergePreviewAnalyzer] with quarantine-aware arguments.
  * No mock framework used — inputs constructed inline.
  *
  * Tests 1–9 verify [QuarantinePlanner.plan]; test 10 verifies the analyzer
@@ -75,7 +75,7 @@ class QuarantineTest {
         lyrics: List<BackupLyricsOverride> = emptyList(),
         baselines: List<BackupImportBaseline> = emptyList(),
         playlists: List<BackupPlaylist> = emptyList(),
-    ) = WavdropBackup(
+    ) = StereoSineBackup(
         exportedAt      = "2026-06-23T00:00:00Z",
         songs           = songs,
         trackStats      = stats,
@@ -86,7 +86,7 @@ class QuarantineTest {
     )
 
     private fun plan(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         resolvedBackupSongIds: Set<Long> = emptySet(),
         existingOriginKeys: Set<String> = emptySet(),
     ): QuarantinePlanner.Plan {
@@ -255,7 +255,7 @@ class QuarantineTest {
     @Test
     fun `legacy backup without payloadSha256 - fingerprint is stable, deduplication works`() {
         // payloadSha256 is null → this is a legacy backup
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2025-01-01T00:00:00Z",
             songs           = listOf(backupSong(30L)),
             trackStats      = listOf(backupStats(30L)),
@@ -306,7 +306,7 @@ class QuarantineTest {
         // songId 51 already in quarantine from a prior import
         val existingKeys = setOf(QuarantinePlanner.originKey(fp, 51L))
 
-        val analyzerResult = WavdropMergePreviewAnalyzer.analyze(
+        val analyzerResult = StereoSineMergePreviewAnalyzer.analyze(
             backup                       = backup,
             currentSongs                 = emptyList(),
             existingQuarantineOriginKeys = existingKeys,
@@ -335,7 +335,7 @@ class QuarantineTest {
         // No currentSongs → resolvedBySongId empty; stats matcher finds no matches.
         // But QuarantinePlanner will find songId 60 as unmatched with stats data →
         // result should be mergeable (quarantine path active).
-        val result = WavdropMergePreviewAnalyzer.analyze(
+        val result = StereoSineMergePreviewAnalyzer.analyze(
             backup                       = backup,
             currentSongs                 = emptyList(),
             existingQuarantineOriginKeys = emptySet(),
@@ -353,8 +353,8 @@ class QuarantineTest {
     // ── Test 12: Apply result carries pending counts ──────────────────────────
 
     @Test
-    fun `WavdropBackupImportApplyResult default values for pending fields are zero`() {
-        val result = WavdropBackupImportApplyResult(
+    fun `StereoSineBackupImportApplyResult default values for pending fields are zero`() {
+        val result = StereoSineBackupImportApplyResult(
             matchedTracks = 0,
             unmatchedTracks = 0,
             statsUpdated = 0,

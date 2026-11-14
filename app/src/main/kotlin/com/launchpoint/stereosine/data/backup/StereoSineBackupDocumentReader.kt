@@ -14,16 +14,16 @@ enum class BackupContainerKind { LEGACY_JSON, WDBK }
 /** Why a selected document was rejected before/while being decoded. Callers map these to their own copy. */
 enum class BackupRejectReason { EMPTY, NOT_A_BACKUP, TOO_LARGE, UNREADABLE }
 
-/** Outcome of [WavdropBackupDocumentReader]: the single entry point from "a selected file" to backup meaning. */
+/** Outcome of [StereoSineBackupDocumentReader]: the single entry point from "a selected file" to backup meaning. */
 sealed interface BackupDocumentReadResult {
     /**
-     * A StereoSine Android backup (legacy V1/V2 JSON or WDBK), decoded to the SAME [WavdropBackup] model either way.
+     * A StereoSine Android backup (legacy V1/V2 JSON or WDBK), decoded to the SAME [StereoSineBackup] model either way.
      * [result] carries the parser/reader verdict (which may itself be a failure with an error message).
      * [legacyText] is the original JSON text for legacy input (Recovery re-validates from it) and null for WDBK,
      * which Recovery re-reads from its source instead of holding the container in memory.
      */
-    data class Wavdrop(
-        val result: WavdropBackupImportResult,
+    data class StereoSine(
+        val result: StereoSineBackupImportResult,
         val container: BackupContainerKind,
         val legacyText: String? = null,
     ) : BackupDocumentReadResult
@@ -39,12 +39,12 @@ sealed interface BackupDocumentReadResult {
  *
  *  - starts with the ZIP signature (`PK`) → WDBK container → [WdbkReader] (bounded, hash- and fingerprint-verified);
  *  - otherwise → legacy JSON: bounded text read (same 100 MiB cap as before), structural sniff, then the existing
- *    [WavdropBackupParser] (or the Desktop parser's sniff). Legacy JSON is NOT converted through WDBK.
+ *    [StereoSineBackupParser] (or the Desktop parser's sniff). Legacy JSON is NOT converted through WDBK.
  *
  * A renamed legacy JSON or WDBK file therefore parses, and a fake `.wdbk` that is not a valid container fails
- * safely. UI code never inspects ZIP entries; everything downstream receives the same [WavdropBackup].
+ * safely. UI code never inspects ZIP entries; everything downstream receives the same [StereoSineBackup].
  */
-object WavdropBackupDocumentReader {
+object StereoSineBackupDocumentReader {
 
     /** Reads [uri] with the provider-declared-size fast reject and the bounded input cap. Never throws. */
     fun readUri(context: Context, uri: Uri): BackupDocumentReadResult {
@@ -80,7 +80,7 @@ object WavdropBackupDocumentReader {
         pushback.unread(head, 0, filled)
 
         return if (looksLikeZip(head, filled)) {
-            BackupDocumentReadResult.Wavdrop(
+            BackupDocumentReadResult.StereoSine(
                 result = WdbkReader(limits).read(pushback, nowMs),
                 container = BackupContainerKind.WDBK,
             )
@@ -98,14 +98,14 @@ object WavdropBackupDocumentReader {
         if (text.isBlank()) return BackupDocumentReadResult.Rejected(BackupRejectReason.EMPTY)
 
         // Cheap structural sniff first: rejects arbitrary JSON/binary content without running the full parser.
-        if (!ImportFileValidation.isLikelyWavdropBackupContent(text)) {
+        if (!ImportFileValidation.isLikelyStereoSineBackupContent(text)) {
             return BackupDocumentReadResult.Rejected(BackupRejectReason.NOT_A_BACKUP)
         }
         if (DesktopWavdropBackupParser.isDesktopBackupContent(text)) {
             return BackupDocumentReadResult.DesktopJson(text)
         }
-        return BackupDocumentReadResult.Wavdrop(
-            result = WavdropBackupParser.parse(text, nowMs),
+        return BackupDocumentReadResult.StereoSine(
+            result = StereoSineBackupParser.parse(text, nowMs),
             container = BackupContainerKind.LEGACY_JSON,
             legacyText = text,
         )

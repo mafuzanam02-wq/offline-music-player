@@ -10,8 +10,8 @@ import com.launchpoint.stereosine.data.backup.BackupListenEvent
 import com.launchpoint.stereosine.data.backup.BackupSong
 import com.launchpoint.stereosine.data.backup.CanonicalEventStream
 import com.launchpoint.stereosine.data.backup.EventExportCursor
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import com.launchpoint.stereosine.data.backup.toBackupListenEvent
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkExportSnapshot
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkWriter
@@ -31,7 +31,7 @@ import java.io.ByteArrayOutputStream
  * Android-device counterpart of the host LegacyExportTieOrderRobolectricTest (WDBK-1 compatibility edge).
  *
  * SQL does not specify the order of rows that are equal on occurredAt, yet the legacy exporter's fingerprint depended on it
- * for rows that tie in WavdropBackupIntegrityV2.EVENT_ORDER but emit different canonical records (null eventId versus an
+ * for rows that tie in StereoSineBackupIntegrityV2.EVENT_ORDER but emit different canonical records (null eventId versus an
  * empty one). WDBK export deliberately reproduces the order observed in the host test environment (descending id). This
  * test runs the REAL TrackListenEventDao.getAllSnapshot() on the device's SQLite, without adding any id sort, records the
  * observed order, and checks that the production WDBK streamed path yields the same semantic fingerprint as the legacy path.
@@ -67,7 +67,7 @@ class LegacyExportTieOrderInstrumentedTest {
 
     private val songs = listOf(BackupSong(1L, "content://s/1", "T", "A", "B", 1L, 1000L, 1L, 1, 2000, null, null))
 
-    private fun shell(events: List<BackupListenEvent>) = WavdropBackup(
+    private fun shell(events: List<BackupListenEvent>) = StereoSineBackup(
         exportedAt = "", songs = songs, trackStats = emptyList(), importBaselines = emptyList(), listenEvents = events,
         backupId = "tie-order-test", sourceInstallationId = "tie-order-install", exportedAtMs = 1_700_000_000_000L,
     )
@@ -75,7 +75,7 @@ class LegacyExportTieOrderInstrumentedTest {
     /** The legacy computation: the production snapshot exactly as returned, fingerprinted by the production comparator. */
     private fun legacyFingerprint(): String = runBlocking {
         val events = dao.getAllSnapshot().filter { BackupEventExportRules.shouldExport(it.source) }.map(::map)
-        WavdropBackupIntegrityV2.fingerprint(shell(events))
+        StereoSineBackupIntegrityV2.fingerprint(shell(events))
     }
 
     private val fetch: suspend (EventExportCursor, Long, Int) -> List<TrackListenEventEntity> = { c, upTo, limit ->

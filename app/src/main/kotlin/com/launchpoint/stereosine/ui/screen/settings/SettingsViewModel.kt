@@ -4,7 +4,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.launchpoint.stereosine.data.backup.WavdropBackupRepository
+import com.launchpoint.stereosine.data.backup.StereoSineBackupRepository
 import com.launchpoint.stereosine.ui.scan.LibraryScanCoordinator
 import com.launchpoint.stereosine.ui.scan.LibraryScanUiState
 import com.launchpoint.stereosine.data.repository.SongRepository
@@ -65,7 +65,7 @@ sealed interface ExportUiState {
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val backupRepository: WavdropBackupRepository,
+    private val backupRepository: StereoSineBackupRepository,
     private val autoBackupRepository: AutoBackupRepository,
     private val autoBackupWorkScheduler: AutoBackupWorkScheduler,
     private val appSettingsRepository: AppSettingsRepository,

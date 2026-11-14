@@ -2,7 +2,7 @@ package com.launchpoint.stereosine.data.backup
 
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 
-object WavdropBackupParser {
+object StereoSineBackupParser {
     const val SUPPORTED_FORMAT = "wavdrop_backup"
     const val SUPPORTED_VERSION = 2
 
@@ -23,7 +23,7 @@ object WavdropBackupParser {
     fun parse(
         content: String,
         nowMs: Long = System.currentTimeMillis(),
-    ): WavdropBackupImportResult {
+    ): StereoSineBackupImportResult {
         if (content.isBlank()) {
             return failure("The selected file is empty.")
         }
@@ -69,7 +69,7 @@ object WavdropBackupParser {
         "importBaselines",
     )
 
-    private fun parseV1(root: Map<*, *>, nowMs: Long): WavdropBackupImportResult {
+    private fun parseV1(root: Map<*, *>, nowMs: Long): StereoSineBackupImportResult {
         requiredV1RootFields.firstOrNull { !root.hasField(it) }?.let { field ->
             return failure("Missing field: $field")
         }
@@ -180,7 +180,7 @@ object WavdropBackupParser {
             }
             val payloadSha256 = root["payloadSha256"] as? String
 
-            val backup = WavdropBackup(
+            val backup = StereoSineBackup(
                 exportedAt      = root["exportedAt"] as? String ?: "",
                 songs           = songs,
                 trackStats      = trackStats,
@@ -198,7 +198,7 @@ object WavdropBackupParser {
 
             var integrityStatus = BackupIntegrityStatus.UNVERIFIED_LEGACY
             if (payloadSha256 != null) {
-                if (payloadSha256 != WavdropBackupIntegrity.payloadFingerprint(backup)) {
+                if (payloadSha256 != StereoSineBackupIntegrity.payloadFingerprint(backup)) {
                     return failure(INTEGRITY_ERROR)
                 }
                 integrityStatus = BackupIntegrityStatus.VERIFIED
@@ -221,7 +221,7 @@ object WavdropBackupParser {
 
     // ── v2 ────────────────────────────────────────────────────────────────────
 
-    private fun parseV2(root: Map<*, *>, nowMs: Long): WavdropBackupImportResult {
+    private fun parseV2(root: Map<*, *>, nowMs: Long): StereoSineBackupImportResult {
         return try {
             // ── 1. Root version consistency ───────────────────────────────────
             val formatMajor = try {
@@ -276,18 +276,18 @@ object WavdropBackupParser {
                 ?: return failure("Missing integrity fingerprint")
 
             // ── 5. Payload sections ───────────────────────────────────────────
-            // Field mapping lives in [WavdropBackupSectionParser], shared verbatim with the
+            // Field mapping lives in [StereoSineBackupSectionParser], shared verbatim with the
             // WDBK container reader so both packagings decode every v2 section identically.
-            val songs = WavdropBackupSectionParser.songs(root.requiredArray("songs"))
-            val trackStats = WavdropBackupSectionParser.trackStats(root.requiredArray("trackStats"))
-            val importBaselines = WavdropBackupSectionParser.importBaselines(root.requiredArray("importBaselines"))
+            val songs = StereoSineBackupSectionParser.songs(root.requiredArray("songs"))
+            val trackStats = StereoSineBackupSectionParser.trackStats(root.requiredArray("trackStats"))
+            val importBaselines = StereoSineBackupSectionParser.importBaselines(root.requiredArray("importBaselines"))
             val lyricsOverrides = (root["lyricsOverrides"] as? List<*>)
-                ?.let(WavdropBackupSectionParser::lyricsOverrides) ?: emptyList()
+                ?.let(StereoSineBackupSectionParser::lyricsOverrides) ?: emptyList()
             val preferences = root.parseAndroidPreferences()
             val playlists = (root["playlists"] as? List<*>)
-                ?.let(WavdropBackupSectionParser::playlists) ?: emptyList()
+                ?.let(StereoSineBackupSectionParser::playlists) ?: emptyList()
             val listenEvents = (root["listenEvents"] as? List<*>)
-                ?.let(WavdropBackupSectionParser::listenEvents) ?: emptyList()
+                ?.let(StereoSineBackupSectionParser::listenEvents) ?: emptyList()
 
             val manifest = (root["manifest"] as? Map<*, *>)?.let { m ->
                 BackupManifest(
@@ -302,7 +302,7 @@ object WavdropBackupParser {
             }
             val desktopOverlayRoot = root["desktopOverlay"] as? Map<*, *>
 
-            val sealedBackup = WavdropBackup(
+            val sealedBackup = StereoSineBackup(
                 exportedAt            = "",
                 exportedAtMs          = exportedAtMs,
                 backupId              = backupId,
@@ -323,7 +323,7 @@ object WavdropBackupParser {
             )
 
             // ── 6. Integrity verification (required for v2) ───────────────────
-            val computedFingerprint = WavdropBackupIntegrityV2.fingerprint(sealedBackup)
+            val computedFingerprint = StereoSineBackupIntegrityV2.fingerprint(sealedBackup)
             if (integrityFingerprint != computedFingerprint) {
                 return failure(INTEGRITY_ERROR)
             }
@@ -374,17 +374,17 @@ object WavdropBackupParser {
     // ── Result helpers ────────────────────────────────────────────────────────
 
     private fun success(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         integrityStatus: BackupIntegrityStatus,
         warnings: List<String> = emptyList(),
-    ) = WavdropBackupImportResult(
+    ) = StereoSineBackupImportResult(
         backup          = backup,
         error           = null,
         integrityStatus = integrityStatus,
         warnings        = warnings,
     )
 
-    private fun failure(message: String) = WavdropBackupImportResult(
+    private fun failure(message: String) = StereoSineBackupImportResult(
         backup          = null,
         error           = message,
         integrityStatus = BackupIntegrityStatus.INVALID,
@@ -394,12 +394,12 @@ object WavdropBackupParser {
 /**
  * Single authority for mapping parsed v2 JSON sections onto the backup domain model.
  *
- * Used by [WavdropBackupParser] (legacy v2 `.json`) and by the WDBK container reader, so the strict
+ * Used by [StereoSineBackupParser] (legacy v2 `.json`) and by the WDBK container reader, so the strict
  * v2 trust rules — opaque string IDs, strict integers, required-field checks — can never drift
  * between the two packagings. Every function takes values produced by [parseJson] and throws
  * [BackupParseException] on any violation.
  */
-internal object WavdropBackupSectionParser {
+internal object StereoSineBackupSectionParser {
 
     /** Parses [text] with the hardened reader (depth limit, duplicate-key rejection, strict numbers). */
     fun parseJson(text: String): Any? = try {

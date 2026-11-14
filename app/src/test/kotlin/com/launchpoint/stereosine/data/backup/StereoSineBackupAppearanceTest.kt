@@ -5,7 +5,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class WavdropBackupAppearanceTest {
+class StereoSineBackupAppearanceTest {
 
     // ── BackupPreferences model holds appearance fields ────────────────────────
 
@@ -107,7 +107,7 @@ class WavdropBackupAppearanceTest {
 
     @Test
     fun `parser accepts backup without appearance fields`() {
-        val result = WavdropBackupParser.parse(legacyBackupWithoutAppearance())
+        val result = StereoSineBackupParser.parse(legacyBackupWithoutAppearance())
         assertNull(result.error)
         val prefs = result.backup?.preferences
         assertNotNull(prefs)
@@ -119,7 +119,7 @@ class WavdropBackupAppearanceTest {
 
     @Test
     fun `parser accepts backup without preferences block`() {
-        val result = WavdropBackupParser.parse(backupWithNoPreferences())
+        val result = StereoSineBackupParser.parse(backupWithNoPreferences())
         assertNull(result.error)
         assertNull(result.backup?.preferences)
     }
@@ -167,7 +167,7 @@ class WavdropBackupAppearanceTest {
 
     @Test
     fun `parser reads appearance fields alongside existing preferences`() {
-        val result = WavdropBackupParser.parse(
+        val result = StereoSineBackupParser.parse(
             backupWithFullPreferences(
                 themeMode    = "LIGHT",
                 accentColor  = "MIDNIGHT_VIOLET",
@@ -222,7 +222,7 @@ class WavdropBackupAppearanceTest {
               }
             }
         """.trimIndent()
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull(result.error)
         return result.backup?.preferences
     }

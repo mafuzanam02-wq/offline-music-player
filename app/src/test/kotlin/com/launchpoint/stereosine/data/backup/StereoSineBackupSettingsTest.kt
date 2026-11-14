@@ -14,9 +14,9 @@ import org.junit.Test
 /**
  * Phase 4: complete non-default settings backup + Obsidian Black default icon.
  */
-class WavdropBackupSettingsTest {
+class StereoSineBackupSettingsTest {
 
-    private fun minimalBackup(preferences: BackupPreferences?) = WavdropBackup(
+    private fun minimalBackup(preferences: BackupPreferences?) = StereoSineBackup(
         exportedAt      = "2026-06-11T10:00:00Z",
         songs           = emptyList(),
         trackStats      = emptyList(),
@@ -75,8 +75,8 @@ class WavdropBackupSettingsTest {
             pauseOnAudioDisconnect    = false,
             bluetoothResumeMode       = "ALWAYS_RESUME",
         )
-        val parsed = WavdropBackupParser
-            .parse(WavdropBackupExporter.toJson(minimalBackup(prefs)))
+        val parsed = StereoSineBackupParser
+            .parse(StereoSineBackupExporter.toJson(minimalBackup(prefs)))
             .backup
         assertNotNull(parsed)
         assertEquals(prefs, parsed!!.preferences)
@@ -84,11 +84,11 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `non-default song sort is exported and parsed`() {
-        val json = WavdropBackupExporter.toJson(
+        val json = StereoSineBackupExporter.toJson(
             minimalBackup(allNullPrefs().copy(songSortMode = "MOST_PLAYED_ALL_TIME")),
         )
         val prefsObj = androidPreferencesObject(json)
-        val parsed = WavdropBackupParser.parse(json).backup
+        val parsed = StereoSineBackupParser.parse(json).backup
 
         assertEquals("MOST_PLAYED_ALL_TIME", prefsObj.getString("songSortMode"))
         assertNotNull(parsed)
@@ -97,11 +97,11 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `non-default search tap behavior is exported and parsed`() {
-        val json = WavdropBackupExporter.toJson(
+        val json = StereoSineBackupExporter.toJson(
             minimalBackup(allNullPrefs().copy(searchTapBehavior = "PRESERVE_QUEUE")),
         )
         val prefsObj = androidPreferencesObject(json)
-        val parsed = WavdropBackupParser.parse(json).backup
+        val parsed = StereoSineBackupParser.parse(json).backup
 
         assertEquals("PRESERVE_QUEUE", prefsObj.getString("searchTapBehavior"))
         assertNotNull(parsed)
@@ -110,7 +110,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `Android export contains platform-scoped android preferences only`() {
-        val json = WavdropBackupExporter.toJson(
+        val json = StereoSineBackupExporter.toJson(
             minimalBackup(allNullPrefs().copy(startupDestination = "SONGS")),
         )
         val root = JSONObject(json)
@@ -127,7 +127,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `null settings are omitted from the exported JSON`() {
-        val json = WavdropBackupExporter.toJson(minimalBackup(allNullPrefs()))
+        val json = StereoSineBackupExporter.toJson(minimalBackup(allNullPrefs()))
         val platformPrefs = JSONObject(json).getJSONObject("preferences")
         val prefsObj = platformPrefs.getJSONObject("android")
         assertFalse(platformPrefs.has("desktop"))
@@ -141,8 +141,8 @@ class WavdropBackupSettingsTest {
             showQueueCount = false,
             themeMode = "DARK",
         )
-        val parsed = WavdropBackupParser
-            .parse(WavdropBackupExporter.toJson(minimalBackup(prefs)))
+        val parsed = StereoSineBackupParser
+            .parse(StereoSineBackupExporter.toJson(minimalBackup(prefs)))
             .backup!!
         assertEquals(3, parsed.manifest!!.preferenceCount)
     }
@@ -153,8 +153,8 @@ class WavdropBackupSettingsTest {
     fun `legacy backup without phase 4 settings parses with nulls`() {
         // Old 13-setting backup shape: new keys simply absent.
         val prefs = allNullPrefs().copy(themeMode = "DARK", compactMode = true)
-        val parsed = WavdropBackupParser
-            .parse(WavdropBackupExporter.toJson(minimalBackup(prefs)))
+        val parsed = StereoSineBackupParser
+            .parse(StereoSineBackupExporter.toJson(minimalBackup(prefs)))
             .backup!!
         val p = parsed.preferences!!
         assertNull(p.artworkCornerStyle)
@@ -166,7 +166,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `legacy flat Android preferences parse as import-only compatibility`() {
-        val parsed = WavdropBackupParser.parse(
+        val parsed = StereoSineBackupParser.parse(
             minimalBackupJson(
                 """
                 {
@@ -184,7 +184,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `preferences android restores Android settings`() {
-        val parsed = WavdropBackupParser.parse(
+        val parsed = StereoSineBackupParser.parse(
             minimalBackupJson(
                 """
                 {
@@ -207,7 +207,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `preferences desktop is ignored on Android`() {
-        val parsed = WavdropBackupParser.parse(
+        val parsed = StereoSineBackupParser.parse(
             minimalBackupJson(
                 """
                 {
@@ -226,7 +226,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `missing preferences is valid`() {
-        val parsed = WavdropBackupParser.parse(minimalBackupJson()).backup
+        val parsed = StereoSineBackupParser.parse(minimalBackupJson()).backup
 
         assertNotNull(parsed)
         assertNull(parsed!!.preferences)
@@ -234,7 +234,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `missing preferences android is valid`() {
-        val parsed = WavdropBackupParser.parse(
+        val parsed = StereoSineBackupParser.parse(
             minimalBackupJson(
                 """
                 {
@@ -252,7 +252,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `unknown Android preference keys are ignored`() {
-        val parsed = WavdropBackupParser.parse(
+        val parsed = StereoSineBackupParser.parse(
             minimalBackupJson(
                 """
                 {
@@ -272,7 +272,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `invalid Android preference values are sanitized while parsing`() {
-        val parsed = WavdropBackupParser.parse(
+        val parsed = StereoSineBackupParser.parse(
             minimalBackupJson(
                 """
                 {
@@ -297,7 +297,7 @@ class WavdropBackupSettingsTest {
 
     @Test
     fun `legacy home section ids remain accepted in backup preferences`() {
-        val parsed = WavdropBackupParser.parse(
+        val parsed = StereoSineBackupParser.parse(
             minimalBackupJson(
                 """
                 {
@@ -335,11 +335,11 @@ class WavdropBackupSettingsTest {
             allNullPrefs().copy(themeMode = "DARK", artworkCornerStyle = null, restoreQueue = null),
         )
         assertEquals(
-            WavdropBackupIntegrity.payloadFingerprint(legacyShaped),
-            WavdropBackupIntegrity.payloadFingerprint(sameWithExplicitNulls),
+            StereoSineBackupIntegrity.payloadFingerprint(legacyShaped),
+            StereoSineBackupIntegrity.payloadFingerprint(sameWithExplicitNulls),
         )
         // And a checksum written at export time still validates at parse time.
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporter.toJson(legacyShaped))
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporter.toJson(legacyShaped))
         assertNotNull("Checksum must validate: ${parsed.error}", parsed.backup)
     }
 
@@ -348,8 +348,8 @@ class WavdropBackupSettingsTest {
         val base    = minimalBackup(allNullPrefs())
         val changed = minimalBackup(allNullPrefs().copy(showQueueCount = false))
         assertFalse(
-            WavdropBackupIntegrity.payloadFingerprint(base) ==
-                WavdropBackupIntegrity.payloadFingerprint(changed),
+            StereoSineBackupIntegrity.payloadFingerprint(base) ==
+                StereoSineBackupIntegrity.payloadFingerprint(changed),
         )
     }
 
@@ -364,8 +364,8 @@ class WavdropBackupSettingsTest {
             wrappedFallbackTheme         = "OCEAN",
             wrappedVisualStyle           = "NIGHT_PULSE",
         )
-        val parsed = WavdropBackupParser
-            .parse(WavdropBackupExporter.toJson(minimalBackup(prefs)))
+        val parsed = StereoSineBackupParser
+            .parse(StereoSineBackupExporter.toJson(minimalBackup(prefs)))
             .backup
         assertNotNull(parsed)
         val p = parsed!!.preferences!!
@@ -379,8 +379,8 @@ class WavdropBackupSettingsTest {
     @Test
     fun `old backups without wrapped and milestone settings parse with nulls`() {
         val prefs = allNullPrefs().copy(themeMode = "DARK")
-        val parsed = WavdropBackupParser
-            .parse(WavdropBackupExporter.toJson(minimalBackup(prefs)))
+        val parsed = StereoSineBackupParser
+            .parse(StereoSineBackupExporter.toJson(minimalBackup(prefs)))
             .backup!!
         val p = parsed.preferences!!
         assertNull(p.showMilestoneCelebrations)
@@ -395,20 +395,20 @@ class WavdropBackupSettingsTest {
         val base    = minimalBackup(allNullPrefs())
         val changed = minimalBackup(allNullPrefs().copy(wrappedFallbackTheme = "OBSIDIAN"))
         assertFalse(
-            WavdropBackupIntegrity.payloadFingerprint(base) ==
-                WavdropBackupIntegrity.payloadFingerprint(changed),
+            StereoSineBackupIntegrity.payloadFingerprint(base) ==
+                StereoSineBackupIntegrity.payloadFingerprint(changed),
         )
     }
 
     @Test
     fun `tampering a phase 4 setting in the file fails integrity`() {
-        val json = WavdropBackupExporter.toJson(
+        val json = StereoSineBackupExporter.toJson(
             minimalBackup(allNullPrefs().copy(nowPlayingTimeDisplayMode = "REMAINING")),
         )
         val tampered = json.replace("\"REMAINING\"", "\"DURATION\"")
         assertTrue(tampered != json)
-        val result = WavdropBackupParser.parse(tampered)
+        val result = StereoSineBackupParser.parse(tampered)
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, result.error)
     }
 }

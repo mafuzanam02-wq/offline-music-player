@@ -22,16 +22,16 @@ class BackupPresentationTest {
     private val utc = ZoneId.of("UTC")
 
     private fun read(bytes: ByteArray) =
-        WavdropBackupDocumentReader.read(ByteArrayInputStream(bytes), com.launchpoint.stereosine.data.backup.wdbk.WdbkLimits.DEFAULT, WdbkTestSupport.NOW + 1_000_000L)
+        StereoSineBackupDocumentReader.read(ByteArrayInputStream(bytes), com.launchpoint.stereosine.data.backup.wdbk.WdbkLimits.DEFAULT, WdbkTestSupport.NOW + 1_000_000L)
 
-    private fun decoded(bytes: ByteArray): WavdropBackup =
-        ((read(bytes) as BackupDocumentReadResult.Wavdrop).result.backup)!!
+    private fun decoded(bytes: ByteArray): StereoSineBackup =
+        ((read(bytes) as BackupDocumentReadResult.StereoSine).result.backup)!!
 
     private fun wdbk() = decoded(WdbkTestSupport.write(WdbkTestSupport.fullBackup()).first)
     private fun v2() = decoded(RecoveryTestFixtures.v2Json().toByteArray())
     private fun v1() = decoded(RecoveryTestFixtures.v1Json().toByteArray())
     private fun bare(exportedAt: String = "", ms: Long? = null, sha: String? = null, ver: BackupFormatVersion = BackupFormatVersion.V2) =
-        WavdropBackup(exportedAt, emptyList(), emptyList(), emptyList(), payloadSha256 = sha, sourceVersion = ver, exportedAtMs = ms)
+        StereoSineBackup(exportedAt, emptyList(), emptyList(), emptyList(), payloadSha256 = sha, sourceVersion = ver, exportedAtMs = ms)
 
     // ── Defect A: format warning ─────────────────────────────────────────────
 
@@ -61,10 +61,10 @@ class BackupPresentationTest {
         val bytes = WdbkTestSupport.write(WdbkTestSupport.fullBackup()).first
         val flipped = bytes.copyOf().also { it[it.size / 2] = (it[it.size / 2].toInt() xor 0x55).toByte() }
         val r = read(flipped)
-        assertTrue(r is BackupDocumentReadResult.Rejected || (r as BackupDocumentReadResult.Wavdrop).result.backup == null)
+        assertTrue(r is BackupDocumentReadResult.Rejected || (r as BackupDocumentReadResult.StereoSine).result.backup == null)
         val tampered = RecoveryTestFixtures.v2Json().replace(Regex("\"exportedAt\"\\s*:\\s*${WdbkTestSupport.NOW}"), "\"exportedAt\": ${WdbkTestSupport.NOW + 1}")
         assertTrue(tampered != RecoveryTestFixtures.v2Json())
-        val t = read(tampered.toByteArray()) as BackupDocumentReadResult.Wavdrop
+        val t = read(tampered.toByteArray()) as BackupDocumentReadResult.StereoSine
         assertNull(t.result.backup)
         assertNotNull(t.result.error)
     }

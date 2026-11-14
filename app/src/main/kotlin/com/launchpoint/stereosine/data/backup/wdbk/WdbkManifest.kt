@@ -1,8 +1,8 @@
 package com.launchpoint.stereosine.data.backup.wdbk
 
 import com.launchpoint.stereosine.data.backup.BackupManifest
-import com.launchpoint.stereosine.data.backup.WavdropBackupExporterV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupSectionParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackupExporterV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupSectionParser
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -30,7 +30,7 @@ data class WdbkEntryDescriptor(
 /**
  * `manifest.json` of a WDBK container: container identity/version, the logical-backup identity it wraps, the
  * section/count manifest, the StereoSine semantic integrity fingerprint
- * ([com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2]) and one [WdbkEntryDescriptor] per payload
+ * ([com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2]) and one [WdbkEntryDescriptor] per payload
  * entry. The manifest does not hash itself; it is the root the entry hashes hang from.
  */
 data class WdbkManifest(
@@ -48,7 +48,7 @@ data class WdbkManifest(
     val requiredCapabilities: List<String>,
     val optionalCapabilities: List<String>,
     val counts: BackupManifest,
-    /** [com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2.fingerprint] of the logical backup. */
+    /** [com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2.fingerprint] of the logical backup. */
     val fingerprint: String,
     val entries: List<WdbkEntryDescriptor>,
 ) {
@@ -70,7 +70,7 @@ data class WdbkManifest(
         })
         put("requiredCapabilities", JSONArray().apply { requiredCapabilities.forEach { put(it) } })
         put("optionalCapabilities", JSONArray().apply { optionalCapabilities.forEach { put(it) } })
-        put("counts", WavdropBackupExporterV2.manifestObject(counts))
+        put("counts", StereoSineBackupExporterV2.manifestObject(counts))
         put("integrity", JSONObject().apply {
             put("v", 2)
             put("fingerprint", fingerprint)
@@ -150,7 +150,7 @@ data class WdbkManifest(
                 appVersionName       = producer?.get("appVersionName") as? String,
                 requiredCapabilities = map.stringList("requiredCapabilities"),
                 optionalCapabilities = map.stringList("optionalCapabilities"),
-                counts               = WavdropBackupSectionParser.manifestFromCounts(counts),
+                counts               = StereoSineBackupSectionParser.manifestFromCounts(counts),
                 fingerprint          = integrity["fingerprint"] as? String ?: throw WdbkFormatException("Missing integrity fingerprint"),
                 entries              = entries,
             )

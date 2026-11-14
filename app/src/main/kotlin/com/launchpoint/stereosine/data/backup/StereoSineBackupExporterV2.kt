@@ -4,14 +4,14 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Serialises a [WavdropBackup] to Backup format v2 JSON.
+ * Serialises a [StereoSineBackup] to Backup format v2 JSON.
  *
  * v2 differences from v1:
  *  - `version: 2`, `formatMajor: 2`, `formatMinor: 0`
  *  - `backupId`, `sourceInstallationId`, `exportedAt` (epoch ms integer) at root
  *  - `producer` block with platform metadata
  *  - `requiredCapabilities` / `optionalCapabilities` arrays
- *  - `integrity` object (required); computed from [WavdropBackupIntegrityV2]
+ *  - `integrity` object (required); computed from [StereoSineBackupIntegrityV2]
  *  - Opaque IDs (song id, albumId, playlist id, stat songId, …) serialised as JSON strings
  *  - `trackStats` entries include `lastListenedAt` (required integer)
  *  - `payloadSha256` is not written (v1 only)
@@ -20,14 +20,14 @@ import org.json.JSONObject
  * embedded in `integrity.fingerprint`. The fingerprint covers all payload fields but
  * not the integrity object itself.
  */
-object WavdropBackupExporterV2 {
+object StereoSineBackupExporterV2 {
 
-    fun toJson(backup: WavdropBackup): String {
+    fun toJson(backup: StereoSineBackup): String {
         requireNotNull(backup.backupId) { "backupId must be set for v2 export" }
         requireNotNull(backup.sourceInstallationId) { "sourceInstallationId must be set for v2 export" }
         requireNotNull(backup.exportedAtMs) { "exportedAtMs must be set for v2 export" }
 
-        val fingerprint = WavdropBackupIntegrityV2.fingerprint(backup)
+        val fingerprint = StereoSineBackupIntegrityV2.fingerprint(backup)
         val manifest = BackupManifest.of(backup)
 
         return JSONObject().apply {

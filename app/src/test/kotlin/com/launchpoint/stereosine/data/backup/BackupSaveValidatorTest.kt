@@ -10,14 +10,14 @@ class BackupSaveValidatorTest {
 
     @Test
     fun `manual export read-back validation succeeds for parser-valid backup`() {
-        val json = WavdropBackupExporter.toJson(minimalBackup())
+        val json = StereoSineBackupExporter.toJson(minimalBackup())
 
         assertTrue(BackupSaveValidator.isSavedBackupValid(json))
     }
 
     @Test
     fun `manual export read-back validation fails for damaged backup`() {
-        val json = WavdropBackupExporter.toJson(minimalBackup())
+        val json = StereoSineBackupExporter.toJson(minimalBackup())
         val damaged = JSONObject(json).apply {
             getJSONObject("manifest").put("songCount", 99)
         }.toString(2)
@@ -35,7 +35,7 @@ class BackupSaveValidatorTest {
         assertFalse(BackupSaveValidator.isSavedBackupValid(null))
     }
 
-    private fun minimalBackup() = WavdropBackup(
+    private fun minimalBackup() = StereoSineBackup(
         exportedAt = "2026-06-11T10:00:00Z",
         songs = listOf(
             BackupSong(

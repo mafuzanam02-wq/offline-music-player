@@ -59,7 +59,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Singleton
-class WavdropBackupRepository @Inject constructor(
+class StereoSineBackupRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dataStore: DataStore<Preferences>,
     private val songDao: SongDao,
@@ -157,7 +157,7 @@ class WavdropBackupRepository @Inject constructor(
      * unchanged; it deliberately keeps the original whole-history snapshot read.
      */
     suspend fun buildBackupJson(): String = withContext(Dispatchers.IO) {
-        WavdropBackupExporterV2.toJson(
+        StereoSineBackupExporterV2.toJson(
             assembleBackup { songById ->
                 trackListenEventDao.getAllSnapshot()
                     .filter { BackupEventExportRules.shouldExport(it.source) }
@@ -169,7 +169,7 @@ class WavdropBackupRepository @Inject constructor(
     /** Single authority for collecting the logical backup; only the listen-event source differs between packagings. */
     private suspend fun assembleBackup(
         loadListenEvents: suspend (songById: Map<Long, SongEntity>) -> List<BackupListenEvent>,
-    ): WavdropBackup {
+    ): StereoSineBackup {
         val songs      = songDao.getAllSongsSnapshot()
         val stats      = trackStatsDao.getAllStatsSnapshot()
         val baselines  = importBaselineDao.getAllImportBaselinesSnapshot()
@@ -286,7 +286,7 @@ class WavdropBackupRepository @Inject constructor(
         )
 
         val exportedAtMs = System.currentTimeMillis()
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt           = "",
             exportedAtMs         = exportedAtMs,
             backupId             = UUID.randomUUID().toString(),

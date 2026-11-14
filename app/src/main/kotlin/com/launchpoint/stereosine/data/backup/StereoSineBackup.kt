@@ -31,7 +31,7 @@ data class BackupTrackStats(
      * null  = parsed from a v1 backup (field absent in v1 format).
      * ≥ 0   = parsed from a v2 backup; 0 means no qualifying listen occurred.
      *
-     * The import path branches on [WavdropBackup.sourceVersion] — never on this value
+     * The import path branches on [StereoSineBackup.sourceVersion] — never on this value
      * being null vs 0 — to decide which effective lastListenedAt to apply.
      */
     val lastListenedAt: Long? = null,
@@ -190,7 +190,7 @@ data class BackupManifest(
     val preferenceCount: Int,
 ) {
     /** True when every validated count matches the backup's actual content. */
-    fun matchesContentOf(backup: WavdropBackup): Boolean =
+    fun matchesContentOf(backup: StereoSineBackup): Boolean =
         songCount == backup.songs.size &&
             trackStatsCount == backup.trackStats.size &&
             listenEventCount == backup.listenEvents.size &&
@@ -199,7 +199,7 @@ data class BackupManifest(
             playlistCount == backup.playlists.size
 
     companion object {
-        fun of(backup: WavdropBackup): BackupManifest = BackupManifest(
+        fun of(backup: StereoSineBackup): BackupManifest = BackupManifest(
             songCount           = backup.songs.size,
             trackStatsCount     = backup.trackStats.size,
             listenEventCount    = backup.listenEvents.size,
@@ -253,7 +253,7 @@ data class BackupManifest(
     }
 }
 
-data class WavdropBackup(
+data class StereoSineBackup(
     /** ISO-8601 string used by v1 exports. Empty string for v2 (use [exportedAtMs] instead). */
     val exportedAt: String,
     val songs: List<BackupSong>,

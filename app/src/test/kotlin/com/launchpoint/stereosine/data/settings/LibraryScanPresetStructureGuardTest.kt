@@ -89,7 +89,7 @@ class LibraryScanPresetStructureGuardTest {
             val t = f.readText()
             assertFalse("${f.name} must not carry preset exclusions", t.contains("excludedPresetFolders") || t.contains("LibraryScanExclusion"))
         }
-        assertFalse(src("data/backup/WavdropBackup.kt").contains("xclusion"))
+        assertFalse(src("data/backup/StereoSineBackup.kt").contains("xclusion"))
     }
 
     @Test fun `no schema permission or logging of folder paths was added`() {

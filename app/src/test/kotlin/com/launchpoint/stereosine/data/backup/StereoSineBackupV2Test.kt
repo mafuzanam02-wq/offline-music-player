@@ -14,11 +14,11 @@ import org.junit.Test
  * Covers required tests 1–16 and 19–25 from the slice contract.
  * Migration tests (17–18) live in StereoSineDatabaseMigrationTest (instrumentation).
  */
-class WavdropBackupV2Test {
+class StereoSineBackupV2Test {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun v1Backup() = WavdropBackup(
+    private fun v1Backup() = StereoSineBackup(
         exportedAt      = "2026-06-11T10:00:00Z",
         songs           = listOf(
             BackupSong(1L, "content://media/1", "Ghost Song", "Doors", "Other Voices",
@@ -39,7 +39,7 @@ class WavdropBackupV2Test {
         sourceInstallationId: String = "00000000-0000-0000-0000-000000000002",
         exportedAtMs: Long = 1_782_230_400_000L,
         lastListenedAt: Long = 1_782_230_100_000L,
-    ) = WavdropBackup(
+    ) = StereoSineBackup(
         exportedAt           = "",
         exportedAtMs         = exportedAtMs,
         backupId             = backupId,
@@ -59,17 +59,17 @@ class WavdropBackupV2Test {
         importBaselines      = emptyList(),
     )
 
-    private fun v2Json(backup: WavdropBackup = v2Backup()): String =
-        WavdropBackupExporterV2.toJson(backup)
+    private fun v2Json(backup: StereoSineBackup = v2Backup()): String =
+        StereoSineBackupExporterV2.toJson(backup)
 
-    private fun v1Json(backup: WavdropBackup = v1Backup()): String =
-        WavdropBackupExporter.toJson(backup)
+    private fun v1Json(backup: StereoSineBackup = v1Backup()): String =
+        StereoSineBackupExporter.toJson(backup)
 
     // ── Test 1: v1 backup parses as V1 with correct integrity status ──────────
 
     @Test
     fun `test 1 - v1 backup parses as V1 format`() {
-        val result = WavdropBackupParser.parse(v1Json())
+        val result = StereoSineBackupParser.parse(v1Json())
         assertNotNull(result.backup)
         assertEquals(BackupFormatVersion.V1, result.backup!!.sourceVersion)
         // v1 with payloadSha256 present → VERIFIED
@@ -80,7 +80,7 @@ class WavdropBackupV2Test {
 
     @Test
     fun `test 2 - v2 valid backup parses as VERIFIED`() {
-        val result = WavdropBackupParser.parse(v2Json())
+        val result = StereoSineBackupParser.parse(v2Json())
         assertNotNull("v2 parse failed: ${result.error}", result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
         assertEquals(BackupFormatVersion.V2, result.backup!!.sourceVersion)
@@ -91,7 +91,7 @@ class WavdropBackupV2Test {
     @Test
     fun `test 3 - v2 without integrity field is INVALID`() {
         val json = JSONObject(v2Json()).apply { remove("integrity") }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull(result.backup)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
@@ -104,9 +104,9 @@ class WavdropBackupV2Test {
         val tampered = JSONObject(json).apply {
             getJSONArray("trackStats").getJSONObject(0).put("lastListenedAt", 9_999_999_999L)
         }.toString(2)
-        val result = WavdropBackupParser.parse(tampered)
+        val result = StereoSineBackupParser.parse(tampered)
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, result.error)
     }
 
     // ── Test 5: fingerprint changes when only lastListenedAt changes ──────────
@@ -115,8 +115,8 @@ class WavdropBackupV2Test {
     fun `test 5 - v2 fingerprint changes when only lastListenedAt changes`() {
         val base = v2Backup(lastListenedAt = 1_000L)
         val changed = v2Backup(lastListenedAt = 2_000L)
-        val baseFp = WavdropBackupIntegrityV2.fingerprint(base)
-        val changedFp = WavdropBackupIntegrityV2.fingerprint(changed)
+        val baseFp = StereoSineBackupIntegrityV2.fingerprint(base)
+        val changedFp = StereoSineBackupIntegrityV2.fingerprint(changed)
         assertTrue("Fingerprints must differ when lastListenedAt changes", baseFp != changedFp)
     }
 
@@ -126,7 +126,7 @@ class WavdropBackupV2Test {
     fun `test 6 - v2 fingerprint changes when only exportedAtMs changes`() {
         val base = v2Backup(exportedAtMs = 1_000L)
         val changed = v2Backup(exportedAtMs = 2_000L)
-        assertTrue(WavdropBackupIntegrityV2.fingerprint(base) != WavdropBackupIntegrityV2.fingerprint(changed))
+        assertTrue(StereoSineBackupIntegrityV2.fingerprint(base) != StereoSineBackupIntegrityV2.fingerprint(changed))
     }
 
     // ── Test 7: fingerprint changes when only backupId changes ───────────────
@@ -135,7 +135,7 @@ class WavdropBackupV2Test {
     fun `test 7 - v2 fingerprint changes when only backupId changes`() {
         val base = v2Backup(backupId = "aaaa-1111")
         val changed = v2Backup(backupId = "bbbb-2222")
-        assertTrue(WavdropBackupIntegrityV2.fingerprint(base) != WavdropBackupIntegrityV2.fingerprint(changed))
+        assertTrue(StereoSineBackupIntegrityV2.fingerprint(base) != StereoSineBackupIntegrityV2.fingerprint(changed))
     }
 
     // ── Test 8: fingerprint changes when only sourceInstallationId changes ────
@@ -144,7 +144,7 @@ class WavdropBackupV2Test {
     fun `test 8 - v2 fingerprint changes when only sourceInstallationId changes`() {
         val base = v2Backup(sourceInstallationId = "install-aaa")
         val changed = v2Backup(sourceInstallationId = "install-bbb")
-        assertTrue(WavdropBackupIntegrityV2.fingerprint(base) != WavdropBackupIntegrityV2.fingerprint(changed))
+        assertTrue(StereoSineBackupIntegrityV2.fingerprint(base) != StereoSineBackupIntegrityV2.fingerprint(changed))
     }
 
     // ── Test 9: v2 missing lastListenedAt fails parsing ───────────────────────
@@ -154,7 +154,7 @@ class WavdropBackupV2Test {
         val json = JSONObject(v2Json()).apply {
             getJSONArray("trackStats").getJSONObject(0).remove("lastListenedAt")
         }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull(result.backup)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
@@ -164,7 +164,7 @@ class WavdropBackupV2Test {
     @Test
     fun `test 10 - v2 lastListenedAt=0 is valid (no qualifying listen occurred)`() {
         val backup = v2Backup(lastListenedAt = 0L)
-        val result = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(backup))
+        val result = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(backup))
         assertNotNull("Parse failed: ${result.error}", result.backup)
         assertEquals(0L, result.backup!!.trackStats[0].lastListenedAt)
     }
@@ -245,7 +245,7 @@ class WavdropBackupV2Test {
         )
         val backup = v2Backup(lastListenedAt = 9_000L)  // newer than local 1000
 
-        // Simulate the effect check that WavdropMergePreviewAnalyzer performs:
+        // Simulate the effect check that StereoSineMergePreviewAnalyzer performs:
         val stat = backup.trackStats[0]
         val effectiveLastListenedAt = stat.lastListenedAt!!
         val effect = StatsRestoreStrategy.computeEffect(
@@ -309,7 +309,7 @@ class WavdropBackupV2Test {
     fun `test 19 - v2 opaque IDs accept valid digit strings`() {
         // Build each backup from the model with the specific ID so the fingerprint is correct.
         for (id in listOf(0L, 1L, 3316L, Long.MAX_VALUE)) {
-            val backup = WavdropBackup(
+            val backup = StereoSineBackup(
                 exportedAt = "", exportedAtMs = 1_000L,
                 backupId = "bkp-001", sourceInstallationId = "inst-001",
                 sourceVersion = BackupFormatVersion.V2,
@@ -324,8 +324,8 @@ class WavdropBackupV2Test {
                 ),
                 importBaselines = emptyList(),
             )
-            val json = WavdropBackupExporterV2.toJson(backup)
-            val result = WavdropBackupParser.parse(json)
+            val json = StereoSineBackupExporterV2.toJson(backup)
+            val result = StereoSineBackupParser.parse(json)
             assertNotNull("ID '$id' should be valid; error=${result.error}", result.backup)
         }
     }
@@ -368,7 +368,7 @@ class WavdropBackupV2Test {
         // The JSON has the id as a string, so we replace the string value directly.
         val validJson = v2Json()
         val patched = validJson.replace("\"3316\"", "\"$badId\"")
-        val result = WavdropBackupParser.parse(patched)
+        val result = StereoSineBackupParser.parse(patched)
         assertNull(
             "Opaque ID '$badId' should be rejected, but parse succeeded",
             result.backup,
@@ -382,7 +382,7 @@ class WavdropBackupV2Test {
         val json = v2Json()
         val patched = json.replace("\"lastPlayedAt\": 1782230000000", "\"lastPlayedAt\": 1.78223e12")
         if (patched == json) return  // formatting guard — field not found, skip
-        val result = WavdropBackupParser.parse(patched)
+        val result = StereoSineBackupParser.parse(patched)
         assertNull("Decimal/exponent lastPlayedAt should be rejected", result.backup)
     }
 
@@ -393,7 +393,7 @@ class WavdropBackupV2Test {
         // The exporter writes the exact Long value; we patch it to a fraction.
         val badJson = json.replace("\"lastListenedAt\": 1782230100000", "\"lastListenedAt\": 1.5")
         if (badJson == json) return
-        val result = WavdropBackupParser.parse(badJson)
+        val result = StereoSineBackupParser.parse(badJson)
         assertNull("Fractional lastListenedAt should be rejected", result.backup)
     }
 
@@ -407,7 +407,7 @@ class WavdropBackupV2Test {
             // just verify the parser returns failure before reaching integrity check.
         }.toString(2)
         // Note: the modified JSON will fail integrity, but the capability check fires first.
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull(result.backup)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
@@ -435,7 +435,7 @@ class WavdropBackupV2Test {
         // We verify the contract by confirming the parsed backup is NOT null when
         // optionalCapabilities is empty (no unknown caps) in normal flow.
         val json = v2Json(base)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNotNull(result.backup)
         assertTrue("No warnings expected when optionalCapabilities is empty", result.warnings.isEmpty())
     }
@@ -447,7 +447,7 @@ class WavdropBackupV2Test {
         val json = JSONObject(v2Json()).apply {
             put("formatMajor", 3)
         }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull(result.backup)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
@@ -457,7 +457,7 @@ class WavdropBackupV2Test {
         val json = JSONObject(v2Json()).apply {
             put("formatMajor", 1)
         }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull(result.backup)
     }
 
@@ -468,9 +468,9 @@ class WavdropBackupV2Test {
         val json = JSONObject(v2Json()).apply {
             put("version", 3)
         }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.NEWER_VERSION_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.NEWER_VERSION_ERROR, result.error)
     }
 
     // ── Additional v2-specific fingerprint completeness tests ─────────────────
@@ -480,15 +480,15 @@ class WavdropBackupV2Test {
         val v1 = v1Backup()
         val v2 = v2Backup()
         // v2 fingerprint includes header record, v1 does not
-        val v1Fp = WavdropBackupIntegrity.payloadFingerprint(v1)
-        val v2Fp = WavdropBackupIntegrityV2.fingerprint(v2)
+        val v1Fp = StereoSineBackupIntegrity.payloadFingerprint(v1)
+        val v2Fp = StereoSineBackupIntegrityV2.fingerprint(v2)
         assertTrue("v1 and v2 fingerprints must differ", v1Fp != v2Fp)
     }
 
     @Test
     fun `v2 export + parse round-trips lastListenedAt exactly`() {
         val original = v2Backup(lastListenedAt = 1_782_230_100_000L)
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(original)).backup!!
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(original)).backup!!
         assertEquals(1_782_230_100_000L, parsed.trackStats[0].lastListenedAt)
     }
 
@@ -498,7 +498,7 @@ class WavdropBackupV2Test {
             backupId = "test-backup-id-abc",
             sourceInstallationId = "test-install-id-xyz",
         )
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(original)).backup!!
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(original)).backup!!
         assertEquals("test-backup-id-abc", parsed.backupId)
         assertEquals("test-install-id-xyz", parsed.sourceInstallationId)
     }
@@ -506,14 +506,14 @@ class WavdropBackupV2Test {
     @Test
     fun `v2 export + parse round-trips exportedAtMs`() {
         val original = v2Backup(exportedAtMs = 1_782_230_400_000L)
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(original)).backup!!
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(original)).backup!!
         assertEquals(1_782_230_400_000L, parsed.exportedAtMs)
     }
 
     @Test
     fun `v1 backup still produces VERIFIED with existing payloadSha256`() {
-        val json = WavdropBackupExporter.toJson(v1Backup())
-        val result = WavdropBackupParser.parse(json)
+        val json = StereoSineBackupExporter.toJson(v1Backup())
+        val result = StereoSineBackupParser.parse(json)
         assertNotNull(result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
         assertEquals(BackupFormatVersion.V1, result.backup!!.sourceVersion)
@@ -522,11 +522,11 @@ class WavdropBackupV2Test {
 
     @Test
     fun `v1 legacy backup without checksum parses as UNVERIFIED_LEGACY`() {
-        val json = JSONObject(WavdropBackupExporter.toJson(v1Backup())).apply {
+        val json = JSONObject(StereoSineBackupExporter.toJson(v1Backup())).apply {
             remove("manifest")
             remove("payloadSha256")
         }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNotNull(result.backup)
         assertEquals(BackupIntegrityStatus.UNVERIFIED_LEGACY, result.integrityStatus)
     }
@@ -537,7 +537,7 @@ class WavdropBackupV2Test {
     fun `canonical fingerprint is invariant to song insertion order`() {
         val songA = BackupSong(1L, "content://media/1", "Aaa", "Art", "Alb", 1L, 100L, 0L, 1, 2020)
         val songB = BackupSong(2L, "content://media/2", "Bbb", "Art", "Alb", 1L, 100L, 0L, 2, 2020)
-        val base = WavdropBackup(
+        val base = StereoSineBackup(
             exportedAt = "", exportedAtMs = 1_000L,
             backupId = "bkp", sourceInstallationId = "inst",
             sourceVersion = BackupFormatVersion.V2,
@@ -547,8 +547,8 @@ class WavdropBackupV2Test {
         val reversed = base.copy(songs = listOf(songB, songA))
         assertEquals(
             "Fingerprint must be identical regardless of songs list order",
-            WavdropBackupIntegrityV2.fingerprint(base),
-            WavdropBackupIntegrityV2.fingerprint(reversed),
+            StereoSineBackupIntegrityV2.fingerprint(base),
+            StereoSineBackupIntegrityV2.fingerprint(reversed),
         )
     }
 
@@ -556,7 +556,7 @@ class WavdropBackupV2Test {
     fun `canonical fingerprint is invariant to trackStats insertion order`() {
         val statA = BackupTrackStats(1L, "content://media/1", 5, 0, 100L, 50_000L, false, 90L)
         val statB = BackupTrackStats(2L, "content://media/2", 3, 1, 200L, 30_000L, false, 190L)
-        val base = WavdropBackup(
+        val base = StereoSineBackup(
             exportedAt = "", exportedAtMs = 1_000L,
             backupId = "bkp", sourceInstallationId = "inst",
             sourceVersion = BackupFormatVersion.V2,
@@ -565,8 +565,8 @@ class WavdropBackupV2Test {
         )
         val reversed = base.copy(trackStats = listOf(statB, statA))
         assertEquals(
-            WavdropBackupIntegrityV2.fingerprint(base),
-            WavdropBackupIntegrityV2.fingerprint(reversed),
+            StereoSineBackupIntegrityV2.fingerprint(base),
+            StereoSineBackupIntegrityV2.fingerprint(reversed),
         )
     }
 
@@ -574,7 +574,7 @@ class WavdropBackupV2Test {
     fun `canonical fingerprint is invariant to listenEvents insertion order`() {
         val eventA = BackupListenEvent(1L, "uri1", "T1", "A", "Alb", "PLAY", 100L, 30_000L, 180_000L, "wavdrop_playback")
         val eventB = BackupListenEvent(2L, "uri2", "T2", "A", "Alb", "PLAY", 200L, 30_000L, 180_000L, "wavdrop_playback")
-        val base = WavdropBackup(
+        val base = StereoSineBackup(
             exportedAt = "", exportedAtMs = 1_000L,
             backupId = "bkp", sourceInstallationId = "inst",
             sourceVersion = BackupFormatVersion.V2,
@@ -583,8 +583,8 @@ class WavdropBackupV2Test {
         )
         val reversed = base.copy(listenEvents = listOf(eventB, eventA))
         assertEquals(
-            WavdropBackupIntegrityV2.fingerprint(base),
-            WavdropBackupIntegrityV2.fingerprint(reversed),
+            StereoSineBackupIntegrityV2.fingerprint(base),
+            StereoSineBackupIntegrityV2.fingerprint(reversed),
         )
     }
 
@@ -607,7 +607,7 @@ class WavdropBackupV2Test {
             versionInFile > v1SupportedVersion,
         )
         // Confirm the current parser (v2-capable) correctly parses it as VERIFIED
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNotNull("v2-capable parser must accept version=2", result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
     }
@@ -616,7 +616,7 @@ class WavdropBackupV2Test {
 
     @Test
     fun `backupId is a valid UUID-like string`() {
-        // WavdropBackupRepository generates via UUID.randomUUID().toString() — verify format.
+        // StereoSineBackupRepository generates via UUID.randomUUID().toString() — verify format.
         val uuidRegex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
         val id = java.util.UUID.randomUUID().toString()
         assertTrue("UUID.randomUUID().toString() must match UUID format", id.matches(uuidRegex))
@@ -646,19 +646,19 @@ class WavdropBackupV2Test {
         // purposes, but it is never written to DataStore (the local identity store).
         // This test verifies the parsed model carries it as a read-only field only.
         val backup = v2Backup(sourceInstallationId = "remote-install-id")
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(backup)).backup!!
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(backup)).backup!!
         // The parsed backup carries the remote ID (needed for integrity re-check)
         assertEquals("remote-install-id", parsed.sourceInstallationId)
         // Nothing in the backup model provides a setter or write-back to DataStore.
-        // The WavdropBackupImportRepository does not touch DataStore.
-        // (DataStore lifecycle is managed exclusively by WavdropBackupRepository.getOrCreateInstallationId())
+        // The StereoSineBackupImportRepository does not touch DataStore.
+        // (DataStore lifecycle is managed exclusively by StereoSineBackupRepository.getOrCreateInstallationId())
     }
 
     // ── Task C #5: Optional capability warning UI propagation ─────────────────
 
     @Test
     fun `parser returns no warnings for empty optionalCapabilities`() {
-        val result = WavdropBackupParser.parse(v2Json())
+        val result = StereoSineBackupParser.parse(v2Json())
         assertNotNull(result.backup)
         assertTrue("No warnings expected for empty optionalCapabilities", result.warnings.isEmpty())
     }
@@ -668,7 +668,7 @@ class WavdropBackupV2Test {
         val json = JSONObject(v2Json()).apply {
             put("requiredCapabilities", org.json.JSONArray().put("track_identity_v1"))
         }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull("Unknown required capability must block import", result.backup)
         // On capability rejection the warnings list is irrelevant; backup is null
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -681,7 +681,7 @@ class WavdropBackupV2Test {
     )
 
     private fun fingerprintOf(events: List<BackupListenEvent>): String =
-        WavdropBackupIntegrityV2.fingerprint(eventBackup(events))
+        StereoSineBackupIntegrityV2.fingerprint(eventBackup(events))
 
     private fun makeEvent(
         occurredAt: Long = 1_782_230_000_000L,
@@ -765,7 +765,7 @@ class WavdropBackupV2Test {
         // Re-compute integrity over modified JSON (fingerprint mismatch expected; use v1-like path
         // that skips integrity — we want to validate warning plumbing, not integrity).
         // For plumbing test, parse directly and inspect warnings.
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         // The backup may be rejected due to integrity mismatch (expected — JSON modified without
         // updating the fingerprint). What we verify is that IF the parser accepts it, warnings
         // are non-empty. Alternatively verify the warning message content from the parser source.
@@ -789,14 +789,14 @@ class WavdropBackupV2Test {
     fun `optional capability warning does not block import — backup field is non-null`() {
         // Build a valid v2 backup with an unknown optional capability but correct integrity.
         val baseBackup = v2Backup()
-        val json = JSONObject(WavdropBackupExporterV2.toJson(baseBackup)).apply {
+        val json = JSONObject(StereoSineBackupExporterV2.toJson(baseBackup)).apply {
             // Insert unknown optional capability AFTER the fingerprint is computed, so integrity
             // check will fail. This test verifies parser wiring at unit level only.
             // The real proof that optional capabilities are non-blocking is the parser logic:
             // unknown optional → warning added, parsing continues; unknown required → null backup.
         }
         // Direct unit-level check: a backup with no optionalCapabilities parses cleanly.
-        val result = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(baseBackup))
+        val result = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(baseBackup))
         assertNotNull("Valid v2 backup without unknown capabilities must parse successfully", result.backup)
         assertTrue("No warnings expected when optionalCapabilities is empty", result.warnings.isEmpty())
     }
@@ -817,28 +817,28 @@ class WavdropBackupV2Test {
 
     @Test
     fun `phase5 - v2 backup without eventId still parses with null eventId`() {
-        val result = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(v2BackupWithEvent(eventId = null)))
+        val result = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(v2BackupWithEvent(eventId = null)))
         assertNotNull("Parse failed: ${result.error}", result.backup)
         assertNull(result.backup!!.listenEvents[0].eventId)
     }
 
     @Test
     fun `phase5 - v2 backup with eventId parses correctly`() {
-        val result = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(v2BackupWithEvent(eventId = "evt-123")))
+        val result = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(v2BackupWithEvent(eventId = "evt-123")))
         assertNotNull("Parse failed: ${result.error}", result.backup)
         assertEquals("evt-123", result.backup!!.listenEvents[0].eventId)
     }
 
     @Test
     fun `phase5 - export omits eventId key when null`() {
-        val json = WavdropBackupExporterV2.toJson(v2BackupWithEvent(eventId = null))
+        val json = StereoSineBackupExporterV2.toJson(v2BackupWithEvent(eventId = null))
         val event = JSONObject(json).getJSONArray("listenEvents").getJSONObject(0)
         assertTrue("eventId key must be absent when null", !event.has("eventId"))
     }
 
     @Test
     fun `phase5 - export includes eventId key when non-null`() {
-        val json = WavdropBackupExporterV2.toJson(v2BackupWithEvent(eventId = "evt-xyz"))
+        val json = StereoSineBackupExporterV2.toJson(v2BackupWithEvent(eventId = "evt-xyz"))
         val event = JSONObject(json).getJSONArray("listenEvents").getJSONObject(0)
         assertEquals("evt-xyz", event.getString("eventId"))
     }
@@ -846,7 +846,7 @@ class WavdropBackupV2Test {
     @Test
     fun `phase5 - round-trip preserves eventId exactly`() {
         val original = v2BackupWithEvent(eventId = "evt-roundtrip-001")
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(original)).backup!!
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(original)).backup!!
         assertEquals(original.listenEvents, parsed.listenEvents)
         assertEquals("evt-roundtrip-001", parsed.listenEvents[0].eventId)
     }
@@ -858,18 +858,18 @@ class WavdropBackupV2Test {
         // Requirement 1: a null eventId contributes nothing — the model's all-null fingerprint
         // is identical to the backup re-read from JSON that has no eventId keys at all.
         val original = v2BackupWithEvent(eventId = null)
-        val json = WavdropBackupExporterV2.toJson(original)
+        val json = StereoSineBackupExporterV2.toJson(original)
         assertTrue("Exported JSON must contain no eventId key", !json.contains("eventId"))
-        val parsed = WavdropBackupParser.parse(json).backup!!
+        val parsed = StereoSineBackupParser.parse(json).backup!!
         assertEquals(
-            WavdropBackupIntegrityV2.fingerprint(original),
-            WavdropBackupIntegrityV2.fingerprint(parsed),
+            StereoSineBackupIntegrityV2.fingerprint(original),
+            StereoSineBackupIntegrityV2.fingerprint(parsed),
         )
     }
 
     @Test
     fun `phase6 - non-null eventId verifies via export then parse`() {
-        val result = WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(v2BackupWithEvent("evt-abc")))
+        val result = StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(v2BackupWithEvent("evt-abc")))
         assertNotNull("Parse/verify failed: ${result.error}", result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
     }
@@ -877,26 +877,26 @@ class WavdropBackupV2Test {
     @Test
     fun `phase6 - changing eventId changes fingerprint`() {
         assertNotEquals(
-            WavdropBackupIntegrityV2.fingerprint(v2BackupWithEvent("evt-1")),
-            WavdropBackupIntegrityV2.fingerprint(v2BackupWithEvent("evt-2")),
+            StereoSineBackupIntegrityV2.fingerprint(v2BackupWithEvent("evt-1")),
+            StereoSineBackupIntegrityV2.fingerprint(v2BackupWithEvent("evt-2")),
         )
     }
 
     @Test
     fun `phase6 - setting eventId changes fingerprint versus null`() {
         assertNotEquals(
-            WavdropBackupIntegrityV2.fingerprint(v2BackupWithEvent(eventId = null)),
-            WavdropBackupIntegrityV2.fingerprint(v2BackupWithEvent("evt-1")),
+            StereoSineBackupIntegrityV2.fingerprint(v2BackupWithEvent(eventId = null)),
+            StereoSineBackupIntegrityV2.fingerprint(v2BackupWithEvent("evt-1")),
         )
     }
 
     @Test
     fun `phase6 - tampered eventId fails integrity on parse`() {
-        val json = WavdropBackupExporterV2.toJson(v2BackupWithEvent("evt-original"))
+        val json = StereoSineBackupExporterV2.toJson(v2BackupWithEvent("evt-original"))
         val tampered = json.replace("\"evt-original\"", "\"evt-tampered\"")
-        val result = WavdropBackupParser.parse(tampered)
+        val result = StereoSineBackupParser.parse(tampered)
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, result.error)
     }
 
     @Test
@@ -906,8 +906,8 @@ class WavdropBackupV2Test {
         val base = v2Backup().copy(listenEvents = listOf(e1, e2))
         val reversed = v2Backup().copy(listenEvents = listOf(e2, e1))
         assertEquals(
-            WavdropBackupIntegrityV2.fingerprint(base),
-            WavdropBackupIntegrityV2.fingerprint(reversed),
+            StereoSineBackupIntegrityV2.fingerprint(base),
+            StereoSineBackupIntegrityV2.fingerprint(reversed),
         )
     }
 
@@ -921,8 +921,8 @@ class WavdropBackupV2Test {
         val reversed = v2Backup().copy(listenEvents = listOf(e2, e1))
         assertEquals(
             "eventId tie-breaker must make collided events order-invariant",
-            WavdropBackupIntegrityV2.fingerprint(base),
-            WavdropBackupIntegrityV2.fingerprint(reversed),
+            StereoSineBackupIntegrityV2.fingerprint(base),
+            StereoSineBackupIntegrityV2.fingerprint(reversed),
         )
     }
 
@@ -932,14 +932,14 @@ class WavdropBackupV2Test {
         val integrityBeforeOverlay = base.getJSONObject("integrity").getString("fingerprint")
         base.put("desktopOverlay", desktopOverlayJson())
 
-        val result = WavdropBackupParser.parse(base.toString(2))
+        val result = StereoSineBackupParser.parse(base.toString(2))
 
         assertNotNull("Parse failed: ${result.error}", result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
         assertEquals(integrityBeforeOverlay, base.getJSONObject("integrity").getString("fingerprint"))
         assertEquals(1, result.backup!!.desktopOverlay!!.schemaVersion)
         assertEquals("desktop", result.backup!!.desktopOverlay!!.producerPlatform)
-        assertEquals(integrityBeforeOverlay, WavdropBackupIntegrityV2.fingerprint(result.backup!!))
+        assertEquals(integrityBeforeOverlay, StereoSineBackupIntegrityV2.fingerprint(result.backup!!))
     }
 
     @Test
@@ -974,7 +974,7 @@ class WavdropBackupV2Test {
             )
         }
 
-        val result = WavdropBackupParser.parse(json.toString(2))
+        val result = StereoSineBackupParser.parse(json.toString(2))
 
         assertNotNull("Parse failed: ${result.error}", result.backup)
         assertEquals("desktop-track-1", result.backup!!.desktopOverlay!!.trackStats.single().desktopTrackId)
@@ -1009,8 +1009,8 @@ class WavdropBackupV2Test {
         }
         val originalFingerprint = json.getJSONObject("integrity").getString("fingerprint")
 
-        val parsed = WavdropBackupParser.parse(json.toString(2)).backup!!
-        val exported = JSONObject(WavdropBackupExporterV2.toJson(parsed))
+        val parsed = StereoSineBackupParser.parse(json.toString(2)).backup!!
+        val exported = JSONObject(StereoSineBackupExporterV2.toJson(parsed))
 
         assertEquals(originalFingerprint, exported.getJSONObject("integrity").getString("fingerprint"))
         assertTrue(exported.getJSONObject("desktopOverlay").has("unknownRootField"))
@@ -1066,7 +1066,7 @@ class WavdropBackupV2Test {
         val json = JSONObject(v2Json()).apply {
             put("requiredCapabilities", org.json.JSONArray().put("track_identity_v1"))
         }.toString(2)
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNull("Required capability rejection must block import", result.backup)
         // Capability warnings are only for optional; on required-capability rejection there are none.
         assertTrue(

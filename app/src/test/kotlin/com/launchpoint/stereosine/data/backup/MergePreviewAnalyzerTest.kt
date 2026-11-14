@@ -12,7 +12,7 @@ import org.junit.Test
 /**
  * P1-B.1: Merge Result Accuracy and No-Op Protection.
  *
- * Covers all 8 required test cases for [WavdropMergePreviewAnalyzer]:
+ * Covers all 8 required test cases for [StereoSineMergePreviewAnalyzer]:
  *  1. Preferences-only backup → hasMergeableData=false, reason mentions "settings"
  *  2. Completely empty backup → hasMergeableData=false
  *  3. All events already present (duplicates) → hasMergeableData=false
@@ -71,7 +71,7 @@ class MergePreviewAnalyzerTest {
         },
     )
 
-    private fun emptyBackup(prefs: BackupPreferences? = null) = WavdropBackup(
+    private fun emptyBackup(prefs: BackupPreferences? = null) = StereoSineBackup(
         exportedAt      = "2026-06-23T00:00:00Z",
         songs           = emptyList(),
         trackStats      = emptyList(),
@@ -80,17 +80,17 @@ class MergePreviewAnalyzerTest {
     )
 
     private fun analyze(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         currentSongs: List<Song> = emptyList(),
         existingStats: Map<Long, com.launchpoint.stereosine.data.local.entity.TrackStatsEntity> = emptyMap(),
         existingEventFingerprints: Set<String> = emptySet(),
         existingEventIds: Set<String> = emptySet(),
         existingListenEvents: ListenEventRestorePlanner.ExistingListenEvents = ListenEventRestorePlanner.ExistingListenEvents.EMPTY,
         existingBaselines: List<ImportBaselineEntity> = emptyList(),
-        existingLyrics: Map<WavdropMergePreviewAnalyzer.ExistingLyricsKey, Long> = emptyMap(),
+        existingLyrics: Map<StereoSineMergePreviewAnalyzer.ExistingLyricsKey, Long> = emptyMap(),
         existingPlaylists: Map<String, Set<Long>> = emptyMap(),
         existingQuarantineOriginKeys: Set<String> = emptySet(),
-    ) = WavdropMergePreviewAnalyzer.analyze(
+    ) = StereoSineMergePreviewAnalyzer.analyze(
         backup                       = backup,
         currentSongs                 = currentSongs,
         existingQuarantineOriginKeys = existingQuarantineOriginKeys,
@@ -143,7 +143,7 @@ class MergePreviewAnalyzerTest {
     fun `all listen events are already present — hasMergeableData false`() {
         val songId = 1L
         val event  = backupEvent(songId, occurredAt = 1_000_000L)
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(backupSong(songId)),
             trackStats      = emptyList(),
@@ -169,7 +169,7 @@ class MergePreviewAnalyzerTest {
     @Test
     fun `all playlist entries already present — hasMergeableData false`() {
         val songId = 1L
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(backupSong(songId)),
             trackStats      = emptyList(),
@@ -194,7 +194,7 @@ class MergePreviewAnalyzerTest {
     fun `backup has stats but no local songs to match against — quarantine path makes it mergeable`() {
         // P2-A: unmatched backup tracks with data are quarantined, not silently discarded.
         // The import is therefore mergeable (the Apply button should be enabled).
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(backupSong(1L)),
             trackStats      = listOf(backupStats(1L)),
@@ -211,7 +211,7 @@ class MergePreviewAnalyzerTest {
     @Test
     fun `backup has one matched track stat — hasMergeableData true`() {
         val songId = 1L
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(backupSong(songId)),
             trackStats      = listOf(backupStats(songId, playCount = 10)),
@@ -414,7 +414,7 @@ class MergePreviewAnalyzerTest {
     @Test
     fun `android-only v2 backup is unaffected by overlay changes (test-8)`() {
         val songId = 99L
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             sourceVersion   = BackupFormatVersion.V2,
             songs           = listOf(backupSong(songId)),

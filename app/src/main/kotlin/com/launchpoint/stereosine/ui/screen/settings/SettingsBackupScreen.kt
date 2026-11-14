@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.launchpoint.stereosine.data.backup.BackupFileNames
 import com.launchpoint.stereosine.data.backup.BackupVerificationResult
 import com.launchpoint.stereosine.data.backup.VerificationStatus
 import com.launchpoint.stereosine.data.settings.AutoBackupCheckResult
@@ -79,8 +80,8 @@ fun SettingsBackupScreen(
     val suggestedExportName by remember {
         derivedStateOf {
             when (backupFileMode) {
-                BackupFileMode.DATED            -> "wavdrop-backup-${LocalDate.now()}.wdbk"
-                BackupFileMode.REPLACE_PREVIOUS -> "wavdrop-backup.wdbk"
+                BackupFileMode.DATED            -> BackupFileNames.datedName(LocalDate.now())
+                BackupFileMode.REPLACE_PREVIOUS -> BackupFileNames.fixedName()
             }
         }
     }
@@ -334,7 +335,7 @@ fun SettingsBackupScreen(
             item {
                 ScanModeRow(
                     title    = "Fixed filename",
-                    subtitle = "Always saves as wavdrop-backup.wdbk, replacing the previous file.",
+                    subtitle = "Always saves as stereosine-backup.wdbk, replacing the previous StereoSine backup. Older Wavdrop backups in the folder are kept and still recognised.",
                     selected = backupFileMode == BackupFileMode.REPLACE_PREVIOUS,
                     onClick  = { viewModel.setBackupFileMode(BackupFileMode.REPLACE_PREVIOUS) },
                 )

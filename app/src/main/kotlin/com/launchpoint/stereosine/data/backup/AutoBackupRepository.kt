@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 class AutoBackupRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val appSettingsRepository: AppSettingsRepository,
-    private val backupRepository: WavdropBackupRepository,
+    private val backupRepository: StereoSineBackupRepository,
     private val backupExecutionSerializer: BackupExecutionSerializer,
 ) {
     sealed interface Result {
@@ -110,8 +110,8 @@ class AutoBackupRepository @Inject constructor(
 
             val backupFileMode = appSettingsRepository.backupFileMode.first()
             val fileName = when (backupFileMode) {
-                BackupFileMode.DATED            -> "wavdrop-backup-${LocalDate.now()}.wdbk"
-                BackupFileMode.REPLACE_PREVIOUS -> "wavdrop-backup.wdbk"
+                BackupFileMode.DATED            -> BackupFileNames.datedName(LocalDate.now())
+                BackupFileMode.REPLACE_PREVIOUS -> BackupFileNames.fixedName()
             }
 
             val success = writeWdbkToFolder(folder, fileName)
@@ -181,7 +181,7 @@ class AutoBackupRepository @Inject constructor(
     }
 
     private companion object {
-        const val TAG = "WavdropBackup"
+        const val TAG = "StereoSineBackup"
         const val FOLDER_UNAVAILABLE_MSG =
             "Automatic backup couldn't access the selected folder. Choose a backup folder again."
     }

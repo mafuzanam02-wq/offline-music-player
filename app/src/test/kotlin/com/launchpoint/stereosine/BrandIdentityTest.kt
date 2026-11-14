@@ -1,6 +1,6 @@
 package com.launchpoint.stereosine
 
-import com.launchpoint.stereosine.data.backup.WavdropBackupParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackupParser
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkContainerVersion
 import com.launchpoint.stereosine.data.local.DATABASE_FILE_NAME
 import com.launchpoint.stereosine.data.settings.AppIconChoice
@@ -64,19 +64,19 @@ class BrandIdentityTest {
     }
 
     @Test fun `no source file or resource keeps the old package namespace except the legacy backup metadata literal`() {
-        val allowed = setOf("WavdropBackupExporter.kt", "WavdropBackupParserTest.kt", "BrandIdentityTest.kt")
+        val allowed = setOf("StereoSineBackupExporter.kt", "StereoSineBackupParserTest.kt", "BrandIdentityTest.kt")
         val roots = listOf("src/main", "src/test", "src/androidTest").map { File(moduleDir, it) }
         val offenders = roots.flatMap { r -> r.walkTopDown().filter { it.isFile && it.extension in setOf("kt", "java", "xml") }.toList() }
             .filter { it.name !in allowed && it.readText().contains("com.launchpoint.wavdrop") }
             .map { it.path }
         assertTrue("old package still referenced: $offenders", offenders.isEmpty())
         assertTrue("legacy packageName literal is kept in the exporter",
-            File(mainKotlin, "data/backup/WavdropBackupExporter.kt").readText().contains("put(\"packageName\", \"com.launchpoint.wavdrop\")"))
+            File(mainKotlin, "data/backup/StereoSineBackupExporter.kt").readText().contains("put(\"packageName\", \"com.launchpoint.wavdrop\")"))
     }
 
     @Test fun `legacy data identifiers are unchanged (compatibility, not branding)`() {
         // .wdbk / JSON backups written by Wavdrop must stay readable: these literals are format identifiers.
-        assertEquals("wavdrop_backup", WavdropBackupParser.SUPPORTED_FORMAT)
+        assertEquals("wavdrop_backup", StereoSineBackupParser.SUPPORTED_FORMAT)
         assertEquals("wavdrop_wdbk", WdbkContainerVersion.FORMAT)
         assertEquals("wavdrop_backup", WdbkContainerVersion.LOGICAL_FORMAT)
         // Persisted-store identifiers: renaming these would silently reset data in a future in-place migration.

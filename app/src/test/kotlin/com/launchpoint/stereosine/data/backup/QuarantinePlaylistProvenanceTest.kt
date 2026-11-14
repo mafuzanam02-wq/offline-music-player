@@ -28,7 +28,7 @@ class QuarantinePlaylistProvenanceTest {
     private fun entry(songId: Long, pos: Int = 0) =
         BackupPlaylistSong(songId, "content://media/$songId", pos, "Track $songId", "Artist", "Album")
 
-    private fun plan(backup: WavdropBackup, existingOriginKeys: Set<String> = emptySet()): QuarantinePlanner.Plan {
+    private fun plan(backup: StereoSineBackup, existingOriginKeys: Set<String> = emptySet()): QuarantinePlanner.Plan {
         val fp = QuarantinePlanner.backupFingerprint(backup)
         return QuarantinePlanner.plan(
             backup                = backup,
@@ -48,7 +48,7 @@ class QuarantinePlaylistProvenanceTest {
      */
     @Test
     fun `same name different id playlists produce distinct entry fingerprints`() {
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T10:00:00Z",
             songs           = listOf(song(1L)),
             trackStats      = emptyList(),
@@ -87,7 +87,7 @@ class QuarantinePlaylistProvenanceTest {
     fun `same id playlist with different display names - fingerprint is stable against rename`() {
         // This documents that a playlist renamed between two exports will be treated as the
         // same playlist by fingerprint (ID used), not as two separate playlists.
-        val backup1 = WavdropBackup(
+        val backup1 = StereoSineBackup(
             exportedAt      = "2026-06-01T10:00:00Z",
             songs           = listOf(song(5L)),
             trackStats      = emptyList(),
@@ -97,7 +97,7 @@ class QuarantinePlaylistProvenanceTest {
                     songs = listOf(entry(5L, 0))),
             ),
         )
-        val backup2 = WavdropBackup(
+        val backup2 = StereoSineBackup(
             exportedAt      = "2026-06-01T10:00:00Z", // same exportedAt → same fingerprint
             songs           = listOf(song(5L)),
             trackStats      = emptyList(),
@@ -138,7 +138,7 @@ class QuarantinePlaylistProvenanceTest {
      */
     @Test
     fun `re-importing same snapshot produces no new playlist entries`() {
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T10:00:00Z",
             songs           = listOf(song(1L), song(2L)),
             trackStats      = emptyList(),
@@ -186,14 +186,14 @@ class QuarantinePlaylistProvenanceTest {
                 songs = listOf(entry(10L, 0))),
         )
 
-        val export1 = WavdropBackup(
+        val export1 = StereoSineBackup(
             exportedAt      = "2026-06-20T08:00:00Z",
             songs           = songs,
             trackStats      = emptyList(),
             importBaselines = emptyList(),
             playlists       = playlists,
         )
-        val export2 = WavdropBackup(
+        val export2 = StereoSineBackup(
             exportedAt      = "2026-06-23T08:00:00Z", // only this field differs
             songs           = songs,
             trackStats      = emptyList(),
@@ -245,7 +245,7 @@ class QuarantinePlaylistProvenanceTest {
 
     @Test
     fun `PlaylistEntryCandidate carries all three provenance fields from source playlist`() {
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T10:00:00Z",
             songs           = listOf(song(3L)),
             trackStats      = emptyList(),

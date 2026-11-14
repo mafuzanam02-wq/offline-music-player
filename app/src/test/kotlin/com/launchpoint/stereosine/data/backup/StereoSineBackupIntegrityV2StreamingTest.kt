@@ -5,10 +5,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** The streaming fingerprint must be bit-for-bit the fingerprint the old whole-string implementation produced. */
-class WavdropBackupIntegrityV2StreamingTest {
+class StereoSineBackupIntegrityV2StreamingTest {
 
-    private fun assertSame(backup: WavdropBackup) =
-        assertEquals(ReferenceFingerprintV2.fingerprint(backup), WavdropBackupIntegrityV2.fingerprint(backup))
+    private fun assertSame(backup: StereoSineBackup) =
+        assertEquals(ReferenceFingerprintV2.fingerprint(backup), StereoSineBackupIntegrityV2.fingerprint(backup))
 
     @Test fun `identical to the reference implementation across fixtures`() {
         assertSame(RecoveryTestFixtures.v2Backup())

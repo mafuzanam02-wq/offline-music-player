@@ -41,7 +41,7 @@ class RecoverySafetySnapshotCreatorTest {
         assertTrue(r.snapshot.sizeBytes > 0 && r.snapshot.integrityFingerprint != null && r.snapshot.backupId != null)
         assertFalse("temp file is gone after the atomic replace", File(dir, RecoverySafetySnapshotCreator.TEMP_NAME).exists())
         // importable through the normal parser, as a normal v2 backup
-        val parsed = WavdropBackupParser.parse(c.latestFile.readText())
+        val parsed = StereoSineBackupParser.parse(c.latestFile.readText())
         assertEquals(BackupIntegrityStatus.VERIFIED, parsed.integrityStatus)
         assertEquals(BackupFormatVersion.V2, parsed.backup!!.sourceVersion)
         assertTrue(BackupSaveValidator.isSavedBackupValid(c.latestFile.readText()))
@@ -96,7 +96,7 @@ class RecoverySafetySnapshotCreatorTest {
         val bad = creator(build = { RecoveryTestFixtures.tampered(RecoveryTestFixtures.v2Json()) })
         assertTrue(create(bad) is SafetySnapshotResult.Failed)
         assertEquals(before, good.latestFile.readText())
-        assertNotNull(WavdropBackupParser.parse(good.latestFile.readText()).backup)
+        assertNotNull(StereoSineBackupParser.parse(good.latestFile.readText()).backup)
     }
 
     @Test fun `a replace failure blocks the snapshot and keeps the previous one`() {

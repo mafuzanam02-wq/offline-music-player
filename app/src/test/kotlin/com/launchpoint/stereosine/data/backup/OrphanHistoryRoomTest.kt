@@ -54,7 +54,7 @@ class OrphanHistoryRoomTest {
             .allowMainThreadQueries().build().also { dbs += it }
         private val file = File(RuntimeEnvironment.getApplication().cacheDir, "p17c-${UUID.randomUUID()}.preferences_pb").also { files += it }
         private val store = PreferenceDataStoreFactory.create { file }
-        val merge = WavdropBackupImportRepository(
+        val merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
@@ -62,7 +62,7 @@ class OrphanHistoryRoomTest {
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
-        val exporter = WavdropBackupRepository(
+        val exporter = StereoSineBackupRepository(
             RuntimeEnvironment.getApplication(), store, db.songDao(), db.trackStatsDao(), db.importBaselineDao(), db.lyricsOverrideDao(),
             db.playlistDao(), db.trackListenEventDao(), db.pendingBackupExtensionDao(), db.pendingTrackDao(),
             AppSettingsRepository(store), HomeLayoutSettingsRepository(store), LibraryScanSettingsRepository(store),
@@ -72,7 +72,7 @@ class OrphanHistoryRoomTest {
 
         init { runBlocking { db.songDao().upsertAll(libraryIds.map(::songEntity)) } }
 
-        suspend fun restore(backup: WavdropBackup, mode: Mode): WavdropBackupImportApplyResult =
+        suspend fun restore(backup: StereoSineBackup, mode: Mode): StereoSineBackupImportApplyResult =
             if (mode == Mode.MERGE) merge.applyImport(backup) else recovery.applyRecovery(backup)
 
         suspend fun export(f: Fmt): ByteArray = when (f) {
@@ -110,14 +110,14 @@ class OrphanHistoryRoomTest {
         backupId = id,
     )
 
-    private fun serialize(f: Fmt, b: WavdropBackup): ByteArray = when (f) {
-        Fmt.JSON -> WavdropBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
+    private fun serialize(f: Fmt, b: StereoSineBackup): ByteArray = when (f) {
+        Fmt.JSON -> StereoSineBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
         Fmt.WDBK -> WdbkTestSupport.write(b).first
     }
 
-    private fun parse(f: Fmt, bytes: ByteArray): WavdropBackup {
+    private fun parse(f: Fmt, bytes: ByteArray): StereoSineBackup {
         val r = when (f) {
-            Fmt.JSON -> WavdropBackupParser.parse(String(bytes, Charsets.UTF_8))
+            Fmt.JSON -> StereoSineBackupParser.parse(String(bytes, Charsets.UTF_8))
             Fmt.WDBK -> WdbkReader().read(ByteArrayInputStream(bytes), RecoveryTestFixtures.NOW + 1_000_000L)
         }
         assertNull(r.error, r.error)
@@ -125,7 +125,7 @@ class OrphanHistoryRoomTest {
         return r.backup!!
     }
 
-    private fun key(b: WavdropBackup, songId: Long) = QuarantinePlanner.originKey(QuarantinePlanner.backupFingerprint(b), songId)
+    private fun key(b: StereoSineBackup, songId: Long) = QuarantinePlanner.originKey(QuarantinePlanner.backupFingerprint(b), songId)
 
     private suspend fun counts(n: Node) = listOf(
         n.db.pendingTrackDao().getAllOriginKeys().size, n.db.pendingTrackDao().getAllEventFingerprints().size,
@@ -291,11 +291,11 @@ class OrphanHistoryRoomTest {
     // ── legacy input, integrity, overlay ──────────────────────────────────────
 
     @Test fun `a legacy v1 backup with an orphan keeps missing optional fields absent`() = runBlocking {
-        val v1 = WavdropBackup(
+        val v1 = StereoSineBackup(
             exportedAt = "2026-06-11T10:00:00Z", songs = emptyList(),
             trackStats = listOf(backupStats(90, 17, 3, true).copy(lastListenedAt = null)), importBaselines = emptyList(),
         )
-        val r = WavdropBackupParser.parse(WavdropBackupExporter.toJson(v1))
+        val r = StereoSineBackupParser.parse(StereoSineBackupExporter.toJson(v1))
         assertNull(r.error, r.error)
         val n = Node()
         assertFalse(n.merge.applyImport(r.backup!!).isNoOp)
@@ -305,10 +305,10 @@ class OrphanHistoryRoomTest {
     }
 
     @Test fun `tampered or incomplete orphan records are rejected, not accepted as history`() {
-        val json = WavdropBackupExporterV2.toJson(RecoveryTestFixtures.v2Backup(songs = emptyList(), stats = listOf(backupStats(90, 10, 1, false))))
-        val tampered = WavdropBackupParser.parse(RecoveryTestFixtures.tampered(json))
+        val json = StereoSineBackupExporterV2.toJson(RecoveryTestFixtures.v2Backup(songs = emptyList(), stats = listOf(backupStats(90, 10, 1, false))))
+        val tampered = StereoSineBackupParser.parse(RecoveryTestFixtures.tampered(json))
         assertTrue("integrity mismatch is not a verified backup", tampered.error != null || tampered.integrityStatus != BackupIntegrityStatus.VERIFIED)
-        val noId = WavdropBackupParser.parse(json.replaceFirst(Regex("\"songId\"\\s*:\\s*\"?90\"?\\s*,?"), ""))
+        val noId = StereoSineBackupParser.parse(json.replaceFirst(Regex("\"songId\"\\s*:\\s*\"?90\"?\\s*,?"), ""))
         assertTrue("a record with no song id at all is rejected", noId.error != null || noId.backup == null)
     }
 

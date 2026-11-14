@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.backup
 
-data class WavdropBackupImportResult(
-    val backup: WavdropBackup?,
+data class StereoSineBackupImportResult(
+    val backup: StereoSineBackup?,
     val error: String?,
     val integrityStatus: BackupIntegrityStatus,
     /**

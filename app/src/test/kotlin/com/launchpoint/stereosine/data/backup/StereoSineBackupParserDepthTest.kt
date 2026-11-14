@@ -20,7 +20,7 @@ import org.junit.Test
  * the first level beyond that is rejected deterministically with a normal
  * parser failure — never a StackOverflowError.
  */
-class WavdropBackupParserDepthTest {
+class StereoSineBackupParserDepthTest {
 
     private companion object {
         const val MAX_DEPTH = 128
@@ -36,7 +36,7 @@ class WavdropBackupParserDepthTest {
 
     // ── Fixtures reused from the v2 test shape ────────────────────────────────
 
-    private fun v2Backup() = WavdropBackup(
+    private fun v2Backup() = StereoSineBackup(
         exportedAt           = "",
         exportedAtMs         = 1_782_230_400_000L,
         backupId             = "00000000-0000-0000-0000-000000000001",
@@ -56,7 +56,7 @@ class WavdropBackupParserDepthTest {
         importBaselines      = emptyList(),
     )
 
-    private fun v2Json(): String = WavdropBackupExporterV2.toJson(v2Backup())
+    private fun v2Json(): String = StereoSineBackupExporterV2.toJson(v2Backup())
 
     private fun desktopOverlayJson(): JSONObject =
         JSONObject()
@@ -85,7 +85,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `normal v2 fixture parses`() {
-        val result = WavdropBackupParser.parse(v2Json())
+        val result = StereoSineBackupParser.parse(v2Json())
         assertNotNull("v2 parse failed: ${result.error}", result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
     }
@@ -98,7 +98,7 @@ class WavdropBackupParserDepthTest {
             put("desktopOverlay", desktopOverlayJson())
         }.toString(2)
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
         assertNotNull("desktop-overlay v2 parse failed: ${result.error}", result.backup)
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
         assertEquals(1, result.backup!!.desktopOverlay!!.schemaVersion)
@@ -110,7 +110,7 @@ class WavdropBackupParserDepthTest {
     fun `nested objects at the limit do not trigger a depth failure`() {
         // At exactly MAX_DEPTH the reader accepts the structure; the failure that
         // follows is a schema/format failure, never the depth failure.
-        val result = WavdropBackupParser.parse(nestedObjects(MAX_DEPTH))
+        val result = StereoSineBackupParser.parse(nestedObjects(MAX_DEPTH))
         assertNull(result.backup)
         assertNotEquals(DEPTH_ERROR, result.error)
     }
@@ -119,7 +119,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `nested arrays at the limit do not trigger a depth failure`() {
-        val result = WavdropBackupParser.parse(nestedArrays(MAX_DEPTH))
+        val result = StereoSineBackupParser.parse(nestedArrays(MAX_DEPTH))
         assertNull(result.backup)
         // A top-level array is well-formed JSON but not an object → "Malformed JSON".
         assertNotEquals(DEPTH_ERROR, result.error)
@@ -129,7 +129,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `object nesting above the limit is rejected with depth error`() {
-        val result = WavdropBackupParser.parse(nestedObjects(MAX_DEPTH + 1))
+        val result = StereoSineBackupParser.parse(nestedObjects(MAX_DEPTH + 1))
         assertNull(result.backup)
         assertEquals(DEPTH_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -139,7 +139,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `array nesting above the limit is rejected with depth error`() {
-        val result = WavdropBackupParser.parse(nestedArrays(MAX_DEPTH + 1))
+        val result = StereoSineBackupParser.parse(nestedArrays(MAX_DEPTH + 1))
         assertNull(result.backup)
         assertEquals(DEPTH_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -149,7 +149,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `mixed nesting above the limit is rejected with depth error`() {
-        val result = WavdropBackupParser.parse(mixedNesting(MAX_DEPTH + 1))
+        val result = StereoSineBackupParser.parse(mixedNesting(MAX_DEPTH + 1))
         assertNull(result.backup)
         assertEquals(DEPTH_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -159,7 +159,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `array nesting far beyond the limit returns a normal failure, not StackOverflowError`() {
-        val result = WavdropBackupParser.parse(nestedArrays(STRESS_DEPTH))
+        val result = StereoSineBackupParser.parse(nestedArrays(STRESS_DEPTH))
         assertNull(result.backup)
         assertEquals(DEPTH_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -167,7 +167,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `object nesting far beyond the limit returns a normal failure, not StackOverflowError`() {
-        val result = WavdropBackupParser.parse(nestedObjects(STRESS_DEPTH))
+        val result = StereoSineBackupParser.parse(nestedObjects(STRESS_DEPTH))
         assertNull(result.backup)
         assertEquals(DEPTH_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -175,7 +175,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `mixed nesting far beyond the limit returns a normal failure, not StackOverflowError`() {
-        val result = WavdropBackupParser.parse(mixedNesting(STRESS_DEPTH))
+        val result = StereoSineBackupParser.parse(mixedNesting(STRESS_DEPTH))
         assertNull(result.backup)
         assertEquals(DEPTH_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -185,7 +185,7 @@ class WavdropBackupParserDepthTest {
 
     @Test
     fun `shallow nesting well within the limit is accepted by the reader`() {
-        val result = WavdropBackupParser.parse(nestedArrays(4))
+        val result = StereoSineBackupParser.parse(nestedArrays(4))
         // Well-formed but not a backup object → not a depth failure.
         assertTrue(
             "Shallow nesting must not be rejected for depth: ${result.error}",

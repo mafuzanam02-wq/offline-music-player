@@ -54,7 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportApplyResult
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportApplyResult
 import com.launchpoint.stereosine.data.backup.BackupRestoreMode
 import com.launchpoint.stereosine.data.backup.CleanInstallRecoveryUiText
 import com.launchpoint.stereosine.ui.permission.audioPermission
@@ -633,7 +633,7 @@ private fun ConfirmApplyDialog(
 
 @Composable
 private fun AppliedContent(
-    result: WavdropBackupImportApplyResult,
+    result: StereoSineBackupImportApplyResult,
     partialRecoveryDetail: String?,
     onNavigateBack: () -> Unit,
     onChooseFolder: () -> Unit,

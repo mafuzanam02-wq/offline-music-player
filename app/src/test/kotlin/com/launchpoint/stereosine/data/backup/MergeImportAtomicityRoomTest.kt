@@ -133,7 +133,7 @@ class MergeImportAtomicityRoomTest {
     }
 
     /** The real production repository, over wrapped DAOs. */
-    private fun merge() = WavdropBackupImportRepository(
+    private fun merge() = StereoSineBackupImportRepository(
         db, db.songDao(), stats(), lyrics(), baselines(), playlists(), events(), pending(), extension(),
     )
 
@@ -417,7 +417,7 @@ class MergeImportAtomicityRoomTest {
         val before = dump()
         val lock = RestoreOperationLock()
         trace.clear()
-        var result: WavdropBackupImportApplyResult? = null
+        var result: StereoSineBackupImportApplyResult? = null
         var cancelled = false
         val job = launch(start = CoroutineStart.LAZY) {
             try {
@@ -448,7 +448,7 @@ class MergeImportAtomicityRoomTest {
         val lock = RestoreOperationLock()
         trace.clear()
         onWrite = { w -> if (w == "playlists.insertSongs") throw CancellationException("injected cancellation at a cooperative checkpoint") }
-        var result: WavdropBackupImportApplyResult? = null
+        var result: StereoSineBackupImportApplyResult? = null
         val thrown = runCatching { result = lock.tryRun { merge().applyImport(backup()) } }.exceptionOrNull()
         onWrite = null
         assertTrue("CancellationException must propagate, not be swallowed: $thrown", thrown is CancellationException)
@@ -567,7 +567,7 @@ class MergeImportAtomicityRoomTest {
     @Test fun `J6 desktop caller cancellation mid-transaction yields no result and a complete, never partial, import`() = runBlocking {
         val before = dump()
         trace.clear()
-        var result: WavdropBackupImportApplyResult? = null
+        var result: StereoSineBackupImportApplyResult? = null
         var cancelled = false
         val job = launch(start = CoroutineStart.LAZY) {
             try { result = desktop().applyImport(desktopBackup()) } catch (e: CancellationException) { cancelled = true; throw e }

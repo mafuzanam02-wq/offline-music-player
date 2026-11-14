@@ -55,12 +55,12 @@ class BackupPreferencesParityTest {
 
     @Test
     fun `parser populates every BackupPreferences field`() {
-        val result = WavdropBackupParser.parse(allFieldsBackupJson())
+        val result = StereoSineBackupParser.parse(allFieldsBackupJson())
         assertNull(result.error)
         val prefs = requireNotNull(result.backup?.preferences)
         val missing = preferenceFields().filter { it.get(prefs) == null }.map { it.name }
         assertTrue(
-            "WavdropBackupParser does not read these BackupPreferences fields: $missing",
+            "StereoSineBackupParser does not read these BackupPreferences fields: $missing",
             missing.isEmpty(),
         )
     }
@@ -69,23 +69,23 @@ class BackupPreferencesParityTest {
     fun `v1 and v2 exporters round-trip every BackupPreferences field`() {
         // Build a fully-populated instance via the parser (proven complete by the test above),
         // so this test needs no reflective data-class construction.
-        val full = requireNotNull(WavdropBackupParser.parse(allFieldsBackupJson()).backup?.preferences)
-        val backup = WavdropBackup(
+        val full = requireNotNull(StereoSineBackupParser.parse(allFieldsBackupJson()).backup?.preferences)
+        val backup = StereoSineBackup(
             exportedAt = "2026-06-01T10:00:00Z",
             songs = emptyList(),
             trackStats = emptyList(),
             importBaselines = emptyList(),
             preferences = full,
-            // v2 export mandates these header fields (WavdropBackupExporterV2 requireNotNull-s them,
-            // just as WavdropBackupRepository always sets them for a real export). The fixture must
+            // v2 export mandates these header fields (StereoSineBackupExporterV2 requireNotNull-s them,
+            // just as StereoSineBackupRepository always sets them for a real export). The fixture must
             // supply them or toJson throws before the preference round-trip is ever exercised. They
             // are v2-only and absent from v1 output, so v1 parity is unaffected.
             backupId = "test-backup-id",
             sourceInstallationId = "test-installation-id",
             exportedAtMs = 1_717_236_000_000L,
         )
-        val v1 = requireNotNull(WavdropBackupParser.parse(WavdropBackupExporter.toJson(backup)).backup?.preferences)
-        val v2 = requireNotNull(WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(backup)).backup?.preferences)
+        val v1 = requireNotNull(StereoSineBackupParser.parse(StereoSineBackupExporter.toJson(backup)).backup?.preferences)
+        val v2 = requireNotNull(StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(backup)).backup?.preferences)
         // If either exporter omits a field, the round-tripped value differs from the source.
         assertEquals("v1 exporter dropped a preference field", full, v1)
         assertEquals("v2 exporter dropped a preference field", full, v2)

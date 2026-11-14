@@ -11,11 +11,11 @@ import com.launchpoint.stereosine.data.backup.BackupPlaylist
 import com.launchpoint.stereosine.data.backup.BackupPreferences
 import com.launchpoint.stereosine.data.backup.BackupSong
 import com.launchpoint.stereosine.data.backup.BackupTrackStats
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportResult
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupParser
-import com.launchpoint.stereosine.data.backup.WavdropBackupSectionParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportResult
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackupSectionParser
 import com.launchpoint.stereosine.data.backup.BackupParseException
 import com.launchpoint.stereosine.data.backup.PendingHistoryBackup
 import com.launchpoint.stereosine.data.backup.PendingHistoryCodec
@@ -43,7 +43,7 @@ import java.util.zip.ZipInputStream
  *  4. every entry's byte length and SHA-256 match the manifest;
  *  5. section contract (required sections, contiguous history chunks, per-chunk event counts);
  *  6. logical section counts match the reconstructed model;
- *  7. the WavdropBackupIntegrityV2 semantic fingerprint of the reconstructed model matches the manifest;
+ *  7. the StereoSineBackupIntegrityV2 semantic fingerprint of the reconstructed model matches the manifest;
  *  8. stat plausibility (WD-05), same as legacy.
  *
  * Success is [BackupIntegrityStatus.VERIFIED] with a backup indistinguishable from the one the legacy v2 parser
@@ -54,7 +54,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
     fun read(
         input: InputStream,
         nowMs: Long = System.currentTimeMillis(),
-    ): WavdropBackupImportResult = try {
+    ): StereoSineBackupImportResult = try {
         decode(input, nowMs)
     } catch (e: WdbkFormatException) {
         failure(e.message ?: DAMAGED)
@@ -98,7 +98,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         var deferredParseError: BackupParseException? = null
     }
 
-    private fun decode(input: InputStream, nowMs: Long): WavdropBackupImportResult {
+    private fun decode(input: InputStream, nowMs: Long): StereoSineBackupImportResult {
         // Buffered BELOW the recorder so provider streams are read in 64 KiB blocks (ZipInputStream asks for 512 bytes).
         val tail = TailRecordingInputStream(BufferedInputStream(input, 64 * 1024), limits.maxContainerBytes)
         val zip = ZipInputStream(tail)
@@ -109,7 +109,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         }
     }
 
-    private fun decodeEntries(zip: ZipInputStream, tail: TailRecordingInputStream, nowMs: Long): WavdropBackupImportResult {
+    private fun decodeEntries(zip: ZipInputStream, tail: TailRecordingInputStream, nowMs: Long): StereoSineBackupImportResult {
         val observed = LinkedHashMap<String, Observed>()
         val collected = Collected()
         var manifestBytes: ByteArray? = null
@@ -145,7 +145,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         )
         tail.drainAndRequireZipEndRecord()
 
-        val manifest = WdbkManifest.fromParsed(WavdropBackupSectionParser.parseJson(String(rawManifest, Charsets.UTF_8)))
+        val manifest = WdbkManifest.fromParsed(StereoSineBackupSectionParser.parseJson(String(rawManifest, Charsets.UTF_8)))
         return finish(manifest, observed, collected, nowMs)
     }
 
@@ -158,7 +158,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         if (section == null && chunkIndex == null) return // unknown name: only hashed; must be declared optional later
         if (into.deferredParseError != null) return
         try {
-            val value = WavdropBackupSectionParser.parseJson(String(bytes, Charsets.UTF_8))
+            val value = StereoSineBackupSectionParser.parseJson(String(bytes, Charsets.UTF_8))
             when {
                 chunkIndex != null -> {
                     val list = value as? List<*> ?: throw BackupParseException("Field listenEvents must be an array")
@@ -166,20 +166,20 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
                     if (list.size > limits.maxEventsPerChunk) {
                         throw WdbkFormatException(DAMAGED)
                     }
-                    into.chunks[chunkIndex] = WavdropBackupSectionParser.listenEvents(list)
+                    into.chunks[chunkIndex] = StereoSineBackupSectionParser.listenEvents(list)
                 }
-                section == WdbkLayout.Section.SONGS -> into.songs = WavdropBackupSectionParser.songs(array(value, "songs"))
-                section == WdbkLayout.Section.TRACK_STATS -> into.trackStats = WavdropBackupSectionParser.trackStats(array(value, "trackStats"))
-                section == WdbkLayout.Section.IMPORT_BASELINES -> into.importBaselines = WavdropBackupSectionParser.importBaselines(array(value, "importBaselines"))
-                section == WdbkLayout.Section.LYRICS_OVERRIDES -> into.lyricsOverrides = WavdropBackupSectionParser.lyricsOverrides(array(value, "lyricsOverrides"))
-                section == WdbkLayout.Section.PLAYLISTS -> into.playlists = WavdropBackupSectionParser.playlists(array(value, "playlists"))
+                section == WdbkLayout.Section.SONGS -> into.songs = StereoSineBackupSectionParser.songs(array(value, "songs"))
+                section == WdbkLayout.Section.TRACK_STATS -> into.trackStats = StereoSineBackupSectionParser.trackStats(array(value, "trackStats"))
+                section == WdbkLayout.Section.IMPORT_BASELINES -> into.importBaselines = StereoSineBackupSectionParser.importBaselines(array(value, "importBaselines"))
+                section == WdbkLayout.Section.LYRICS_OVERRIDES -> into.lyricsOverrides = StereoSineBackupSectionParser.lyricsOverrides(array(value, "lyricsOverrides"))
+                section == WdbkLayout.Section.PLAYLISTS -> into.playlists = StereoSineBackupSectionParser.playlists(array(value, "playlists"))
                 section == WdbkLayout.Section.PREFERENCES -> {
                     val map = value as? Map<*, *> ?: throw BackupParseException("Field preferences must be an object")
-                    into.preferences = WavdropBackupSectionParser.androidPreferences(map)
+                    into.preferences = StereoSineBackupSectionParser.androidPreferences(map)
                 }
                 section == WdbkLayout.Section.DESKTOP_OVERLAY -> {
                     val map = value as? Map<*, *> ?: throw BackupParseException("Field desktopOverlay must be an object")
-                    into.overlay = WavdropBackupSectionParser.desktopOverlay(map)
+                    into.overlay = StereoSineBackupSectionParser.desktopOverlay(map)
                 }
             }
         } catch (e: BackupParseException) {
@@ -199,17 +199,17 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         observed: Map<String, Observed>,
         collected: Collected,
         nowMs: Long,
-    ): WavdropBackupImportResult {
+    ): StereoSineBackupImportResult {
         val warnings = mutableListOf<String>()
 
         // Capabilities (same rules as legacy v2).
-        manifest.requiredCapabilities.firstOrNull { it !in WavdropBackupParser.KNOWN_REQUIRED_CAPABILITIES }?.let { cap ->
+        manifest.requiredCapabilities.firstOrNull { it !in StereoSineBackupParser.KNOWN_REQUIRED_CAPABILITIES }?.let { cap ->
             throw WdbkFormatException(
                 "This backup requires a feature this version of StereoSine does not support: $cap. Update StereoSine and try again.",
                 WdbkFormatException.Kind.UNSUPPORTED,
             )
         }
-        val unknownOptional = manifest.optionalCapabilities.filter { it !in WavdropBackupParser.KNOWN_OPTIONAL_CAPABILITIES }
+        val unknownOptional = manifest.optionalCapabilities.filter { it !in StereoSineBackupParser.KNOWN_OPTIONAL_CAPABILITIES }
         if (unknownOptional.isNotEmpty()) {
             warnings += "This backup includes optional features not supported by this version of " +
                 "StereoSine. Some data may not be fully restored: ${unknownOptional.joinToString()}."
@@ -230,7 +230,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         for ((path, d) in declared) {
             val seen = observed.getValue(path)
             if (seen.length != d.byteLength || !seen.sha256.equals(d.sha256, ignoreCase = true)) {
-                throw WdbkFormatException(WavdropBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
+                throw WdbkFormatException(StereoSineBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
             }
         }
 
@@ -297,14 +297,14 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         val events = ArrayList<BackupListenEvent>(sorted.sumOf { it.eventCount ?: 0 })
         for (d in sorted) {
             val chunk = collected.chunks[d.chunkIndex] ?: throw WdbkFormatException(DAMAGED)
-            if (chunk.size != d.eventCount) throw WdbkFormatException(WavdropBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
+            if (chunk.size != d.eventCount) throw WdbkFormatException(StereoSineBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
             events.addAll(chunk)
         }
 
         val preferencesDeclared = declared.containsKey(WdbkLayout.PREFERENCES)
         if (preferencesDeclared && collected.preferences == null) throw WdbkFormatException(DAMAGED)
 
-        val sealed = WavdropBackup(
+        val sealed = StereoSineBackup(
             exportedAt = "",
             exportedAtMs = manifest.exportedAtMs,
             backupId = manifest.backupId,
@@ -324,17 +324,17 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
 
         // Logical section counts, then the semantic fingerprint — the equivalence bridge to legacy v2.
         if (!manifest.counts.matchesContentOf(sealed)) {
-            throw WdbkFormatException(WavdropBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
+            throw WdbkFormatException(StereoSineBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
         }
-        if (manifest.fingerprint != WavdropBackupIntegrityV2.fingerprint(sealed)) {
-            throw WdbkFormatException(WavdropBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
+        if (manifest.fingerprint != StereoSineBackupIntegrityV2.fingerprint(sealed)) {
+            throw WdbkFormatException(StereoSineBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
         }
-        if (!WavdropBackupSectionParser.trackStatsArePlausible(sealed.trackStats, nowMs)) {
-            throw WdbkFormatException(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR)
+        if (!StereoSineBackupSectionParser.trackStatsArePlausible(sealed.trackStats, nowMs)) {
+            throw WdbkFormatException(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR)
         }
 
         val backup = sealed.copy(desktopOverlay = if (overlayUsable) collected.overlay else null, pendingHistory = pendingHistory)
-        return WavdropBackupImportResult(
+        return StereoSineBackupImportResult(
             backup = backup,
             error = null,
             integrityStatus = BackupIntegrityStatus.VERIFIED,
@@ -370,7 +370,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         }
 
         val rawMain = collected.pendingMainBytes ?: throw WdbkFormatException(DAMAGED)
-        val section = WavdropBackupSectionParser.parseJson(String(rawMain, Charsets.UTF_8)) as? Map<*, *>
+        val section = StereoSineBackupSectionParser.parseJson(String(rawMain, Charsets.UTF_8)) as? Map<*, *>
             ?: throw BackupParseException(PendingHistoryCodec.DAMAGED)
         if (PendingHistoryCodec.schemaVersion(section) != PendingHistoryLimits.SCHEMA_VERSION.toLong()) {
             throw BackupParseException(PendingHistoryCodec.DAMAGED)   // descriptor and body disagree
@@ -385,13 +385,13 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
             val declaredCount = d.eventCount ?: throw WdbkFormatException(DAMAGED)
             if (declaredCount < 1 || declaredCount > limits.maxEventsPerChunk) throw WdbkFormatException(DAMAGED)
             val bytes = collected.pendingChunkBytes[expected] ?: throw WdbkFormatException(DAMAGED)
-            val list = WavdropBackupSectionParser.parseJson(String(bytes, Charsets.UTF_8)) as? List<*>
+            val list = StereoSineBackupSectionParser.parseJson(String(bytes, Charsets.UTF_8)) as? List<*>
                 ?: throw BackupParseException(PendingHistoryCodec.DAMAGED)
             val chunk = PendingHistoryCodec.parseEvents(list, limits.maxEventsPerChunk)
-            if (chunk.size != declaredCount) throw WdbkFormatException(WavdropBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
+            if (chunk.size != declaredCount) throw WdbkFormatException(StereoSineBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
             events.addAll(chunk)
         }
-        if (events.size.toLong() != parsed.eventCount) throw WdbkFormatException(WavdropBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
+        if (events.size.toLong() != parsed.eventCount) throw WdbkFormatException(StereoSineBackupParser.INTEGRITY_ERROR, WdbkFormatException.Kind.INTEGRITY)
 
         val history = PendingHistoryBackup(parsed.core, events)
         PendingHistoryCodec.validate(history)
@@ -508,7 +508,7 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         const val DAMAGED = "The backup file is damaged and cannot be restored."
         const val TOO_LARGE_TO_OPEN = "This backup is larger than StereoSine can safely open."
 
-        fun failure(message: String) = WavdropBackupImportResult(
+        fun failure(message: String) = StereoSineBackupImportResult(
             backup = null,
             error = message,
             integrityStatus = BackupIntegrityStatus.INVALID,

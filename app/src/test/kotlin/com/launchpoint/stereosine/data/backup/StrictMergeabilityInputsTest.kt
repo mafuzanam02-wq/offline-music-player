@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * P1-B.3: Strict Mergeability Inputs.
  *
- * [WavdropMergePreviewAnalyzer.analyze] requires [existingStats] to be supplied
+ * [StereoSineMergePreviewAnalyzer.analyze] requires [existingStats] to be supplied
  * explicitly by every caller. The default was removed so that omitting it is a
  * compile-time error. These tests verify the field-level behaviour that depends on
  * the explicitly supplied map:
@@ -66,7 +66,7 @@ class StrictMergeabilityInputsTest {
         listeningMs: Long = 0L,
         lastPlayedAt: Long = 0L,
         isFavorite: Boolean = false,
-    ) = WavdropBackup(
+    ) = StereoSineBackup(
         exportedAt      = "2026-06-23T00:00:00Z",
         songs           = listOf(
             BackupSong(songId, "content://media/$songId", "Track $songId", "Artist", "Album",
@@ -87,10 +87,10 @@ class StrictMergeabilityInputsTest {
     )
 
     private fun analyze(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         currentSongs: List<Song>,
         existingStats: Map<Long, TrackStatsEntity>,
-    ) = WavdropMergePreviewAnalyzer.analyze(
+    ) = StereoSineMergePreviewAnalyzer.analyze(
         backup                       = backup,
         currentSongs                 = currentSongs,
         existingQuarantineOriginKeys = emptySet(),

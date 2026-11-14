@@ -10,7 +10,7 @@ import org.junit.Test
 
 /**
  * P5-REL-04A - CHARACTERIZATION of how Recovery/Merge statistics matching behaves when two DIFFERENT live songs share a normalized
- * title and have durations inside [WavdropBackupStatsMatcher.DURATION_TOLERANCE_MS] (observed on the Samsung A15 as two songs titled
+ * title and have durations inside [StereoSineBackupStatsMatcher.DURATION_TOLERANCE_MS] (observed on the Samsung A15 as two songs titled
  * "Home" whose statistics stayed in pending storage while their listen events were restored).
  *
  * These tests assert CURRENT behavior. They are not a statement that the behavior is the desired end state: where a test pins a
@@ -18,7 +18,7 @@ import org.junit.Test
  * history is used.
  *
  * Mechanism pinned below:
- *  - [WavdropBackupStatsMatcher] walks its tiers in a fixed order and takes the FIRST tier that has any candidate. If that tier has
+ *  - [StereoSineBackupStatsMatcher] walks its tiers in a fixed order and takes the FIRST tier that has any candidate. If that tier has
  *    more than one distinct candidate the row is AMBIGUOUS and later (stronger-in-information) tiers are never consulted.
  *  - Folder+title+duration (tier 2) is artist-blind and precedes title+artist+album+duration (tier 3), so two songs in one folder
  *    with the same title and near-equal durations collide at tier 2 although tier 3 would identify each uniquely.
@@ -55,7 +55,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
 
     private fun backup(
         songs: List<BackupSong>, stats: List<BackupTrackStats>, events: List<BackupListenEvent> = emptyList(),
-    ) = WavdropBackup(
+    ) = StereoSineBackup(
         exportedAt = "", songs = songs, trackStats = stats, importBaselines = emptyList(), listenEvents = events,
     )
 
@@ -75,9 +75,9 @@ class StatsMatchingAmbiguityCharacterizationTest {
     fun `A - two songs with one normalized title and durations inside tolerance are both ambiguous at the path tier`() {
         val b = backup(listOf(backupNorth(), backupSouth()), bothStats())
 
-        val result = WavdropBackupStatsMatcher.match(b, live)
+        val result = StereoSineBackupStatsMatcher.match(b, live)
 
-        assertEquals("1,320 ms apart is inside the 2,000 ms tolerance", true, 170_424 - 169_104 <= WavdropBackupStatsMatcher.DURATION_TOLERANCE_MS)
+        assertEquals("1,320 ms apart is inside the 2,000 ms tolerance", true, 170_424 - 169_104 <= StereoSineBackupStatsMatcher.DURATION_TOLERANCE_MS)
         assertTrue("neither row may be attached to either song", result.matchedRows.isEmpty())
         assertEquals(2, result.unmatchedCount)
         assertEquals(2, result.diagnostics.ambiguous)
@@ -88,7 +88,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
     fun `A - the ambiguity is not an artifact of row order`() {
         val b = backup(listOf(backupSouth(), backupNorth()), bothStats().reversed())
 
-        val result = WavdropBackupStatsMatcher.match(b, live.reversed())
+        val result = StereoSineBackupStatsMatcher.match(b, live.reversed())
 
         assertTrue(result.matchedRows.isEmpty())
         assertEquals(2, result.diagnostics.ambiguous)
@@ -100,7 +100,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
     fun `B - the same rows resolve uniquely by tags plus duration when the backup carries no folder path`() {
         val b = backup(listOf(backupNorth(folder = null), backupSouth(folder = null)), bothStats())
 
-        val result = WavdropBackupStatsMatcher.match(b, live)
+        val result = StereoSineBackupStatsMatcher.match(b, live)
 
         assertEquals(2, result.matchedRows.size)
         assertEquals(2, result.diagnostics.matchedByTagsDuration)
@@ -116,7 +116,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
     fun `E - a backup folder that matches no live folder skips the path tier and the rows resolve by tags plus duration`() {
         val b = backup(listOf(backupNorth("Downloads/Old"), backupSouth("Downloads/Old")), bothStats())
 
-        val result = WavdropBackupStatsMatcher.match(b, live)
+        val result = StereoSineBackupStatsMatcher.match(b, live)
 
         assertEquals(2, result.matchedRows.size)
         assertEquals(2, result.diagnostics.matchedByTagsDuration)
@@ -129,7 +129,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
         val south = liveSouth.copy(folderPath = "Music/South")
         val b = backup(listOf(backupNorth("Music/North"), backupSouth("Music/South")), bothStats())
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(north, south))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(north, south))
 
         assertEquals(2, result.matchedRows.size)
         assertEquals(2, result.diagnostics.matchedByPath)
@@ -141,7 +141,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
     fun `statistics matcher resolves neither song while the event link resolver resolves both by unique tags`() {
         val b = backup(listOf(backupNorth(), backupSouth()), bothStats())
 
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, live)
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, live)
         val linkResolver = BackupSongLinkResolver(live, resolution.resolved, resolution.rejectedLocalIds)
 
         assertTrue("stats-side resolution is empty", resolution.resolved.isEmpty())
@@ -156,7 +156,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
             event(12, "content://media/old/12", "harbor", "Artist South", "Album Two", at = 1_700_000_100_000L, id = "evt-south-1"),
         )
         val b = backup(listOf(backupNorth(), backupSouth()), bothStats(), events)
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, live)
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, live)
         val linkResolver = BackupSongLinkResolver(live, resolution.resolved, resolution.rejectedLocalIds)
 
         val plan = ListenEventRestorePlanner.plan(
@@ -186,8 +186,8 @@ class StatsMatchingAmbiguityCharacterizationTest {
     @Test
     fun `G - ambiguous statistics are carried unchanged by the quarantine plan and attached to no live song`() {
         val b = backup(listOf(backupNorth(), backupSouth()), bothStats())
-        val match = WavdropBackupStatsMatcher.match(b, live)
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, live)
+        val match = StereoSineBackupStatsMatcher.match(b, live)
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, live)
 
         val plan = QuarantinePlanner.plan(b, "fp", resolution.resolved.keys, emptySet())
 
@@ -208,7 +208,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
     @Test
     fun `G - re-planning the same backup against its own origin keys adds nothing`() {
         val b = backup(listOf(backupNorth(), backupSouth()), bothStats())
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, live)
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, live)
         val first = QuarantinePlanner.plan(b, "fp", resolution.resolved.keys, emptySet())
 
         val again = QuarantinePlanner.plan(b, "fp", resolution.resolved.keys, first.newCandidates.map { it.originKey }.toSet())
@@ -226,7 +226,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
         val bs = bSong(21, "content://media/old/21", "Echo", "Same Artist", "Same Album", 200_400)
         val b = backup(listOf(bs), listOf(stat(21, "content://media/old/21", 4, 1)))
 
-        val match = WavdropBackupStatsMatcher.match(b, listOf(copyA, copyB))
+        val match = StereoSineBackupStatsMatcher.match(b, listOf(copyA, copyB))
         val linkResolver = BackupSongLinkResolver(listOf(copyA, copyB), emptyMap())
 
         assertTrue(match.matchedRows.isEmpty())
@@ -243,7 +243,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
         val bs = bSong(31, "content://media/old/31", "Tide", "Duo", "Deluxe Edition", 180_200, folderPath = null)
         val b = backup(listOf(bs), listOf(stat(31, "content://media/old/31", 2, 2)))
 
-        val match = WavdropBackupStatsMatcher.match(b, listOf(release1, release2))
+        val match = StereoSineBackupStatsMatcher.match(b, listOf(release1, release2))
 
         assertTrue(match.matchedRows.isEmpty())
         assertEquals(1, match.diagnostics.ambiguous)
@@ -256,7 +256,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
         val bs = bSong(32, "content://media/old/32", "Tide", "Duo", "Deluxe Edition", 195_500, folderPath = null)
         val b = backup(listOf(bs), listOf(stat(32, "content://media/old/32", 2, 2)))
 
-        val match = WavdropBackupStatsMatcher.match(b, listOf(short, long))
+        val match = StereoSineBackupStatsMatcher.match(b, listOf(short, long))
 
         assertEquals(long, match.matchedRows.single().first)
     }
@@ -270,7 +270,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
             listOf(stat(11, liveNorth.uri, 11, 3)),
         )
 
-        val result = WavdropBackupStatsMatcher.match(b, live)
+        val result = StereoSineBackupStatsMatcher.match(b, live)
 
         assertEquals(liveNorth, result.matchedRows.single().first)
         assertEquals(1, result.diagnostics.matchedByUri)
@@ -290,7 +290,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
             listOf(stat(11, liveSouth.uri, 11, 3)),
         )
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(liveSouth))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(liveSouth))
 
         assertTrue(result.matchedRows.isEmpty())
         assertEquals(0, result.diagnostics.matchedByUri)
@@ -302,7 +302,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
         val bs = bSong(41, staleOwner.uri, "Harbor", "Artist North", "Album One", 170_424)
         val b = backup(listOf(bs), listOf(stat(41, staleOwner.uri, 1, 1)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(staleOwner))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(staleOwner))
 
         assertTrue(result.matchedRows.isEmpty())
         assertEquals(1, result.unmatchedCount)
@@ -321,7 +321,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
         val bs = bSong(51, "content://media/old/51", "Harbor", "Artist North", "Album One", 170_500, folderPath = null)
         val b = backup(listOf(bs), listOf(stat(51, "content://media/old/51", 1, 1)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(onlyLive))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(onlyLive))
 
         assertNotNull(result.matchedRows.singleOrNull())
         assertEquals(1, result.diagnostics.matchedByTitleDuration)
@@ -336,7 +336,7 @@ class StatsMatchingAmbiguityCharacterizationTest {
         val retagged = bSong(62, "content://media/old/62", "Solo", "Artist", "Album", 150_000, folderPath = null)
         val b = backup(listOf(exact, retagged), listOf(stat(61, only.uri, 9, 1), stat(62, "content://media/old/62", 2, 2)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(only))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(only))
 
         assertEquals(1, result.matchedRows.size)
         assertEquals(9, result.matchedRows.single().second.playCount)

@@ -28,7 +28,7 @@ import kotlinx.coroutines.CancellationException
  * The backup writes only settings that differ from their default; a null field therefore means "was default at export time".
  * For a MERGE or a fresh install, leaving that field alone is correct. For an authoritative Recovery on a device whose settings
  * have since changed, leaving it alone would keep the device's non-default value, so Recovery resolves every null to its default
- * first. The defaults are the exact complements of the exporter's `takeIf` rules (see WavdropBackupRepository.buildBackupJson).
+ * first. The defaults are the exact complements of the exporter's `takeIf` rules (see StereoSineBackupRepository.buildBackupJson).
  *
  * Also NOT resolved: the P5-AUDIT-08 settings (Home Smart Collections, Crossfade, Transport Fade, Previous behavior). A current export
  * writes those unconditionally, so null there means the backup predates the field; resolving it would silently overwrite a newer

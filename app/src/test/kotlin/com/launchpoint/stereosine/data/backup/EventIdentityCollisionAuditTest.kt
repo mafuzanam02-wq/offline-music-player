@@ -57,7 +57,7 @@ class EventIdentityCollisionAuditTest {
             .allowMainThreadQueries().build().also { dbs += it }
         private val file = File(RuntimeEnvironment.getApplication().cacheDir, "p18a-${UUID.randomUUID()}.preferences_pb").also { files += it }
         private val store = PreferenceDataStoreFactory.create { file }
-        val merge = WavdropBackupImportRepository(
+        val merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
@@ -65,7 +65,7 @@ class EventIdentityCollisionAuditTest {
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
-        val exporter = WavdropBackupRepository(
+        val exporter = StereoSineBackupRepository(
             RuntimeEnvironment.getApplication(), store, db.songDao(), db.trackStatsDao(), db.importBaselineDao(), db.lyricsOverrideDao(),
             db.playlistDao(), db.trackListenEventDao(), db.pendingBackupExtensionDao(), db.pendingTrackDao(),
             AppSettingsRepository(store), HomeLayoutSettingsRepository(store), LibraryScanSettingsRepository(store),
@@ -75,7 +75,7 @@ class EventIdentityCollisionAuditTest {
 
         init { runBlocking { db.songDao().upsertAll(listOf(songEntity(5)) + extraLive) } }
 
-        suspend fun restore(b: WavdropBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
+        suspend fun restore(b: StereoSineBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
         suspend fun export(f: Fmt): ByteArray = when (f) {
             Fmt.JSON -> exporter.buildBackupJson().toByteArray(Charsets.UTF_8)
             Fmt.WDBK -> ByteArrayOutputStream().also { WdbkWriter().write(exporter.buildWdbkExportSnapshot(), it) }.toByteArray()
@@ -87,14 +87,14 @@ class EventIdentityCollisionAuditTest {
         SongEntity(id, it.title, it.artist, it.album, it.albumId, it.duration, it.uri, it.dateAdded, it.trackNumber, it.year, it.folderPath, it.folderName)
     }
 
-    private fun serialize(f: Fmt, b: WavdropBackup): ByteArray = when (f) {
-        Fmt.JSON -> WavdropBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
+    private fun serialize(f: Fmt, b: StereoSineBackup): ByteArray = when (f) {
+        Fmt.JSON -> StereoSineBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
         Fmt.WDBK -> WdbkTestSupport.write(b).first
     }
 
-    private fun parse(f: Fmt, bytes: ByteArray): WavdropBackup {
+    private fun parse(f: Fmt, bytes: ByteArray): StereoSineBackup {
         val r = when (f) {
-            Fmt.JSON -> WavdropBackupParser.parse(String(bytes, Charsets.UTF_8))
+            Fmt.JSON -> StereoSineBackupParser.parse(String(bytes, Charsets.UTF_8))
             Fmt.WDBK -> WdbkReader().read(ByteArrayInputStream(bytes), RecoveryTestFixtures.NOW + 1_000_000L)
         }
         assertNull(r.error, r.error)

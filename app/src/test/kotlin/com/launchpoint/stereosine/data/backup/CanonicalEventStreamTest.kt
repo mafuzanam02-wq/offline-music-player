@@ -71,7 +71,7 @@ class CanonicalEventStreamTest {
     private fun expected(rows: List<TrackListenEventEntity>, upTo: Long) = LegacyExportOrder.snapshot(rows)
         .filter { it.id <= upTo && BackupEventExportRules.shouldExport(it.source) }
         .map(::toBackup)
-        .sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER)
+        .sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER)
 
     @Test fun `output equals the fully sorted canonical history for every page and chunk size`() {
         // Many rows share a timestamp (runs span page boundaries) and are inserted in adversarial order.

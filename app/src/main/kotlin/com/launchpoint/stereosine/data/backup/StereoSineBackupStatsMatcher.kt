@@ -23,7 +23,7 @@ import kotlin.math.abs
  * strongest match is applied; the rest are dropped and counted as collisions
  * so stats are never silently overwritten by "last write wins".
  */
-object WavdropBackupStatsMatcher {
+object StereoSineBackupStatsMatcher {
 
     /** Two songs are "the same duration" within this tolerance (rescans can shift ms). */
     const val DURATION_TOLERANCE_MS = 2_000L
@@ -134,7 +134,7 @@ object WavdropBackupStatsMatcher {
         }
     }
 
-    fun match(backup: WavdropBackup, currentSongs: List<Song>): WavdropBackupMatchResult {
+    fun match(backup: StereoSineBackup, currentSongs: List<Song>): StereoSineBackupMatchResult {
         val resolver = Resolver(currentSongs)
         val backupSongById = backup.songs.associateBy { it.id }
 
@@ -176,7 +176,7 @@ object WavdropBackupStatsMatcher {
             }
         }
 
-        val diagnostics = WavdropBackupMatchDiagnostics(
+        val diagnostics = StereoSineBackupMatchDiagnostics(
             statsInBackup                = backup.trackStats.size,
             matchedByUri                 = tierCounts[MatchTier.URI] ?: 0,
             matchedByPath                =
@@ -195,7 +195,7 @@ object WavdropBackupStatsMatcher {
             unmatched                    = unmatched,
         )
 
-        return WavdropBackupMatchResult(
+        return StereoSineBackupMatchResult(
             matchedRows    = matched,
             unmatchedCount = unmatched + ambiguous + collisions,
             diagnostics    = diagnostics,
@@ -208,13 +208,13 @@ object WavdropBackupStatsMatcher {
      * songId-keyed backup rows) to their new local song ids after a reinstall.
      * Ambiguous or unmatched backup songs are simply absent from the map.
      */
-    fun resolveBackupSongIds(backup: WavdropBackup, currentSongs: List<Song>): Map<Long, Song> =
+    fun resolveBackupSongIds(backup: StereoSineBackup, currentSongs: List<Song>): Map<Long, Song> =
         resolveBackupSongs(backup, currentSongs).resolved
 
     /** [resolved]: backup song id -> current song. [rejectedLocalIds]: backup song id -> URI-colliding local ids that must never be re-attached. */
     data class BackupSongResolution(val resolved: Map<Long, Song>, val rejectedLocalIds: Map<Long, Set<Long>>)
 
-    fun resolveBackupSongs(backup: WavdropBackup, currentSongs: List<Song>): BackupSongResolution {
+    fun resolveBackupSongs(backup: StereoSineBackup, currentSongs: List<Song>): BackupSongResolution {
         val resolver = Resolver(currentSongs)
         val resolved = mutableMapOf<Long, Song>()
         val rejected = mutableMapOf<Long, Set<Long>>()

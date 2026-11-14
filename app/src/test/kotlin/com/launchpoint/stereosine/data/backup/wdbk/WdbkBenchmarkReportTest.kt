@@ -7,10 +7,10 @@ import com.launchpoint.stereosine.data.backup.BackupPlaylist
 import com.launchpoint.stereosine.data.backup.BackupSong
 import com.launchpoint.stereosine.data.backup.BackupTrackStats
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupExporterV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupExporterV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupParser
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -45,7 +45,7 @@ class WdbkBenchmarkReportTest {
     private val titles = listOf("Midnight City", "Blue in Green", "Hurt", "Take Five", "Windowlicker", "Teardrop", "Karma Police")
     private val artists = listOf("M83", "Miles Davis", "Johnny Cash", "Dave Brubeck", "Aphex Twin", "Massive Attack", "Radiohead")
 
-    private fun build(f: Fixture): WavdropBackup {
+    private fun build(f: Fixture): StereoSineBackup {
         val rnd = Random(42)
         val base = RecoveryTestFixtures.NOW
         val songs = List(f.songs) { i ->
@@ -132,24 +132,24 @@ class WdbkBenchmarkReportTest {
         report.appendLine("| fixture | songs | events | legacy JSON KiB | WDBK KiB | WDBK/JSON | legacy export ms | WDBK export ms | legacy parse ms | WDBK decode+verify ms | legacy largest payload KiB | WDBK largest entry KiB | legacy heap peak MiB* | WDBK write heap peak MiB* |")
         report.appendLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
 
-        var largeFixture: WavdropBackup? = null
+        var largeFixture: StereoSineBackup? = null
         for (f in fixtures) {
             val backup = build(f)
             if (f.name.startsWith("large")) largeFixture = backup
-            val fingerprint = WavdropBackupIntegrityV2.fingerprint(backup)
+            val fingerprint = StereoSineBackupIntegrityV2.fingerprint(backup)
 
-            val (json, legacyExportMs, legacyPeak) = measured { WavdropBackupExporterV2.toJson(backup) }
+            val (json, legacyExportMs, legacyPeak) = measured { StereoSineBackupExporterV2.toJson(backup) }
             val jsonBytes = json.toByteArray(Charsets.UTF_8)
-            val (legacyParsed, legacyParseMs) = timed { WavdropBackupParser.parse(json, RecoveryTestFixtures.NOW + 1_000_000L) }
+            val (legacyParsed, legacyParseMs) = timed { StereoSineBackupParser.parse(json, RecoveryTestFixtures.NOW + 1_000_000L) }
             assertNull(legacyParsed.error)
-            assertEquals(fingerprint, WavdropBackupIntegrityV2.fingerprint(legacyParsed.backup!!))
+            assertEquals(fingerprint, StereoSineBackupIntegrityV2.fingerprint(legacyParsed.backup!!))
 
             val out = ByteArrayOutputStream()
             val (receipt, wdbkExportMs, wdbkPeak) = measured { kotlinx.coroutines.runBlocking { WdbkWriter().write(WdbkExportSnapshot.fromBackup(backup), out) } }
             val container = out.toByteArray()
             val (decoded, decodeMs) = timed { WdbkReader().read(ByteArrayInputStream(container), RecoveryTestFixtures.NOW + 1_000_000L) }
             assertNull(decoded.error)
-            assertEquals(fingerprint, WavdropBackupIntegrityV2.fingerprint(decoded.backup!!))
+            assertEquals(fingerprint, StereoSineBackupIntegrityV2.fingerprint(decoded.backup!!))
             assertEquals(backup.listenEvents.size, decoded.backup!!.listenEvents.size)
 
             val largestEntry = WdbkTestSupport.unzip(container).values.maxOf { it.size }.toLong()

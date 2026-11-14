@@ -3,9 +3,9 @@ package com.launchpoint.stereosine.data.backup.wdbk
 import com.launchpoint.stereosine.data.backup.BackupInputReader
 import com.launchpoint.stereosine.data.backup.BackupIntegrityStatus
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportResult
-import com.launchpoint.stereosine.data.backup.WavdropBackupParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportResult
+import com.launchpoint.stereosine.data.backup.StereoSineBackupParser
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.bytesOf
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.mutateEntryDescriptor
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.mutateManifest
@@ -26,10 +26,10 @@ import org.junit.Test
 /** Untrusted-input behaviour: every malformed/tampered/oversized container fails cleanly with NO backup. */
 class WdbkCorruptionTest {
 
-    private val backup: WavdropBackup = WdbkTestSupport.fullBackup(eventCount = 12)
+    private val backup: StereoSineBackup = WdbkTestSupport.fullBackup(eventCount = 12)
     private val good: ByteArray = write(backup, eventsPerChunk = 5).first
 
-    private fun assertRejected(result: WavdropBackupImportResult, message: String? = null) {
+    private fun assertRejected(result: StereoSineBackupImportResult, message: String? = null) {
         assertNull("no partial backup may reach restore", result.backup)
         assertNotNull(result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
@@ -114,7 +114,7 @@ class WdbkCorruptionTest {
     }
 
     @Test fun `a newer logical version inside a container is rejected with the newer-version message`() {
-        assertRejectedAfter(WavdropBackupParser.NEWER_VERSION_ERROR) { mutateManifest(it) { m -> m.put("logicalVersion", 3) } }
+        assertRejectedAfter(StereoSineBackupParser.NEWER_VERSION_ERROR) { mutateManifest(it) { m -> m.put("logicalVersion", 3) } }
     }
 
     @Test fun `unknown required capability is rejected and unknown optional capability only warns`() {
@@ -149,26 +149,26 @@ class WdbkCorruptionTest {
     // ── Integrity layers ──────────────────────────────────────────────────────
 
     @Test fun `wrong entry SHA-256 is rejected as an integrity failure`() {
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             mutateEntryDescriptor(entries, "sections/songs.json") { it.put("sha256", "0".repeat(64)) }
         }
     }
 
     @Test fun `tampered entry content with the original manifest is an integrity failure not a parse error`() {
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             val i = entries.indexOfFirst { it.first == "sections/songs.json" }
             val text = String(entries[i].second, Charsets.UTF_8).replace("Song 1", "Song X")
             entries[i] = "sections/songs.json" to text.toByteArray()
         }
         // Even content that would not parse reports integrity (the hash is checked before a parse error is surfaced).
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             val i = entries.indexOfFirst { it.first == "sections/songs.json" }
             entries[i] = "sections/songs.json" to "{{{".toByteArray()
         }
     }
 
     @Test fun `wrong declared entry size is rejected`() {
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             mutateEntryDescriptor(entries, "sections/songs.json") { it.put("byteLength", it.getLong("byteLength") + 1) }
         }
     }
@@ -183,31 +183,31 @@ class WdbkCorruptionTest {
     }
 
     @Test fun `wrong overall section count is rejected`() {
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             mutateManifest(entries) { m -> m.getJSONObject("counts").put("songCount", 99) }
         }
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             mutateManifest(entries) { m -> m.getJSONObject("counts").put("listenEventCount", 1) }
         }
     }
 
     @Test fun `wrong semantic fingerprint is rejected even when every entry hash is valid`() {
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             mutateManifest(entries) { m -> m.getJSONObject("integrity").put("fingerprint", "f".repeat(64)) }
         }
     }
 
     @Test fun `content changed together with its hash still fails the semantic fingerprint`() {
         // A tamperer who recomputes the entry hash and manifest length cannot also forge the fingerprint.
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { entries ->
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { entries ->
             val songs = String(entries.bytesOf("sections/songs.json"), Charsets.UTF_8).replace("\"year\":2020", "\"year\":1999")
             replaceEntryConsistently(entries, "sections/songs.json", songs.toByteArray())
         }
     }
 
     @Test fun `identity fields are covered by the fingerprint`() {
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { mutateManifest(it) { m -> m.put("backupId", "tampered") } }
-        assertRejectedAfter(WavdropBackupParser.INTEGRITY_ERROR) { mutateManifest(it) { m -> m.put("exportedAt", 1L) } }
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { mutateManifest(it) { m -> m.put("backupId", "tampered") } }
+        assertRejectedAfter(StereoSineBackupParser.INTEGRITY_ERROR) { mutateManifest(it) { m -> m.put("exportedAt", 1L) } }
     }
 
     @Test fun `the strict v2 trust rules still apply to WDBK sections`() {
@@ -234,7 +234,7 @@ class WdbkCorruptionTest {
 
     @Test fun `implausible stats are rejected like in legacy backups`() {
         val absurd = RecoveryTestFixtures.v2Backup(stats = listOf(RecoveryTestFixtures.backupStats(1L, 2_000_000_000, 0, false)))
-        assertRejected(write(absurd).first, WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR)
+        assertRejected(write(absurd).first, StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR)
     }
 
     // ── Container damage ──────────────────────────────────────────────────────

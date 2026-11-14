@@ -63,7 +63,7 @@ class PendingHistoryPreservationRoomTest {
             .allowMainThreadQueries().build().also { dbs += it }
         private val file = File(RuntimeEnvironment.getApplication().cacheDir, "p17b-${UUID.randomUUID()}.preferences_pb").also { files += it }
         private val store = PreferenceDataStoreFactory.create { file }
-        val merge = WavdropBackupImportRepository(
+        val merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
@@ -71,7 +71,7 @@ class PendingHistoryPreservationRoomTest {
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
-        val exporter = WavdropBackupRepository(
+        val exporter = StereoSineBackupRepository(
             RuntimeEnvironment.getApplication(), store, db.songDao(), db.trackStatsDao(), db.importBaselineDao(), db.lyricsOverrideDao(),
             db.playlistDao(), db.trackListenEventDao(), db.pendingBackupExtensionDao(), db.pendingTrackDao(),
             AppSettingsRepository(store), HomeLayoutSettingsRepository(store), LibraryScanSettingsRepository(store),
@@ -81,7 +81,7 @@ class PendingHistoryPreservationRoomTest {
 
         init { runBlocking { db.songDao().upsertAll(libraryIds.map(::songEntity) + extra) } }
 
-        suspend fun restore(backup: WavdropBackup, mode: Mode): WavdropBackupImportApplyResult =
+        suspend fun restore(backup: StereoSineBackup, mode: Mode): StereoSineBackupImportApplyResult =
             if (mode == Mode.MERGE) merge.applyImport(backup) else recovery.applyRecovery(backup)
 
         suspend fun export(f: Fmt): ByteArray = when (f) {
@@ -118,15 +118,15 @@ class PendingHistoryPreservationRoomTest {
         backupId = id,
     )
 
-    private fun serialize(f: Fmt, b: WavdropBackup): ByteArray = when (f) {
-        Fmt.JSON -> WavdropBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
+    private fun serialize(f: Fmt, b: StereoSineBackup): ByteArray = when (f) {
+        Fmt.JSON -> StereoSineBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
         Fmt.WDBK -> WdbkTestSupport.write(b).first
     }
 
     /** The production parser/reader for the format; asserts the artifact verifies and returns its backup. */
-    private fun parse(f: Fmt, bytes: ByteArray): WavdropBackup {
+    private fun parse(f: Fmt, bytes: ByteArray): StereoSineBackup {
         val r = when (f) {
-            Fmt.JSON -> WavdropBackupParser.parse(String(bytes, Charsets.UTF_8))
+            Fmt.JSON -> StereoSineBackupParser.parse(String(bytes, Charsets.UTF_8))
             Fmt.WDBK -> WdbkReader().read(ByteArrayInputStream(bytes), RecoveryTestFixtures.NOW + 1_000_000L)
         }
         assertNull(r.error, r.error)
@@ -439,7 +439,7 @@ class PendingHistoryPreservationRoomTest {
         val creator = RecoverySafetySnapshotCreator(dir, BackupExecutionSerializer(), { n.exporter.buildBackupJson() }, SafetySnapshotIo.Default)
         val snap = creator.createVerifiedSnapshot() as SafetySnapshotResult.Verified
         assertEquals(BackupIntegrityStatus.VERIFIED, snap.snapshot.verification)
-        val inSnapshot = WavdropBackupParser.parse(creator.latestFile.readText()).backup!!.pendingHistory!!
+        val inSnapshot = StereoSineBackupParser.parse(creator.latestFile.readText()).backup!!.pendingHistory!!
         assertEquals(sortedEvents(pendingBefore), sortedEvents(inSnapshot))
 
         // A Recovery from a backup that carries NO pending section: live state is replaced, pending is untouched.
@@ -472,8 +472,8 @@ class PendingHistoryPreservationRoomTest {
             assertEquals(without.listenEvents, with.listenEvents)
             assertEquals(2, with.trackStats.size); assertEquals(2, with.listenEvents.size)
             assertEquals("the primary fingerprint covers the same live content either way",
-                WavdropBackupIntegrityV2.fingerprint(without.copy(backupId = "same", exportedAtMs = 1)),
-                WavdropBackupIntegrityV2.fingerprint(with.copy(backupId = "same", exportedAtMs = 1)))
+                StereoSineBackupIntegrityV2.fingerprint(without.copy(backupId = "same", exportedAtMs = 1)),
+                StereoSineBackupIntegrityV2.fingerprint(with.copy(backupId = "same", exportedAtMs = 1)))
             assertEquals(JSONObject(WdbkTestSupport.OVERLAY_RAW).toString(), JSONObject(with.desktopOverlay!!.rawJson).toString())
         }
     }
@@ -483,7 +483,7 @@ class PendingHistoryPreservationRoomTest {
         val r = n.restore(parse(Fmt.JSON, serialize(Fmt.JSON, RecoveryTestFixtures.v2Backup())), Mode.MERGE)
         assertEquals(0, r.pendingTracksPreserved)
         assertEquals(10, n.db.trackStatsDao().getStatsBySongId(1)!!.playCount)
-        val v1 = WavdropBackupParser.parse(RecoveryTestFixtures.v1Json())
+        val v1 = StereoSineBackupParser.parse(RecoveryTestFixtures.v1Json())
         assertNull(v1.error); assertNull(v1.backup!!.pendingHistory)
     }
 }

@@ -12,20 +12,20 @@ import java.security.MessageDigest
  * the model it reconstructed. If any data field was corrupted in transit, the
  * two fingerprints differ.
  *
- * Metadata fields ([WavdropBackup.appVersionCode], [WavdropBackup.appVersionName],
- * [WavdropBackup.manifest], [WavdropBackup.payloadSha256]) are deliberately
+ * Metadata fields ([StereoSineBackup.appVersionCode], [StereoSineBackup.appVersionName],
+ * [StereoSineBackup.manifest], [StereoSineBackup.payloadSha256]) are deliberately
  * excluded — the checksum protects the data payload, not its own envelope.
  *
  * Canonical form: fields joined with the ASCII unit separator (), records
  * terminated with the record separator (), sections prefixed with a tag.
  * List order is preserved (JSON arrays keep order through export and parse).
  */
-object WavdropBackupIntegrity {
+object StereoSineBackupIntegrity {
 
     private const val FIELD = ''  // ASCII unit separator
     private const val RECORD = '' // ASCII record separator
 
-    fun payloadFingerprint(backup: WavdropBackup): String {
+    fun payloadFingerprint(backup: StereoSineBackup): String {
         val canonical = buildString {
             record("exportedAt", backup.exportedAt)
 

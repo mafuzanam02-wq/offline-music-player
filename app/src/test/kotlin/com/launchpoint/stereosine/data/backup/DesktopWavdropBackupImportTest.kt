@@ -17,13 +17,13 @@ class DesktopWavdropBackupImportTest {
     @Test
     fun `desktop backup detection recognizes desktop appName`() {
         assertTrue(DesktopWavdropBackupParser.isDesktopBackupContent(legacyDesktopJson()))
-        assertTrue(ImportFileValidation.isLikelyWavdropBackupContent(legacyDesktopJson()))
+        assertTrue(ImportFileValidation.isLikelyStereoSineBackupContent(legacyDesktopJson()))
     }
 
     @Test
     fun `desktop backup detection recognizes sourcePlatform desktop`() {
         assertTrue(DesktopWavdropBackupParser.isDesktopBackupContent(sharedDesktopJson()))
-        assertTrue(ImportFileValidation.isLikelyWavdropBackupContent(sharedDesktopJson()))
+        assertTrue(ImportFileValidation.isLikelyStereoSineBackupContent(sharedDesktopJson()))
     }
 
     // ── Parsing ───────────────────────────────────────────────────────────────
@@ -298,8 +298,8 @@ class DesktopWavdropBackupImportTest {
             desktop = desktopSong(playCount = 90, totalListeningTimeMs = 3_000L, lastPlayedAt = 4_000L),
         ).matchedRows.single().mergedStats
 
-        val json = WavdropBackupExporter.toJson(
-            WavdropBackup(
+        val json = StereoSineBackupExporter.toJson(
+            StereoSineBackup(
                 exportedAt = "2026-06-13T00:00:00Z",
                 songs = emptyList(),
                 trackStats = listOf(

@@ -30,7 +30,7 @@ class BackupUriCollisionImportRoomTest {
 
     private lateinit var db: StereoSineDatabase
     private lateinit var recovery: RecoveryRestoreRepository
-    private lateinit var merge: WavdropBackupImportRepository
+    private lateinit var merge: StereoSineBackupImportRepository
 
     private val colliding = 5L
     private val good = 6L
@@ -41,7 +41,7 @@ class BackupUriCollisionImportRoomTest {
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
-        merge = WavdropBackupImportRepository(
+        merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )

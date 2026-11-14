@@ -88,3 +88,34 @@ together with the backup writer-metadata/filename decision.
   would be dropped on update. Not a risk for installs that never shipped the BRAND-01 identity.
 - Docs under `docs/` and root `*.md` still carry the old name (historical/QA); `VersionConfigTest` ties `WHATS_NEW.md`'s title to it.
 - Residual user-visible old text: "Always saves as wavdrop-backup.wdbk" in Backup settings (filename decision pending).
+
+---
+
+# BRAND-03 — Backup filenames and backup-subsystem symbols (completed)
+
+Baseline HEAD `a7ed696f57da104faeaac522052d25f54fbe4821`. No format, marker, version, checksum, serialization or writer-metadata change.
+
+## Filename policy (`data/backup/BackupFileNames.kt`, single source of truth)
+- New backups: `stereosine-backup.wdbk` (replace-previous) and `stereosine-backup-<yyyy-MM-dd>.wdbk` (dated; `LocalDate.toString()` as before).
+  Used by manual export suggestion (`SettingsBackupScreen`) and scheduled/"Back up now" (`AutoBackupRepository`).
+- Recognised for discovery (Backup Verification): `stereosine-backup*` and legacy `wavdrop-backup*`, `.wdbk` or legacy `.json`, never `.tmp`.
+  This is the only place a filename controls behaviour besides the writer target; restore/preview/import decide by CONTENT, not name.
+- Replace-previous targets the exact `stereosine-backup.wdbk` in the chosen folder. A legacy `wavdrop-backup.wdbk` is a different file:
+  never read-for-overwrite, renamed, overwritten or deleted. After migration a folder can hold both; verification picks the newest by
+  modification time, ties to the StereoSine name. A stale legacy file therefore remains until the user removes it.
+- Manual export keeps the user's chosen name; the app only suggests one.
+
+## Renamed symbols (code-only)
+`WavdropBackup*` → `StereoSineBackup*` (model, parser, exporters, integrity, repository, importer, document reader, stats matcher, tests),
+`WavdropMergePreviewAnalyzer`, `BackupDocumentReadResult.Wavdrop`, `isLikelyWavdropBackup{FileName,Content}`,
+`ImportFileValidation.WAVDROP_{WRONG_FILE,NOT_A_BACKUP}_MESSAGE` → `STEREOSINE_…`, log tags `WavdropBackup/Restore/ImportApply/OverlayPlanner/Preview`.
+24 source files renamed to match.
+
+## Retained on purpose
+`DesktopWavdropBackup*` (names the external Desktop `wavdrop-desktop-lab` format), `wavdrop_backup` / `wavdrop_wdbk`, `.wdbk` markers,
+writer metadata (`app:"Wavdrop"`, `packageName:"com.launchpoint.wavdrop"`, `database:"wavdrop.db"`), `ImportSourceTypes.WAVDROP_JSON`,
+`SOURCE_WAVDROP_PLAYBACK`, all BRAND-02 persisted literals.
+
+## Remaining
+- Writer metadata (`app`/`packageName`/`database`) still legacy: DECISION REQUIRED, depends on Desktop consumers.
+- Backup preview/restore copy says "StereoSine backup" without a legacy-format note; wording of any legacy hint is a product choice.

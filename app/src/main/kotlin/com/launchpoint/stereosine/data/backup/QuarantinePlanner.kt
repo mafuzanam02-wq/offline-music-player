@@ -15,7 +15,7 @@ package com.launchpoint.stereosine.data.backup
  *
  * Pending rows produced by this planner are **snapshot-scoped**.
  *
- * The [originKey] is derived from [WavdropBackupIntegrity.payloadFingerprint],
+ * The [originKey] is derived from [StereoSineBackupIntegrity.payloadFingerprint],
  * which includes `exportedAt`. Two exports from the same installation at
  * different times therefore produce distinct [originKey] values and create
  * separate pending rows for the same logical unresolved track.
@@ -41,13 +41,13 @@ object QuarantinePlanner {
     /**
      * Stable snapshot fingerprint used as the origin-key prefix for quarantine rows.
      *
-     * v2 backups use [WavdropBackupIntegrityV2.fingerprint] so the quarantine origin
+     * v2 backups use [StereoSineBackupIntegrityV2.fingerprint] so the quarantine origin
      * key covers all v2-specific fields (backupId, sourceInstallationId, exportedAtMs,
      * lastListenedAt). v1 backups use the v1 fingerprint unchanged.
      */
-    fun backupFingerprint(backup: WavdropBackup): String = when (backup.sourceVersion) {
-        BackupFormatVersion.V2 -> WavdropBackupIntegrityV2.fingerprint(backup)
-        BackupFormatVersion.V1 -> WavdropBackupIntegrity.payloadFingerprint(backup)
+    fun backupFingerprint(backup: StereoSineBackup): String = when (backup.sourceVersion) {
+        BackupFormatVersion.V2 -> StereoSineBackupIntegrityV2.fingerprint(backup)
+        BackupFormatVersion.V1 -> StereoSineBackupIntegrity.payloadFingerprint(backup)
     }
 
     fun originKey(fp: String, songId: Long): String = "$fp|$songId"
@@ -154,7 +154,7 @@ object QuarantinePlanner {
      * @param existingOriginKeys   The current contents of `SELECT originKey FROM pending_tracks`.
      */
     fun plan(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         backupFingerprint: String,
         resolvedBackupSongIds: Set<Long>,
         existingOriginKeys: Set<String>,
@@ -294,7 +294,7 @@ object QuarantinePlanner {
      * orphans x records. Title, artist and album are only meaningful together, so the whole triple must be unanimous
      * (all-blank triples state nothing and are ignored; blank URIs likewise).
      */
-    private fun orphanHints(backup: WavdropBackup, orphanIds: Set<Long>): Map<Long, OrphanHint> {
+    private fun orphanHints(backup: StereoSineBackup, orphanIds: Set<Long>): Map<Long, OrphanHint> {
         if (orphanIds.isEmpty()) return emptyMap()
         val tags = HashMap<Long, Seen<Triple<String, String, String>>>()
         val uris = HashMap<Long, Seen<String>>()

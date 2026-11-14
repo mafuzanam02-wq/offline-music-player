@@ -9,14 +9,14 @@ import android.provider.OpenableColumns
  *
  * SAF pickers cannot reliably filter by extension (and providers often mislabel
  * MIME types), so each flow validates the selected file AFTER picking:
- *  - StereoSine restore decides by CONTENT (see [WavdropBackupDocumentReader]): a `.wdbk` container or a
+ *  - StereoSine restore decides by CONTENT (see [StereoSineBackupDocumentReader]): a `.wdbk` container or a
  *    legacy `.json` backup is recognised by its bytes, never by file name, extension or MIME type.
  *  - BlackPlayer import accepts only `.bpstat` names.
  */
 object ImportFileValidation {
 
-    const val WAVDROP_WRONG_FILE_MESSAGE   = "Choose a StereoSine backup file."
-    const val WAVDROP_NOT_A_BACKUP_MESSAGE = "This does not look like a StereoSine backup file."
+    const val STEREOSINE_WRONG_FILE_MESSAGE   = "Choose a StereoSine backup file."
+    const val STEREOSINE_NOT_A_BACKUP_MESSAGE = "This does not look like a StereoSine backup file."
     const val BPSTAT_WRONG_FILE_MESSAGE    = "Choose a BlackPlayer .bpstat file."
 
     /** Resolves the user-visible file name via OpenableColumns, falling back to the URI path. */
@@ -36,7 +36,7 @@ object ImportFileValidation {
     }
 
     /** Name hint only (UI/diagnostics). It never decides how a document is parsed. */
-    fun isLikelyWavdropBackupFileName(name: String?): Boolean {
+    fun isLikelyStereoSineBackupFileName(name: String?): Boolean {
         val lower = name?.trim()?.lowercase() ?: return false
         return lower.endsWith(".wdbk") || lower.endsWith(".json")
     }
@@ -50,11 +50,11 @@ object ImportFileValidation {
      * format or the Desktop appName.
      * This avoids running the full parser on arbitrary binary/text files.
      */
-    fun isLikelyWavdropBackupContent(content: String): Boolean {
+    fun isLikelyStereoSineBackupContent(content: String): Boolean {
         val head = content.trimStart()
         return head.startsWith("{") &&
             (
-                content.contains("\"${WavdropBackupParser.SUPPORTED_FORMAT}\"") ||
+                content.contains("\"${StereoSineBackupParser.SUPPORTED_FORMAT}\"") ||
                     DesktopWavdropBackupParser.isDesktopBackupContent(content)
                 )
     }

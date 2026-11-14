@@ -52,7 +52,7 @@ class QuarantineEventOccurrenceRoomTest {
             .allowMainThreadQueries().build().also { dbs += it }
         private val file = File(RuntimeEnvironment.getApplication().cacheDir, "p18c-${UUID.randomUUID()}.preferences_pb").also { files += it }
         private val store = PreferenceDataStoreFactory.create { file }
-        val merge = WavdropBackupImportRepository(
+        val merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
@@ -60,7 +60,7 @@ class QuarantineEventOccurrenceRoomTest {
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
-        private val exporter = WavdropBackupRepository(
+        private val exporter = StereoSineBackupRepository(
             RuntimeEnvironment.getApplication(), store, db.songDao(), db.trackStatsDao(), db.importBaselineDao(), db.lyricsOverrideDao(),
             db.playlistDao(), db.trackListenEventDao(), db.pendingBackupExtensionDao(), db.pendingTrackDao(),
             AppSettingsRepository(store), HomeLayoutSettingsRepository(store), LibraryScanSettingsRepository(store),
@@ -70,7 +70,7 @@ class QuarantineEventOccurrenceRoomTest {
 
         init { runBlocking { db.songDao().upsertAll(listOf(songEntity(5))) } }
 
-        suspend fun restore(b: WavdropBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
+        suspend fun restore(b: StereoSineBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
         suspend fun export(f: Fmt): ByteArray = when (f) {
             Fmt.JSON -> exporter.buildBackupJson().toByteArray(Charsets.UTF_8)
             Fmt.WDBK -> ByteArrayOutputStream().also { WdbkWriter().write(exporter.buildWdbkExportSnapshot(), it) }.toByteArray()
@@ -85,14 +85,14 @@ class QuarantineEventOccurrenceRoomTest {
         SongEntity(id, it.title, it.artist, it.album, it.albumId, it.duration, it.uri, it.dateAdded, it.trackNumber, it.year, it.folderPath, it.folderName)
     }
 
-    private fun serialize(f: Fmt, b: WavdropBackup): ByteArray = when (f) {
-        Fmt.JSON -> WavdropBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
+    private fun serialize(f: Fmt, b: StereoSineBackup): ByteArray = when (f) {
+        Fmt.JSON -> StereoSineBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
         Fmt.WDBK -> WdbkTestSupport.write(b).first
     }
 
-    private fun parse(f: Fmt, bytes: ByteArray): WavdropBackup {
+    private fun parse(f: Fmt, bytes: ByteArray): StereoSineBackup {
         val r = when (f) {
-            Fmt.JSON -> WavdropBackupParser.parse(String(bytes, Charsets.UTF_8))
+            Fmt.JSON -> StereoSineBackupParser.parse(String(bytes, Charsets.UTF_8))
             Fmt.WDBK -> WdbkReader().read(ByteArrayInputStream(bytes), RecoveryTestFixtures.NOW + 1_000_000L)
         }
         assertNull(r.error, r.error)
@@ -100,7 +100,7 @@ class QuarantineEventOccurrenceRoomTest {
         return r.backup!!
     }
 
-    private fun load(f: Fmt, b: WavdropBackup) = parse(f, serialize(f, b))
+    private fun load(f: Fmt, b: StereoSineBackup) = parse(f, serialize(f, b))
 
     private fun ev(songId: Long, eventId: String?, durationMs: Long = 180_000L, at: Long = 5_000L, listenedMs: Long = 60_000L) =
         backupEvent(songId, eventId, at).copy(durationMs = durationMs, listenedMs = listenedMs)
@@ -313,7 +313,7 @@ class QuarantineEventOccurrenceRoomTest {
         pending.loadAll()?.events.orEmpty().associate { it.originFingerprint to it.durationMs }
 
     /** A valid NON-canonical repaired group: base -> 200000 and base|n=1 -> 100000. */
-    private suspend fun nonCanonicalNode(a: WavdropBackup, mode: Mode = Mode.MERGE): Node {
+    private suspend fun nonCanonicalNode(a: StereoSineBackup, mode: Mode = Mode.MERGE): Node {
         val n = Node()
         n.restore(a, mode)
         n.sql("UPDATE pending_listen_events SET durationMs = CASE WHEN originFingerprint LIKE '%|n=1' THEN 100000 ELSE 200000 END")

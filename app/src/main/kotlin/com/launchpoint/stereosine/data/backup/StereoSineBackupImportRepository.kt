@@ -29,7 +29,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class WavdropBackupImportRepository @Inject constructor(
+class StereoSineBackupImportRepository @Inject constructor(
     private val db: StereoSineDatabase,
     private val songDao: SongDao,
     private val trackStatsDao: TrackStatsDao,
@@ -53,9 +53,9 @@ class WavdropBackupImportRepository @Inject constructor(
             pendingTrackDao.getAllOriginKeys().isEmpty()
 
     suspend fun applyImport(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         onStage: ((String) -> Unit)? = null,
-    ): WavdropBackupImportApplyResult {
+    ): StereoSineBackupImportApplyResult {
         val t0 = System.currentTimeMillis()
         if (BuildConfig.DEBUG) Log.d(APPLY_TAG, "start rootStats=${backup.trackStats.size} " +
             "rootEvents=${backup.listenEvents.size} overlay=${backup.desktopOverlay != null} " +
@@ -83,8 +83,8 @@ class WavdropBackupImportRepository @Inject constructor(
 
             // Backup song id → current library song, shared by event and baseline
             // restore so every songId-keyed row follows its track after a reinstall.
-            val match            = WavdropBackupStatsMatcher.match(backup, currentSongs)
-            val songResolution = WavdropBackupStatsMatcher.resolveBackupSongs(backup, currentSongs)
+            val match            = StereoSineBackupStatsMatcher.match(backup, currentSongs)
+            val songResolution = StereoSineBackupStatsMatcher.resolveBackupSongs(backup, currentSongs)
             val resolvedBySongId = songResolution.resolved
 
             // Pre-load current stats for all matched songs to compute reporting deltas
@@ -106,7 +106,7 @@ class WavdropBackupImportRepository @Inject constructor(
             val storedQuarantineEvents = storedQuarantineEventsFor(backup, quarantineFp, existingQuarantineOriginKeys)
 
             val existingLyricsMap = lyricsOverrideDao.getAllSnapshot()
-                .associate { WavdropMergePreviewAnalyzer.ExistingLyricsKey(it.songId, it.contentUri) to it.updatedAt }
+                .associate { StereoSineMergePreviewAnalyzer.ExistingLyricsKey(it.songId, it.contentUri) to it.updatedAt }
 
             val existingPlaylistsMap: Map<String, Set<Long>> = if (backup.playlists.isNotEmpty()) {
                 buildMap {
@@ -187,7 +187,7 @@ class WavdropBackupImportRepository @Inject constructor(
             //       Runs inside the transaction so it sees the current committed state;
             //       preview state may have been stale if playback or scans ran between
             //       preview and apply.
-            val mergeCheck = WavdropMergePreviewAnalyzer.analyze(
+            val mergeCheck = StereoSineMergePreviewAnalyzer.analyze(
                 backup                       = backup,
                 currentSongs                 = currentSongs,
                 existingQuarantineOriginKeys = existingQuarantineOriginKeys,
@@ -212,14 +212,14 @@ class WavdropBackupImportRepository @Inject constructor(
                 val onlyPending = pendingHistory?.let { pendingStore.restore(it) }
                 if (onlyPending == null || onlyPending.rowsInserted == 0) {
                     // No persistent state change was possible (or the pending history was already fully present). Nothing was written.
-                    return@withTransaction WavdropBackupImportApplyResult(
+                    return@withTransaction StereoSineBackupImportApplyResult(
                         matchedTracks   = match.matchedRows.size,
                         unmatchedTracks = match.unmatchedCount,
                         statsUpdated    = 0,
                         isNoOp          = true,
                     )
                 }
-                return@withTransaction WavdropBackupImportApplyResult(
+                return@withTransaction StereoSineBackupImportApplyResult(
                     matchedTracks   = match.matchedRows.size,
                     unmatchedTracks = match.unmatchedCount,
                     statsUpdated    = 0,
@@ -312,7 +312,7 @@ class WavdropBackupImportRepository @Inject constructor(
                 }
 
                 val existingUpdatedAt = existingLyricsMap[
-                    WavdropMergePreviewAnalyzer.ExistingLyricsKey(song.id, song.uri)
+                    StereoSineMergePreviewAnalyzer.ExistingLyricsKey(song.id, song.uri)
                 ]
                 if (existingUpdatedAt == null || override.updatedAt > existingUpdatedAt) {
                     lyricsOverrideDao.upsert(
@@ -589,7 +589,7 @@ class WavdropBackupImportRepository @Inject constructor(
             val favoritesInBackup = backup.trackStats.count { it.isFavorite }
             val matchedFavorites  = match.matchedRows.count { (_, stat) -> stat.isFavorite }
 
-            WavdropBackupImportApplyResult(
+            StereoSineBackupImportApplyResult(
                 matchedTracks         = match.matchedRows.size,
                 unmatchedTracks       = match.unmatchedCount + desktopOverlayUnmatchedTracks,
                 matchDiagnostics      = match.diagnostics,
@@ -701,7 +701,7 @@ class WavdropBackupImportRepository @Inject constructor(
      * fingerprints for overlay events whose timestamps fall outside the root-event window,
      * causing duplicate overlay event insertion on apply.
      */
-    private suspend fun loadEventDedupSnapshot(backup: WavdropBackup): EventDedupSnapshot {
+    private suspend fun loadEventDedupSnapshot(backup: StereoSineBackup): EventDedupSnapshot {
         val rootTimes = backup.listenEvents.map { it.occurredAt }
         val overlayTimes = backup.desktopOverlay?.listenEvents
             ?.mapNotNull { it.occurredAt.takeIf { t -> t > 0L } }.orEmpty()
@@ -743,7 +743,7 @@ class WavdropBackupImportRepository @Inject constructor(
      * range reads; unrelated tracks of the same snapshot are never read or compared).
      */
     private suspend fun storedQuarantineEventsFor(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         fingerprint: String,
         existingOriginKeys: Set<String>,
     ): Map<String, List<PendingListenEventEntity>> {
@@ -756,15 +756,15 @@ class WavdropBackupImportRepository @Inject constructor(
     }
 
     /**
-     * Read-only preview: queries DB snapshots and delegates to [WavdropMergePreviewAnalyzer]
+     * Read-only preview: queries DB snapshots and delegates to [StereoSineMergePreviewAnalyzer]
      * to determine whether the backup contains any data that would actually be written.
      * No data is modified. Called during the preview phase to drive the Apply button and
      * the no-op explanation notice.
      */
     suspend fun previewMerge(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         onStage: ((String) -> Unit)? = null,
-    ): WavdropMergePreviewAnalyzer.Result {
+    ): StereoSineMergePreviewAnalyzer.Result {
         val t0 = System.currentTimeMillis()
         if (BuildConfig.DEBUG) Log.d(TAG, "previewMerge: start rootStats=${backup.trackStats.size} " +
             "rootEvents=${backup.listenEvents.size} overlay=${backup.desktopOverlay != null} " +
@@ -803,9 +803,9 @@ class WavdropBackupImportRepository @Inject constructor(
 
         val existingBaselines = importBaselineDao.getAllImportBaselinesSnapshot()
 
-        val existingLyrics: Map<WavdropMergePreviewAnalyzer.ExistingLyricsKey, Long> =
+        val existingLyrics: Map<StereoSineMergePreviewAnalyzer.ExistingLyricsKey, Long> =
             lyricsOverrideDao.getAllSnapshot()
-                .associate { WavdropMergePreviewAnalyzer.ExistingLyricsKey(it.songId, it.contentUri) to it.updatedAt }
+                .associate { StereoSineMergePreviewAnalyzer.ExistingLyricsKey(it.songId, it.contentUri) to it.updatedAt }
 
         val existingPlaylists: Map<String, Set<Long>> = if (backup.playlists.isNotEmpty()) {
             val result = mutableMapOf<String, Set<Long>>()
@@ -835,7 +835,7 @@ class WavdropBackupImportRepository @Inject constructor(
         }
         if (BuildConfig.DEBUG) Log.d(TAG, "previewMerge: all snapshots ready — calling analyzer " +
             "t=${System.currentTimeMillis() - t0}ms")
-        val result = WavdropMergePreviewAnalyzer.analyze(
+        val result = StereoSineMergePreviewAnalyzer.analyze(
             backup                       = backup,
             currentSongs                 = currentSongs,
             existingQuarantineOriginKeys = existingQuarantineOriginKeys,
@@ -861,7 +861,7 @@ class WavdropBackupImportRepository @Inject constructor(
      * No data is written. Called during the preview phase to decide whether to show a
      * "newer local activity" warning before the user confirms the restore.
      */
-    suspend fun detectStatsRegression(backup: WavdropBackup): StatsRegressionDetector.StatsRegressionSummary {
+    suspend fun detectStatsRegression(backup: StereoSineBackup): StatsRegressionDetector.StatsRegressionSummary {
         if (backup.trackStats.isEmpty()) return StatsRegressionDetector.StatsRegressionSummary(0)
         val currentSongs = songDao.getAllSongsSnapshot().map { e ->
             Song(
@@ -879,7 +879,7 @@ class WavdropBackupImportRepository @Inject constructor(
                 folderName  = e.folderName,
             )
         }
-        val match = WavdropBackupStatsMatcher.match(backup, currentSongs)
+        val match = StereoSineBackupStatsMatcher.match(backup, currentSongs)
         if (match.matchedRows.isEmpty()) return StatsRegressionDetector.StatsRegressionSummary(0)
         val currentStatsById = trackStatsDao.getAllStatsSnapshot().associateBy { it.songId }
         val pairs = match.matchedRows.mapNotNull { (song, backupStats) ->
@@ -909,5 +909,5 @@ private data class EventDedupSnapshot(
 
 private const val EVENT_SNAPSHOT_PAGE = 5_000
 
-private const val TAG = "WavdropRestore"
-private const val APPLY_TAG = "WavdropImportApply"
+private const val TAG = "StereoSineRestore"
+private const val APPLY_TAG = "StereoSineImportApply"

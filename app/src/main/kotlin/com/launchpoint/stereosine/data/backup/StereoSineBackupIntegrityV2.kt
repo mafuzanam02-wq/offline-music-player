@@ -5,7 +5,7 @@ import java.security.MessageDigest
 /**
  * Payload integrity fingerprint for Backup format v2.
  *
- * Separate from [WavdropBackupIntegrity] (v1). Both implementations fingerprint the
+ * Separate from [StereoSineBackupIntegrity] (v1). Both implementations fingerprint the
  * parsed model — never the raw JSON text — so the check is immune to re-encoding.
  *
  * Coverage (v2 adds to v1):
@@ -21,7 +21,7 @@ import java.security.MessageDigest
  * The v2 canonical string is clearly tagged so a v2 fingerprint can never collide
  * with a v1 fingerprint for the same payload data.
  */
-object WavdropBackupIntegrityV2 {
+object StereoSineBackupIntegrityV2 {
 
     private const val FIELD = ''  // ASCII unit separator
     private const val RECORD = '' // ASCII record separator
@@ -40,7 +40,7 @@ object WavdropBackupIntegrityV2 {
         { it.eventId ?: "" },
     )
 
-    fun fingerprint(backup: WavdropBackup): String {
+    fun fingerprint(backup: StereoSineBackup): String {
         val stream = StreamingFingerprint(
             backup.backupId, backup.sourceInstallationId, backup.exportedAtMs,
             backup.songs, backup.trackStats, backup.importBaselines, backup.lyricsOverrides, backup.playlists,

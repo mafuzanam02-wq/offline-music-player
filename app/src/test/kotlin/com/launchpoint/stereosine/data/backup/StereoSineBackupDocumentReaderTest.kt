@@ -10,17 +10,17 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 
 /** Content sniffing: the unified reader never trusts file name, extension or MIME type. */
-class WavdropBackupDocumentReaderTest {
+class StereoSineBackupDocumentReaderTest {
 
     private fun read(bytes: ByteArray, limits: WdbkLimits = WdbkLimits.DEFAULT) =
-        WavdropBackupDocumentReader.read(ByteArrayInputStream(bytes), limits, WdbkTestSupport.NOW + 1_000_000L)
+        StereoSineBackupDocumentReader.read(ByteArrayInputStream(bytes), limits, WdbkTestSupport.NOW + 1_000_000L)
 
     private fun read(text: String) = read(text.toByteArray())
 
-    private fun wavdrop(r: BackupDocumentReadResult) = r as BackupDocumentReadResult.Wavdrop
+    private fun stereoSine(r: BackupDocumentReadResult) = r as BackupDocumentReadResult.StereoSine
 
     @Test fun `valid V2 JSON is accepted and verified`() {
-        val r = wavdrop(read(RecoveryTestFixtures.v2Json(WdbkTestSupport.fullBackup())))
+        val r = stereoSine(read(RecoveryTestFixtures.v2Json(WdbkTestSupport.fullBackup())))
         assertEquals(BackupContainerKind.LEGACY_JSON, r.container)
         assertNull(r.result.error)
         assertEquals(BackupIntegrityStatus.VERIFIED, r.result.integrityStatus)
@@ -29,22 +29,22 @@ class WavdropBackupDocumentReaderTest {
     }
 
     @Test fun `valid V1 JSON is accepted through the legacy parser as V1`() {
-        val r = wavdrop(read(RecoveryTestFixtures.v1Json()))
+        val r = stereoSine(read(RecoveryTestFixtures.v1Json()))
         assertEquals(BackupContainerKind.LEGACY_JSON, r.container)
         assertNull(r.result.error)
         assertEquals(BackupFormatVersion.V1, r.result.backup!!.sourceVersion)
-        assertEquals(WavdropBackupParser.parse(RecoveryTestFixtures.v1Json()), r.result)
+        assertEquals(StereoSineBackupParser.parse(RecoveryTestFixtures.v1Json()), r.result)
     }
 
     @Test fun `legacy JSON is decoded by content whatever it is named - there is no name input at all`() {
         // The reader API takes only a stream: a ".txt"/".wdbk"/MIME-less provider name cannot influence the decision.
         val json = RecoveryTestFixtures.v2Json()
-        assertNull(wavdrop(read(json)).result.error)
+        assertNull(stereoSine(read(json)).result.error)
     }
 
     @Test fun `valid WDBK is accepted whatever its display name`() {
         val backup = WdbkTestSupport.fullBackup()
-        val r = wavdrop(read(WdbkTestSupport.write(backup).first))
+        val r = stereoSine(read(WdbkTestSupport.write(backup).first))
         assertEquals(BackupContainerKind.WDBK, r.container)
         assertNull(r.result.error)
         assertEquals(BackupIntegrityStatus.VERIFIED, r.result.integrityStatus)
@@ -53,8 +53,8 @@ class WavdropBackupDocumentReaderTest {
 
     @Test fun `decoded legacy v2 and decoded WDBK are the same model`() {
         val backup = WdbkTestSupport.fullBackup()
-        val old = wavdrop(read(WavdropBackupExporterV2.toJson(backup))).result.backup
-        val new = wavdrop(read(WdbkTestSupport.write(backup).first)).result.backup
+        val old = stereoSine(read(StereoSineBackupExporterV2.toJson(backup))).result.backup
+        val new = stereoSine(read(WdbkTestSupport.write(backup).first)).result.backup
         assertEquals(old, new)
     }
 
@@ -70,7 +70,7 @@ class WavdropBackupDocumentReaderTest {
 
     @Test fun `a fake zip fails safely with no backup`() {
         val fake = "PK\u0003\u0004 definitely not really a zip".toByteArray()
-        val r = wavdrop(read(fake))
+        val r = stereoSine(read(fake))
         assertEquals(BackupContainerKind.WDBK, r.container)
         assertNull(r.result.backup)
         assertEquals(BackupIntegrityStatus.INVALID, r.result.integrityStatus)
@@ -78,7 +78,7 @@ class WavdropBackupDocumentReaderTest {
 
     @Test fun `an ordinary zip that is not a WDBK is rejected`() {
         val zip = WdbkTestSupport.zip(listOf("readme.txt" to "hi".toByteArray()))
-        assertNull(wavdrop(read(zip)).result.backup)
+        assertNull(stereoSine(read(zip)).result.backup)
     }
 
     @Test fun `empty input is rejected as empty`() {
@@ -88,13 +88,13 @@ class WavdropBackupDocumentReaderTest {
 
     @Test fun `a future legacy logical version keeps the existing newer-version wording`() {
         val future = RecoveryTestFixtures.v2Json().replaceFirst("\"version\": 2", "\"version\": 3")
-        val r = wavdrop(read(future))
-        assertEquals(WavdropBackupParser.NEWER_VERSION_ERROR, r.result.error)
+        val r = stereoSine(read(future))
+        assertEquals(StereoSineBackupParser.NEWER_VERSION_ERROR, r.result.error)
         assertNull(r.result.backup)
     }
 
     @Test fun `a tampered legacy v2 file still fails the existing integrity check`() {
-        val r = wavdrop(read(RecoveryTestFixtures.tampered(RecoveryTestFixtures.v2Json())))
+        val r = stereoSine(read(RecoveryTestFixtures.tampered(RecoveryTestFixtures.v2Json())))
         assertTrue(r.result.error!!.startsWith("Backup integrity check failed"))
     }
 
@@ -114,7 +114,7 @@ class WavdropBackupDocumentReaderTest {
 
     @Test fun `WDBK over the outer cap is rejected with the shared too-large message`() {
         val bytes = WdbkTestSupport.write(WdbkTestSupport.fullBackup()).first
-        val r = wavdrop(read(bytes, WdbkLimits(maxContainerBytes = bytes.size - 1L)))
+        val r = stereoSine(read(bytes, WdbkLimits(maxContainerBytes = bytes.size - 1L)))
         assertEquals(BackupInputReader.TOO_LARGE_MESSAGE, r.result.error)
     }
 }

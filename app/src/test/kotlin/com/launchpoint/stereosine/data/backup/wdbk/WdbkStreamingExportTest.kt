@@ -4,8 +4,8 @@ import com.launchpoint.stereosine.data.backup.BackupListenEvent
 import com.launchpoint.stereosine.data.backup.CanonicalEventStream
 import com.launchpoint.stereosine.data.backup.CanonicalEventStreamTest
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -23,10 +23,10 @@ class WdbkStreamingExportTest {
 
     private val chunk = 100
 
-    private fun smallSections(events: List<BackupListenEvent> = emptyList()): WavdropBackup =
+    private fun smallSections(events: List<BackupListenEvent> = emptyList()): StereoSineBackup =
         WdbkTestSupport.fullBackup(eventCount = 0, overlay = true).copy(listenEvents = events)
 
-    /** A snapshot whose events come ONLY from [openEvents] - the WavdropBackup it is derived from carries none. */
+    /** A snapshot whose events come ONLY from [openEvents] - the StereoSineBackup it is derived from carries none. */
     private fun snapshotWith(openEvents: () -> WdbkEventSource): WdbkExportSnapshot {
         val b = smallSections()
         return WdbkExportSnapshot(
@@ -50,16 +50,16 @@ class WdbkStreamingExportTest {
     }
 
     private fun assertStreamedFingerprintEqualsLegacy(label: String, events: List<BackupListenEvent>, perChunk: Int = chunk) {
-        val canonical = events.sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER)
+        val canonical = events.sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER)
         val (bytes, receipt) = export(snapshotWith(sourceOf(canonical)), perChunk)
-        val legacy = WavdropBackupIntegrityV2.fingerprint(smallSections(events))
+        val legacy = StereoSineBackupIntegrityV2.fingerprint(smallSections(events))
         assertEquals("$label: manifest fingerprint", legacy, receipt.fingerprint)
         assertEquals("$label: manifest count", events.size, receipt.manifest.counts.listenEventCount)
         val read = WdbkTestSupport.read(bytes)
         assertNull("$label: ${read.error}", read.error)
         assertEquals("$label: decoded events", events.size, read.backup!!.listenEvents.size)
-        assertEquals("$label: reader fingerprint", legacy, WavdropBackupIntegrityV2.fingerprint(read.backup!!))
-        assertEquals("$label: each event exactly once", canonical, read.backup!!.listenEvents.sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER))
+        assertEquals("$label: reader fingerprint", legacy, StereoSineBackupIntegrityV2.fingerprint(read.backup!!))
+        assertEquals("$label: each event exactly once", canonical, read.backup!!.listenEvents.sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER))
     }
 
     private fun ev(
@@ -144,7 +144,7 @@ class WdbkStreamingExportTest {
         assertNull(read.error)
         assertEquals(total, read.backup!!.listenEvents.size)
         val regenerated = List(total) { i -> RecoveryTestFixtures.backupEvent(1L + i % 5, "gen-$i", 5_000_000L + i) }
-        assertEquals(WavdropBackupIntegrityV2.fingerprint(smallSections(regenerated)), receipt.fingerprint)
+        assertEquals(StereoSineBackupIntegrityV2.fingerprint(smallSections(regenerated)), receipt.fingerprint)
     }
 
     @Test fun `the writer needs no complete event list - the snapshot type has none and the model it wraps has no events`() {
@@ -208,12 +208,12 @@ class WdbkStreamingExportTest {
         assertTrue(table.calls.all { it.limit == WdbkLimits.EVENT_EXPORT_PAGE_SIZE })
         assertEquals(1, streams)
 
-        val legacy = WavdropBackupIntegrityV2.fingerprint(smallSections(exportable.map(::map)))
+        val legacy = StereoSineBackupIntegrityV2.fingerprint(smallSections(exportable.map(::map)))
         assertEquals(legacy, receipt.fingerprint)
         val read = WdbkTestSupport.read(bytes)
         assertNull(read.error)
         assertEquals(exportable.size, read.backup!!.listenEvents.size)
-        assertEquals(legacy, WavdropBackupIntegrityV2.fingerprint(read.backup!!))
+        assertEquals(legacy, StereoSineBackupIntegrityV2.fingerprint(read.backup!!))
     }
 
     // ── Same-timestamp stress: the former unbounded equal-occurredAt run ──────
@@ -290,14 +290,14 @@ class WdbkStreamingExportTest {
         assertEquals(cursors.size, cursors.toSet().size)
 
         // Exactly once, round trip, and the old full-list reference fingerprint.
-        val legacy = WavdropBackupIntegrityV2.fingerprint(smallSections(exportable.map(::map)))
+        val legacy = StereoSineBackupIntegrityV2.fingerprint(smallSections(exportable.map(::map)))
         assertEquals(legacy, receipt.fingerprint)
         val read = WdbkTestSupport.read(bytes)
         assertNull(read.error)
         assertEquals(exportable.size, read.backup!!.listenEvents.size)
-        assertEquals(legacy, WavdropBackupIntegrityV2.fingerprint(read.backup!!))
+        assertEquals(legacy, StereoSineBackupIntegrityV2.fingerprint(read.backup!!))
         assertEquals(
-            exportable.map(::map).sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER), // stable over id order, like legacy
+            exportable.map(::map).sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER), // stable over id order, like legacy
             read.backup!!.listenEvents,
         )
     }

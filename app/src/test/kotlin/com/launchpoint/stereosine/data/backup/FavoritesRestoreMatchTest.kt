@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Favorites are restored from [WavdropBackupStatsMatcher.match] matchedRows
+ * Favorites are restored from [StereoSineBackupStatsMatcher.match] matchedRows
  * (the same tier matcher as stats). These tests pin the favorite-specific
  * behavior: surviving a reinstall ID change and never landing on a wrong song.
  */
@@ -18,7 +18,7 @@ class FavoritesRestoreMatchTest {
         trackNumber = 0, year = 0,
     )
 
-    private fun backupWithFavorite(songId: Long, uri: String) = WavdropBackup(
+    private fun backupWithFavorite(songId: Long, uri: String) = StereoSineBackup(
         exportedAt = "2026-06-11T00:00:00Z",
         songs = listOf(
             BackupSong(
@@ -40,7 +40,7 @@ class FavoritesRestoreMatchTest {
         val backup = backupWithFavorite(songId = 1L, uri = "content://media/OLD/1")
         val rescanned = song(42L, uri = "content://media/NEW/42")
 
-        val match = WavdropBackupMatchResultOf(backup, rescanned)
+        val match = StereoSineBackupMatchResultOf(backup, rescanned)
         assertEquals(1, match.matchedRows.size)
         val (currentSong, stat) = match.matchedRows.single()
         assertEquals(42L, currentSong.id)
@@ -54,11 +54,11 @@ class FavoritesRestoreMatchTest {
         val dupA = song(42L, uri = "content://media/NEW/42")
         val dupB = song(43L, uri = "content://media/NEW/43")
 
-        val match = WavdropBackupStatsMatcher.match(backup, listOf(dupA, dupB))
+        val match = StereoSineBackupStatsMatcher.match(backup, listOf(dupA, dupB))
         assertEquals(0, match.matchedRows.size)
         assertEquals(1, match.diagnostics.ambiguous)
     }
 
-    private fun WavdropBackupMatchResultOf(backup: WavdropBackup, current: Song) =
-        WavdropBackupStatsMatcher.match(backup, listOf(current))
+    private fun StereoSineBackupMatchResultOf(backup: StereoSineBackup, current: Song) =
+        StereoSineBackupStatsMatcher.match(backup, listOf(current))
 }

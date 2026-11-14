@@ -6,8 +6,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * P5-REL-05. Pure presentation rules for an already-verified [WavdropBackup] (the parser / WDBK reader has rejected anything
- * whose integrity failed before a [WavdropBackup] exists). Nothing here touches integrity checking.
+ * P5-REL-05. Pure presentation rules for an already-verified [StereoSineBackup] (the parser / WDBK reader has rejected anything
+ * whose integrity failed before a [StereoSineBackup] exists). Nothing here touches integrity checking.
  */
 internal object BackupPresentation {
 
@@ -19,17 +19,17 @@ internal object BackupPresentation {
         "Older backup format. It can still be restored — create a new backup to use the current format."
 
     /**
-     * The genuine embedded export time. v2 / WDBK carry [WavdropBackup.exportedAtMs] (covered by the v2 fingerprint / manifest) and
-     * take precedence; legacy v1 carries an ISO-8601 [WavdropBackup.exportedAt]. A non-positive or unparseable value is "missing".
+     * The genuine embedded export time. v2 / WDBK carry [StereoSineBackup.exportedAtMs] (covered by the v2 fingerprint / manifest) and
+     * take precedence; legacy v1 carries an ISO-8601 [StereoSineBackup.exportedAt]. A non-positive or unparseable value is "missing".
      * The file's last-modified time is never consulted here.
      */
-    fun exportTimestampMillis(backup: WavdropBackup): Long? {
+    fun exportTimestampMillis(backup: StereoSineBackup): Long? {
         backup.exportedAtMs?.takeIf { it > 0 }?.let { return it }
         return parseIso(backup.exportedAt)
     }
 
     /** `d MMM yyyy, HH:mm` in [zone], the verification screen's established format, or [UNKNOWN_DATE]. */
-    fun formatExportDate(backup: WavdropBackup, zone: ZoneId = ZoneId.systemDefault()): String =
+    fun formatExportDate(backup: StereoSineBackup, zone: ZoneId = ZoneId.systemDefault()): String =
         exportTimestampMillis(backup)?.let { formatMillis(it, zone) } ?: UNKNOWN_DATE
 
     /** Desktop backups carry an ISO string only; an unparseable non-blank string is shown as written, blank is Unknown. */
@@ -46,7 +46,7 @@ internal object BackupPresentation {
      * Compatibility warning for genuinely old (v1) backups only. v2 JSON and WDBK are the current formats; their integrity is the v2
      * fingerprint / WDBK manifest, so a missing legacy `payloadSha256` is expected and not a warning.
      */
-    fun legacyFormatWarning(backup: WavdropBackup): String? = when {
+    fun legacyFormatWarning(backup: StereoSineBackup): String? = when {
         backup.sourceVersion != BackupFormatVersion.V1 -> null
         backup.payloadSha256 == null -> LEGACY_UNSIGNED_WARNING
         else -> LEGACY_SIGNED_WARNING

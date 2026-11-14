@@ -2,8 +2,8 @@ package com.launchpoint.stereosine.data.backup.wdbk
 
 import com.launchpoint.stereosine.data.backup.BackupIntegrityStatus
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.read
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.unzip
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.write
@@ -18,7 +18,7 @@ class WdbkChunkingTest {
 
     private val chunk = 5
 
-    private fun backupWith(n: Int): WavdropBackup = RecoveryTestFixtures.v2Backup(events = WdbkTestSupport.events(n))
+    private fun backupWith(n: Int): StereoSineBackup = RecoveryTestFixtures.v2Backup(events = WdbkTestSupport.events(n))
 
     private fun historyNames(bytes: ByteArray) = unzip(bytes).keys.filter { it.startsWith("history/") }
 
@@ -32,7 +32,7 @@ class WdbkChunkingTest {
         assertEquals(n, result.backup!!.listenEvents.size)
         assertEquals(src.listenEvents.map { it.eventId.orEmpty() }.sorted(), result.backup!!.listenEvents.map { it.eventId.orEmpty() }.sorted())
         assertEquals(src.listenEvents.toSet().size, result.backup!!.listenEvents.toSet().size)
-        assertEquals(WavdropBackupIntegrityV2.fingerprint(src), WavdropBackupIntegrityV2.fingerprint(result.backup!!))
+        assertEquals(StereoSineBackupIntegrityV2.fingerprint(src), StereoSineBackupIntegrityV2.fingerprint(result.backup!!))
         val expectedChunks = (n + perChunk - 1) / perChunk
         assertEquals(expectedChunks, historyNames(bytes).size)
         assertEquals(n, receipt.manifest.entries.filter { it.section == "listenEvents" }.sumOf { it.eventCount ?: 0 })
@@ -81,7 +81,7 @@ class WdbkChunkingTest {
         val result = read(shuffled)
         assertNull(result.error)
         assertEquals(src.listenEvents.toSet(), result.backup!!.listenEvents.toSet())
-        assertEquals(WavdropBackupIntegrityV2.fingerprint(src), WavdropBackupIntegrityV2.fingerprint(result.backup!!))
+        assertEquals(StereoSineBackupIntegrityV2.fingerprint(src), StereoSineBackupIntegrityV2.fingerprint(result.backup!!))
     }
 
     @Test fun `a missing middle chunk is rejected`() {
@@ -135,7 +135,7 @@ class WdbkChunkingTest {
         val src = backupWith(41)
         val a = read(write(src, 3).first).backup!!
         val b = read(write(src, 17).first).backup!!
-        assertEquals(WavdropBackupIntegrityV2.fingerprint(a), WavdropBackupIntegrityV2.fingerprint(b))
+        assertEquals(StereoSineBackupIntegrityV2.fingerprint(a), StereoSineBackupIntegrityV2.fingerprint(b))
         assertEquals(a.listenEvents, b.listenEvents)
     }
 
@@ -149,12 +149,12 @@ class WdbkChunkingTest {
         // The largest single uncompressed payload is one chunk — far below a monolithic history document.
         val files = unzip(bytes)
         val largest = files.values.maxOf { it.size }
-        val legacyJsonBytes = com.launchpoint.stereosine.data.backup.WavdropBackupExporterV2.toJson(src).toByteArray().size
+        val legacyJsonBytes = com.launchpoint.stereosine.data.backup.StereoSineBackupExporterV2.toJson(src).toByteArray().size
         assertTrue("largest entry $largest vs legacy document $legacyJsonBytes", largest * 10 < legacyJsonBytes)
         val result = read(bytes)
         assertNotNull(result.backup)
         assertEquals(n, result.backup!!.listenEvents.size)
-        assertEquals(WavdropBackupIntegrityV2.fingerprint(src), WavdropBackupIntegrityV2.fingerprint(result.backup!!))
+        assertEquals(StereoSineBackupIntegrityV2.fingerprint(src), StereoSineBackupIntegrityV2.fingerprint(result.backup!!))
         assertTrue("compressed container must be smaller than the legacy JSON", bytes.size < legacyJsonBytes)
     }
 }

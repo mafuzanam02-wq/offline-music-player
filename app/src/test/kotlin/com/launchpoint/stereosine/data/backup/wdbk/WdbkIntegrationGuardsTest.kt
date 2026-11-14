@@ -26,9 +26,11 @@ class WdbkIntegrationGuardsTest {
         val ok = listOf(
             "wavdrop-backup.wdbk", "wavdrop-backup-2026-10-07.wdbk", "wavdrop-backup.json", "wavdrop-backup-2026-06-01.json",
             "WAVDROP-BACKUP.WDBK",
+            "stereosine-backup.wdbk", "stereosine-backup-2026-10-07.wdbk", "stereosine-backup.json", "STEREOSINE-BACKUP.WDBK",
         )
         val not = listOf(
             "wavdrop-backup.wdbk.tmp", "wavdrop-backup.json.tmp", "wavdrop-backup-2026-10-07.wdbk.tmp",
+            "stereosine-backup.wdbk.tmp", "stereosine-backup.zip", "stereosine.wdbk", "backup-stereosine.wdbk",
             "other.wdbk", "wavdrop-backup.zip", "wavdrop-backup.txt", "pre-recovery-latest.json", "", null,
         )
         ok.forEach { assertTrue(it, BackupVerificationRepository.isBackupFileName(it)) }
@@ -37,7 +39,7 @@ class WdbkIntegrationGuardsTest {
 
     @Test fun `verification reads through the unified content-sniffing reader not the extension`() {
         val s = code("data/backup/BackupVerificationRepository.kt")
-        assertTrue("WavdropBackupDocumentReader.readUri" in s)
+        assertTrue("StereoSineBackupDocumentReader.readUri" in s)
         assertFalse("readBackupText" in s)
         assertFalse("ZipInputStream" in s)
     }
@@ -46,8 +48,9 @@ class WdbkIntegrationGuardsTest {
 
     @Test fun `new backups are suggested as wdbk with a provider-safe MIME`() {
         val s = code("ui/screen/settings/SettingsBackupScreen.kt")
-        assertTrue("wavdrop-backup-\${LocalDate.now()}.wdbk" in s)
-        assertTrue("\"wavdrop-backup.wdbk\"" in s)
+        assertTrue("BackupFileNames.datedName(LocalDate.now())" in s)
+        assertTrue("BackupFileNames.fixedName()" in s)
+        assertFalse("wavdrop-backup" in s)
         assertFalse(".json" in s)
         assertFalse("application/json" in s)
         assertTrue("CreateDocument(BackupPickerTypes.CREATE_BACKUP_MIME)" in s)
@@ -58,29 +61,31 @@ class WdbkIntegrationGuardsTest {
     @Test fun `the restore picker is not narrowed and validation is by content`() {
         assertArrayEquals(arrayOf("*/*"), BackupPickerTypes.OPEN_BACKUP_MIME_TYPES)
         val vm = code("ui/screen/backupimport/BackupImportPreviewViewModel.kt")
-        assertTrue("WavdropBackupDocumentReader.readUri" in vm)
-        assertFalse("isLikelyWavdropBackupFileName" in vm)
+        assertTrue("StereoSineBackupDocumentReader.readUri" in vm)
+        assertFalse("isLikelyStereoSineBackupFileName" in vm)
         assertFalse("displayName" in vm)
     }
 
     @Test fun `restore copy no longer says JSON-only and fixed-name copy says wdbk`() {
-        assertEquals("Choose a StereoSine backup file.", ImportFileValidation.WAVDROP_WRONG_FILE_MESSAGE)
+        assertEquals("Choose a StereoSine backup file.", ImportFileValidation.STEREOSINE_WRONG_FILE_MESSAGE)
         val s = src("ui/screen/settings/SettingsBackupScreen.kt")
-        assertTrue("Always saves as wavdrop-backup.wdbk" in s)
+        assertTrue("Always saves as stereosine-backup.wdbk" in s)
+        assertFalse("Always saves as wavdrop-backup.wdbk" in s)
         assertTrue("Choose a StereoSine backup file to preview and restore." in s)
         assertFalse("backup JSON file" in s)
     }
 
     @Test fun `ImportFileValidation name hint accepts both extensions but is not an authority`() {
-        assertTrue(ImportFileValidation.isLikelyWavdropBackupFileName("x.WDBK"))
-        assertTrue(ImportFileValidation.isLikelyWavdropBackupFileName("x.json"))
-        assertFalse(ImportFileValidation.isLikelyWavdropBackupFileName("x.txt"))
+        assertTrue(ImportFileValidation.isLikelyStereoSineBackupFileName("x.WDBK"))
+        assertTrue(ImportFileValidation.isLikelyStereoSineBackupFileName("x.json"))
+        assertFalse(ImportFileValidation.isLikelyStereoSineBackupFileName("x.txt"))
     }
 
     @Test fun `automatic backup names and flow`() {
         val s = src("data/backup/AutoBackupRepository.kt")
-        assertTrue("\"wavdrop-backup-\${LocalDate.now()}.wdbk\"" in s)
-        assertTrue("\"wavdrop-backup.wdbk\"" in s)
+        assertTrue("BackupFileNames.datedName(LocalDate.now())" in s)
+        assertTrue("BackupFileNames.fixedName()" in s)
+        assertFalse("wavdrop-backup" in s)
         assertTrue("saveToFolderAndVerify" in s)
         assertTrue("buildWdbkExportSnapshot()" in s)
         assertFalse("buildBackupJson" in code("data/backup/AutoBackupRepository.kt"))
@@ -89,7 +94,7 @@ class WdbkIntegrationGuardsTest {
     // ── Architecture boundary ─────────────────────────────────────────────────
 
     @Test fun `manual export uses the paged WDBK model and the container saver, not the monolithic JSON string`() {
-        val repo = code("data/backup/WavdropBackupRepository.kt")
+        val repo = code("data/backup/StereoSineBackupRepository.kt")
         val exportFn = repo.substringAfter("suspend fun exportToUri").substringBefore("suspend fun buildWdbkExportSnapshot")
         assertTrue("WdbkBackupSaver().saveAndVerify" in exportFn)
         assertTrue("buildWdbkExportSnapshot()" in exportFn)
@@ -103,7 +108,7 @@ class WdbkIntegrationGuardsTest {
 
     @Test fun `the WDBK writer and reader never build one whole-backup JSON string`() {
         val w = code("data/backup/wdbk/WdbkWriter.kt")
-        for (forbidden in listOf("WavdropBackupExporterV2.toJson", "buildBackupJson", "getAllSnapshot", ".toString(2)", "ByteArrayOutputStream")) {
+        for (forbidden in listOf("StereoSineBackupExporterV2.toJson", "buildBackupJson", "getAllSnapshot", ".toString(2)", "ByteArrayOutputStream")) {
             assertFalse("writer must not use $forbidden", forbidden in w)
         }
         val saver = code("data/backup/wdbk/WdbkBackupSaver.kt")
@@ -113,9 +118,9 @@ class WdbkIntegrationGuardsTest {
 
     @Test fun `merge and recovery repositories stay container-unaware`() {
         for (f in listOf(
-            "data/backup/WavdropBackupImportRepository.kt", "data/backup/RecoveryRestoreRepository.kt",
+            "data/backup/StereoSineBackupImportRepository.kt", "data/backup/RecoveryRestoreRepository.kt",
             "data/backup/RecoveryRestorePlanner.kt", "data/backup/ListenEventRestorePlanner.kt",
-            "data/backup/PlaylistEntryRestorePlanner.kt", "data/backup/WavdropMergePreviewAnalyzer.kt",
+            "data/backup/PlaylistEntryRestorePlanner.kt", "data/backup/StereoSineMergePreviewAnalyzer.kt",
             "data/backup/StatsImportMerger.kt", "data/backup/DesktopOverlayRestorePlanner.kt",
             "data/backup/RecoveryPreferenceApplier.kt",
         )) {
@@ -138,9 +143,9 @@ class WdbkIntegrationGuardsTest {
     }
 
     @Test fun `legacy parser and exporter remain`() {
-        assertTrue("object WavdropBackupParser" in src("data/backup/WavdropBackupParser.kt"))
-        assertTrue("object WavdropBackupExporterV2" in src("data/backup/WavdropBackupExporterV2.kt"))
-        assertTrue("suspend fun buildBackupJson" in src("data/backup/WavdropBackupRepository.kt"))
+        assertTrue("object StereoSineBackupParser" in src("data/backup/StereoSineBackupParser.kt"))
+        assertTrue("object StereoSineBackupExporterV2" in src("data/backup/StereoSineBackupExporterV2.kt"))
+        assertTrue("suspend fun buildBackupJson" in src("data/backup/StereoSineBackupRepository.kt"))
     }
 
     @Test fun `no network permission and no new codec dependencies`() {

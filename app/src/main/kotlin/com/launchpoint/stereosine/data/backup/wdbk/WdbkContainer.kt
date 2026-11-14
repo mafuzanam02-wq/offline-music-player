@@ -5,7 +5,7 @@ import java.util.Locale
 
 /**
  * WDBK container version. INDEPENDENT of the logical backup version
- * ([com.launchpoint.stereosine.data.backup.WavdropBackupParser.SUPPORTED_VERSION], v2): the container only
+ * ([com.launchpoint.stereosine.data.backup.StereoSineBackupParser.SUPPORTED_VERSION], v2): the container only
  * describes how a v2 logical backup is packaged. It is not "Backup V3".
  *
  *  - [MAJOR] changes mean the container cannot be read by older readers (rejected with the standard

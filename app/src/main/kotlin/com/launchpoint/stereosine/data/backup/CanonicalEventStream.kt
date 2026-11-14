@@ -54,7 +54,7 @@ internal data class EventExportCursor(
 
 /**
  * Streams the exportable listen events of a captured export snapshot in the CANONICAL fingerprint order
- * ([WavdropBackupIntegrityV2.EVENT_ORDER]) using bounded keyset pages. Nothing history-shaped is ever collected.
+ * ([StereoSineBackupIntegrityV2.EVENT_ORDER]) using bounded keyset pages. Nothing history-shaped is ever collected.
  *
  * Ordering. The database itself returns rows in the canonical order, so no sorting or run buffering happens here. The
  * canonical order is occurredAt, songId, contentUri, eventType, listenedMs, durationMs, source, title, artist, album,
@@ -127,7 +127,7 @@ internal class CanonicalEventStream(
             if (!BackupEventExportRules.shouldExport(row.source)) continue
             val event = map(row)
             previous?.let {
-                check(WavdropBackupIntegrityV2.EVENT_ORDER.compare(it, event) <= 0) {
+                check(StereoSineBackupIntegrityV2.EVENT_ORDER.compare(it, event) <= 0) {
                     "Event export order disagrees with the canonical fingerprint order at row id ${row.id}"
                 }
             }

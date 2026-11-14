@@ -72,7 +72,7 @@ class PortableSettingsRecoveryRoomTest {
         restorer(d), AutoBackupWorkScheduler(d.app, NoopGateway()),
     )
 
-    private fun exporter(d: Device) = WavdropBackupRepository(
+    private fun exporter(d: Device) = StereoSineBackupRepository(
         RuntimeEnvironment.getApplication(), d.store, db.songDao(), db.trackStatsDao(), db.importBaselineDao(), db.lyricsOverrideDao(),
         db.playlistDao(), db.trackListenEventDao(), db.pendingBackupExtensionDao(), db.pendingTrackDao(), d.app, d.home, d.scan, d.resume,
     )
@@ -100,7 +100,7 @@ class PortableSettingsRecoveryRoomTest {
     )
 
     private fun exportedPrefs(d: Device): BackupPreferences = runBlocking {
-        val r = WavdropBackupParser.parse(exporter(d).buildBackupJson())
+        val r = StereoSineBackupParser.parse(exporter(d).buildBackupJson())
         assertNull(r.error, r.error)
         assertEquals(BackupIntegrityStatus.VERIFIED, r.integrityStatus)
         requireNotNull(r.backup?.preferences)
@@ -158,7 +158,7 @@ class PortableSettingsRecoveryRoomTest {
     }
 
     @Test fun `recovery of a legacy backup leaves the device's newer settings untouched`() = runBlocking {
-        val legacy = requireNotNull(WavdropBackupParser.parse(RecoveryTestFixtures.v2Json(
+        val legacy = requireNotNull(StereoSineBackupParser.parse(RecoveryTestFixtures.v2Json(
             RecoveryTestFixtures.v2Backup(preferences = BackupPreferences(
                 startupDestination = "ALBUMS", mostPlayedPeriod = null, mostPlayedLimit = null, homeVisibleSections = null,
                 scanMode = null, selectedFolderUris = null, minimumTrackDurationSeconds = null,
@@ -218,7 +218,7 @@ class PortableSettingsRecoveryRoomTest {
         val prefs = exportedPrefs(source)
         val target = device()
         val before = snap(target)
-        val merge = WavdropBackupImportRepository(
+        val merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )

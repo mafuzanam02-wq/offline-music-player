@@ -12,7 +12,7 @@ enum class BackupRestoreMode {
     MERGE,
 
     /**
-     * The selected backup becomes authoritative for WavDrop-owned recoverable state, mapped conservatively onto the songs
+     * The selected backup becomes authoritative for StereoSine-owned recoverable state, mapped conservatively onto the songs
      * currently in the device library. Destructive, so it can only run after a VERIFIED pre-restore safety snapshot exists.
      */
     RECOVERY,

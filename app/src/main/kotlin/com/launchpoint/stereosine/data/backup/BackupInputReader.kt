@@ -41,7 +41,7 @@ object BackupInputReader {
     /**
      * Generic variant of [TOO_LARGE_MESSAGE] for non-backup untrusted imports
      * (e.g. the BlackPlayer `.bpstat` importer) that share the same byte cap but
-     * should not surface a Wavdrop-backup-specific string.
+     * should not surface a StereoSine-backup-specific string.
      */
     const val IMPORT_TOO_LARGE_MESSAGE: String =
         "Import file is too large. The maximum supported size is 100 MiB."

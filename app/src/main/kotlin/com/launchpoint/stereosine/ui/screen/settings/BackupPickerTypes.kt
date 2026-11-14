@@ -6,7 +6,7 @@ package com.launchpoint.stereosine.ui.screen.settings
  * Android providers report arbitrary MIME types for `.wdbk` (often `application/octet-stream`, sometimes
  * `application/zip` or a provider-specific type) and legacy `.json` backups (`application/json`, `text/plain`, …).
  * A narrow filter would hide valid files on some providers, so the open picker is NOT narrowed; every selected
- * document is validated strictly by CONTENT after selection (see `WavdropBackupDocumentReader`), never by MIME or
+ * document is validated strictly by CONTENT after selection (see `StereoSineBackupDocumentReader`), never by MIME or
  * extension.
  */
 object BackupPickerTypes {

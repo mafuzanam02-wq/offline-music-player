@@ -230,7 +230,7 @@ internal object PendingHistoryCodec {
         val integrity = section["integrity"] as? Map<*, *> ?: throw BackupParseException(DAMAGED)
         if (integrity["v"] as? Long != 1L) throw BackupParseException(DAMAGED)
         val declared = integrity["sha256"] as? String ?: throw BackupParseException(DAMAGED)
-        if (!declared.equals(digest(history), ignoreCase = true)) throw BackupParseException(WavdropBackupParser.INTEGRITY_ERROR)
+        if (!declared.equals(digest(history), ignoreCase = true)) throw BackupParseException(StereoSineBackupParser.INTEGRITY_ERROR)
         return LegacyParse.Supported(history)
     }
 

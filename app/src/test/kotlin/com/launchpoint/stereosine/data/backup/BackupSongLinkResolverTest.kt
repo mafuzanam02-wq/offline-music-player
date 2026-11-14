@@ -103,7 +103,7 @@ class BackupSongLinkResolverTest {
     fun `lyrics attach to the correct song after ID change via the matcher mapping`() {
         // Reinstall: backup song id 1 (dead URI) tier-matches to current id 42.
         val rescanned = song(42L, uri = "content://media/NEW/42", title = "Track", artist = "A", album = "B")
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt = "2026-06-11T00:00:00Z",
             songs = listOf(
                 BackupSong(
@@ -114,7 +114,7 @@ class BackupSongLinkResolverTest {
             ),
             trackStats = emptyList(), importBaselines = emptyList(),
         )
-        val resolved = WavdropBackupStatsMatcher.resolveBackupSongIds(backup, listOf(rescanned))
+        val resolved = StereoSineBackupStatsMatcher.resolveBackupSongIds(backup, listOf(rescanned))
         val resolver = BackupSongLinkResolver(listOf(rescanned), resolved)
 
         val target = resolver.resolve(1L, "content://media/OLD/1", "Track", "A", "B")

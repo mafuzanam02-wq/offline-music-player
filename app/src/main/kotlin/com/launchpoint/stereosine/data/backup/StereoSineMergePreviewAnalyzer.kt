@@ -20,7 +20,7 @@ import com.launchpoint.stereosine.data.model.Song
  *  - If every data category produces zero writes, the backup is a no-op for this library.
  *  - Does not write to the database. All inputs are snapshots captured by the caller.
  */
-object WavdropMergePreviewAnalyzer {
+object StereoSineMergePreviewAnalyzer {
 
     data class Result(
         val hasMergeableData: Boolean,
@@ -39,7 +39,7 @@ object WavdropMergePreviewAnalyzer {
     data class ExistingLyricsKey(val songId: Long, val contentUri: String)
 
     fun analyze(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         currentSongs: List<Song>,
         existingQuarantineOriginKeys: Set<String>,
         /** The snapshot fingerprint (computed once by the caller; recomputed here when absent). */
@@ -106,14 +106,14 @@ object WavdropMergePreviewAnalyzer {
         }
 
         // For all remaining checks, build the shared song resolver once.
-        val songResolution   = WavdropBackupStatsMatcher.resolveBackupSongs(backup, currentSongs)
+        val songResolution   = StereoSineBackupStatsMatcher.resolveBackupSongs(backup, currentSongs)
         val resolvedBySongId = songResolution.resolved
         val linkResolver     = BackupSongLinkResolver(currentSongs, resolvedBySongId, songResolution.rejectedLocalIds)
 
         // ── Stats: any matched track where backup value is strictly greater,
         //          or backup marks a track as favourite that local does not ───
         if (backup.trackStats.isNotEmpty()) {
-            val match = WavdropBackupStatsMatcher.match(backup, currentSongs)
+            val match = StereoSineBackupStatsMatcher.match(backup, currentSongs)
             for ((song, backupStat) in match.matchedRows) {
                 val local = existingStats[song.id]
                 val effectiveLastListenedAt = when (backup.sourceVersion) {
@@ -159,7 +159,7 @@ object WavdropMergePreviewAnalyzer {
         backup.desktopOverlay?.let { overlay ->
             val overlayPlan = precomputedDesktopOverlayPlan ?: run {
                 val planStart = System.currentTimeMillis()
-                if (BuildConfig.DEBUG) android.util.Log.d("WavdropPreview",
+                if (BuildConfig.DEBUG) android.util.Log.d("StereoSinePreview",
                     "analyze: overlay planner start trackStats=${overlay.trackStats.size} " +
                         "listenEvents=${overlay.listenEvents.size} currentSongs=${currentSongs.size}")
                 DesktopOverlayRestorePlanner.plan(
@@ -169,7 +169,7 @@ object WavdropMergePreviewAnalyzer {
                     existingEventFingerprints = existingEventFingerprints,
                     existingEventIds = existingEventIds,
                 ).also { plan ->
-                    if (BuildConfig.DEBUG) android.util.Log.d("WavdropPreview",
+                    if (BuildConfig.DEBUG) android.util.Log.d("StereoSinePreview",
                         "analyze: overlay planner done in ${System.currentTimeMillis() - planStart}ms " +
                             "matched=${plan.matchedStats.size} " +
                             "unresolved=${plan.unresolvedStats.size} " +

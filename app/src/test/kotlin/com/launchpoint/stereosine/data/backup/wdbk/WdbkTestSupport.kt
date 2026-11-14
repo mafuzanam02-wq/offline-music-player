@@ -7,8 +7,8 @@ import com.launchpoint.stereosine.data.backup.BackupPlaylist
 import com.launchpoint.stereosine.data.backup.BackupPreferences
 import com.launchpoint.stereosine.data.backup.BackupSong
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportResult
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportResult
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -37,7 +37,7 @@ internal object WdbkTestSupport {
         }
 
     /** A backup exercising every section, including awkward text, nulls, duplicates and the Desktop overlay. */
-    fun fullBackup(eventCount: Int = 7, overlay: Boolean = true): WavdropBackup {
+    fun fullBackup(eventCount: Int = 7, overlay: Boolean = true): StereoSineBackup {
         val songs = listOf(
             RecoveryTestFixtures.backupSong(1L),
             RecoveryTestFixtures.backupSong(9_007_199_254_740_993L, title = "Big \"id\" \\ song é中🎵"),
@@ -82,18 +82,18 @@ internal object WdbkTestSupport {
             """"trackStats":[{"desktopTrackId":"d1","title":"T","artist":"A","album":"B","durationMs":1000,"playCount":2,"skipCount":0,""" +
             """"totalListeningTimeMs":2000,"lastPlayedAt":5,"lastListenedAt":5,"favorite":true}],"listenEvents":[]}"""
 
-    fun emptyBackup(): WavdropBackup = RecoveryTestFixtures.v2Backup(
+    fun emptyBackup(): StereoSineBackup = RecoveryTestFixtures.v2Backup(
         songs = emptyList(), stats = emptyList(), events = emptyList(), playlists = emptyList(),
         lyrics = emptyList(), baselines = emptyList(), preferences = null, overlayRawJson = null,
     )
 
-    fun write(backup: WavdropBackup, eventsPerChunk: Int = WdbkLimits.EVENTS_PER_CHUNK): Pair<ByteArray, WdbkWriteReceipt> {
+    fun write(backup: StereoSineBackup, eventsPerChunk: Int = WdbkLimits.EVENTS_PER_CHUNK): Pair<ByteArray, WdbkWriteReceipt> {
         val out = ByteArrayOutputStream()
         val receipt = runBlocking { WdbkWriter(eventsPerChunk).write(WdbkExportSnapshot.fromBackup(backup), out) }
         return out.toByteArray() to receipt
     }
 
-    fun read(bytes: ByteArray, limits: WdbkLimits = WdbkLimits.DEFAULT): WavdropBackupImportResult =
+    fun read(bytes: ByteArray, limits: WdbkLimits = WdbkLimits.DEFAULT): StereoSineBackupImportResult =
         WdbkReader(limits).read(ByteArrayInputStream(bytes), NOW + 1_000_000L)
 
     /** Entries of a ZIP in physical order. */

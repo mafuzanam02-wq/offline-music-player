@@ -11,7 +11,7 @@ internal object ReferenceFingerprintV2 {
     private const val FIELD = ''  // ASCII unit separator
     private const val RECORD = '' // ASCII record separator
 
-    fun fingerprint(backup: WavdropBackup): String {
+    fun fingerprint(backup: StereoSineBackup): String {
         val canonical = buildString {
             // Header record unique to v2 — covers all three v2 root identity fields.
             record(

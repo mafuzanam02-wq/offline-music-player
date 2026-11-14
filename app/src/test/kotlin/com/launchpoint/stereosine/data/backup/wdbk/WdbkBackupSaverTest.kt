@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.backup.wdbk
 
 import com.launchpoint.stereosine.data.backup.BackupSaveValidator
-import com.launchpoint.stereosine.data.backup.WavdropBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.MemoryFolder
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.MemoryHandle
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.mutateManifest
@@ -21,13 +21,13 @@ import java.io.IOException
 /** Success is reported only after the bytes on disk were re-read through the production reader and matched. */
 class WdbkBackupSaverTest {
 
-    private val backup: WavdropBackup = WdbkTestSupport.fullBackup(eventCount = 40)
+    private val backup: StereoSineBackup = WdbkTestSupport.fullBackup(eventCount = 40)
     private val saver = WdbkBackupSaver(writer = WdbkWriter(eventsPerChunk = 10))
 
-    private fun WdbkBackupSaver.saveAndVerify(t: BackupFileHandle, b: WavdropBackup): WdbkWriteReceipt =
+    private fun WdbkBackupSaver.saveAndVerify(t: BackupFileHandle, b: StereoSineBackup): WdbkWriteReceipt =
         runBlocking { saveAndVerify(t, WdbkExportSnapshot.fromBackup(b)) }
 
-    private fun WdbkBackupSaver.saveToFolderAndVerify(f: BackupFolder, name: String, b: WavdropBackup): WdbkWriteReceipt =
+    private fun WdbkBackupSaver.saveToFolderAndVerify(f: BackupFolder, name: String, b: StereoSineBackup): WdbkWriteReceipt =
         runBlocking { saveToFolderAndVerify(f, name, WdbkExportSnapshot.fromBackup(b)) }
 
     private fun assertFailsWith(message: String? = null, block: () -> Unit) {
@@ -108,7 +108,37 @@ class WdbkBackupSaverTest {
 
     // ── Folder (automatic) backup ─────────────────────────────────────────────
 
-    private val fileName = "wavdrop-backup.wdbk"
+    private val fileName = com.launchpoint.stereosine.data.backup.BackupFileNames.fixedName()
+
+    @Test fun `replace-previous never touches a coexisting legacy wavdrop backup or unrelated file`() {
+        val folder = MemoryFolder()
+        val legacy = MemoryHandle(content = "LEGACY-WAVDROP".toByteArray())
+        val unrelated = MemoryHandle(content = "VACATION-PHOTOS".toByteArray())
+        folder.files["wavdrop-backup.wdbk"] = legacy
+        folder.files["notes.txt"] = unrelated
+        saver.saveToFolderAndVerify(folder, fileName, backup)
+        assertEquals("stereosine-backup.wdbk", fileName)
+        assertArrayEquals("LEGACY-WAVDROP".toByteArray(), legacy.content)
+        assertArrayEquals("VACATION-PHOTOS".toByteArray(), unrelated.content)
+        assertFalse(legacy.deleted)
+        assertFalse(unrelated.deleted)
+        assertTrue(legacy.modes.isEmpty())
+        assertNull(WdbkTestSupport.read(folder.files.getValue(fileName).content!!).error)
+    }
+
+    @Test fun `a failed or cancelled write leaves legacy and current files byte-identical`() {
+        val folder = MemoryFolder()
+        val legacy = MemoryHandle(content = "LEGACY".toByteArray())
+        val current = MemoryHandle(content = "CURRENT".toByteArray())
+        folder.files["wavdrop-backup.wdbk"] = legacy
+        folder.files[fileName] = current
+        folder.handleFactory = { name -> if (name.endsWith(".tmp")) MemoryHandle(failWriteAfterBytes = 50) else MemoryHandle() }
+        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
+        assertArrayEquals("LEGACY".toByteArray(), legacy.content)
+        assertArrayEquals("CURRENT".toByteArray(), current.content)
+        assertTrue(legacy.modes.isEmpty())
+        assertTrue(current.modes.isEmpty())
+    }
 
     @Test fun `folder backup verifies temp then promotes the exact verified bytes then verifies final`() {
         val folder = MemoryFolder()
@@ -209,11 +239,12 @@ class WdbkBackupSaverTest {
 
     @Test fun `temp file names never look like a backup to discovery`() {
         val folder = MemoryFolder()
-        saver.saveToFolderAndVerify(folder, "wavdrop-backup-2026-10-07.wdbk", backup)
+        saver.saveToFolderAndVerify(folder, "stereosine-backup-2026-10-07.wdbk", backup)
         val tempName = folder.files.keys.single { it.endsWith(".tmp") }
-        assertEquals("wavdrop-backup-2026-10-07.wdbk.tmp", tempName)
+        assertEquals("stereosine-backup-2026-10-07.wdbk.tmp", tempName)
         assertFalse(com.launchpoint.stereosine.data.backup.BackupVerificationRepository.isBackupFileName(tempName))
-        assertTrue(com.launchpoint.stereosine.data.backup.BackupVerificationRepository.isBackupFileName("wavdrop-backup-2026-10-07.wdbk"))
+        assertTrue(com.launchpoint.stereosine.data.backup.BackupVerificationRepository.isBackupFileName("stereosine-backup-2026-10-07.wdbk"))
+        assertFalse(com.launchpoint.stereosine.data.backup.BackupVerificationRepository.isBackupFileName("wavdrop-backup-2026-10-07.wdbk.tmp"))
     }
 
     @Test fun `receipt manifest matches what a real container contains`() {

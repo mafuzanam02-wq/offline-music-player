@@ -57,7 +57,7 @@ class OrphanRestoreAcceptanceRoomTest {
     private inner class Env(val db: StereoSineDatabase) {
         private val file = File(app().cacheDir, "p17d-${UUID.randomUUID()}.preferences_pb").also { files += it }
         private val store = PreferenceDataStoreFactory.create { file }
-        val merge = WavdropBackupImportRepository(
+        val merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
@@ -65,7 +65,7 @@ class OrphanRestoreAcceptanceRoomTest {
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
-        val exporter = WavdropBackupRepository(
+        val exporter = StereoSineBackupRepository(
             app(), store, db.songDao(), db.trackStatsDao(), db.importBaselineDao(), db.lyricsOverrideDao(),
             db.playlistDao(), db.trackListenEventDao(), db.pendingBackupExtensionDao(), db.pendingTrackDao(),
             AppSettingsRepository(store), HomeLayoutSettingsRepository(store), LibraryScanSettingsRepository(store),
@@ -73,7 +73,7 @@ class OrphanRestoreAcceptanceRoomTest {
         )
         val pending = PendingHistoryStore(db.pendingTrackDao())
 
-        suspend fun restore(b: WavdropBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
+        suspend fun restore(b: StereoSineBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
 
         suspend fun export(f: Fmt): ByteArray = when (f) {
             Fmt.JSON -> exporter.buildBackupJson().toByteArray(Charsets.UTF_8)
@@ -101,7 +101,7 @@ class OrphanRestoreAcceptanceRoomTest {
     // ── fixtures ──────────────────────────────────────────────────────────────
 
     /** History for songs 1..7. Events: some carry stable ids ("ev-…"), some are legacy (null). */
-    private fun seed(): WavdropBackup = RecoveryTestFixtures.v2Backup(
+    private fun seed(): StereoSineBackup = RecoveryTestFixtures.v2Backup(
         songs = (1L..7L).map { backupSong(it) },
         stats = (1L..7L).map { backupStats(it, 10 + it.toInt(), it.toInt(), it % 2 == 0L) },
         events = (1L..7L).flatMap { id ->
@@ -113,14 +113,14 @@ class OrphanRestoreAcceptanceRoomTest {
         backupId = "00000000-0000-0000-0000-0000000000d1",
     )
 
-    private fun serialize(f: Fmt, b: WavdropBackup): ByteArray = when (f) {
-        Fmt.JSON -> WavdropBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
+    private fun serialize(f: Fmt, b: StereoSineBackup): ByteArray = when (f) {
+        Fmt.JSON -> StereoSineBackupExporterV2.toJson(b).toByteArray(Charsets.UTF_8)
         Fmt.WDBK -> WdbkTestSupport.write(b).first
     }
 
-    private fun parse(f: Fmt, bytes: ByteArray): WavdropBackup {
+    private fun parse(f: Fmt, bytes: ByteArray): StereoSineBackup {
         val r = when (f) {
-            Fmt.JSON -> WavdropBackupParser.parse(String(bytes, Charsets.UTF_8))
+            Fmt.JSON -> StereoSineBackupParser.parse(String(bytes, Charsets.UTF_8))
             Fmt.WDBK -> WdbkReader().read(ByteArrayInputStream(bytes), RecoveryTestFixtures.NOW + 1_000_000L)
         }
         assertNull(r.error, r.error)
@@ -132,7 +132,7 @@ class OrphanRestoreAcceptanceRoomTest {
      * Backup A as produced and verified by the real exporter of the ORIGINAL device, then with the descriptors of songs 5, 6, 7 removed
      * (what a legacy or damaged export looks like) and tags rewritten: 6's records disagree, 7's state nothing at all.
      */
-    private fun backupFromOriginal(f: Fmt): WavdropBackup = runBlocking {
+    private fun backupFromOriginal(f: Fmt): StereoSineBackup = runBlocking {
         val original = Env(memoryDb((1L..7L).toList()))
         original.merge.applyImport(seed())
         val a = parse(f, original.export(f))
@@ -266,9 +266,9 @@ class OrphanRestoreAcceptanceRoomTest {
     }
 
     @Test fun `damaged or tampered backups are rejected at verification, before any restore could start`() {
-        val json = WavdropBackupExporterV2.toJson(seed())
+        val json = StereoSineBackupExporterV2.toJson(seed())
         assertTrue("fixture contains the value being tampered", json.contains("\"playCount\": 11"))
-        val r = WavdropBackupParser.parse(json.replaceFirst("\"playCount\": 11", "\"playCount\": 99"))
+        val r = StereoSineBackupParser.parse(json.replaceFirst("\"playCount\": 11", "\"playCount\": 99"))
         assertTrue(r.error != null || r.integrityStatus != BackupIntegrityStatus.VERIFIED)
         val wdbk = WdbkTestSupport.write(seed()).first.copyOf()
         wdbk[wdbk.size / 2] = (wdbk[wdbk.size / 2].toInt() xor 0x5A).toByte()

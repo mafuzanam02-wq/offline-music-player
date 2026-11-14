@@ -1,6 +1,6 @@
 package com.launchpoint.stereosine.data.backup
 
-data class WavdropBackupImportApplyResult(
+data class StereoSineBackupImportApplyResult(
     val matchedTracks: Int,
     val unmatchedTracks: Int,
     val ambiguousTracks: Int = 0,
@@ -36,7 +36,7 @@ data class WavdropBackupImportApplyResult(
     /** Restored events dated inside the current calendar month (drives current-month reports). */
     val currentMonthEventsRestored: Int = 0,
     /** Per-tier matching breakdown for diagnostics (logged and available to UI). */
-    val matchDiagnostics: WavdropBackupMatchDiagnostics = WavdropBackupMatchDiagnostics(),
+    val matchDiagnostics: StereoSineBackupMatchDiagnostics = StereoSineBackupMatchDiagnostics(),
     /** True when the backup restored a non-OFF auto-backup interval but no folder is set on this device. */
     val needsAutoBackupFolderSelection: Boolean = false,
     /** True once Room-backed restore data committed successfully. */

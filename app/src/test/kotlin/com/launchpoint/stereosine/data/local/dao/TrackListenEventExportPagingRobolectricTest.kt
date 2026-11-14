@@ -8,7 +8,7 @@ import com.launchpoint.stereosine.data.backup.EventExportCursor
 import com.launchpoint.stereosine.data.backup.toBackupListenEvent
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkExportSnapshot
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkReader
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport
@@ -76,7 +76,7 @@ class TrackListenEventExportPagingRobolectricTest {
 
     private fun legacyCanonical(): List<BackupListenEvent> = runBlocking {
         dao.getAllSnapshot().filter { BackupEventExportRules.shouldExport(it.source) }.map(::map)
-            .sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER)
+            .sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER)
     }
 
     @Test fun `empty table has no max id and exports nothing`() = runBlocking {
@@ -128,7 +128,7 @@ class TrackListenEventExportPagingRobolectricTest {
         val mapSong = { e: TrackListenEventEntity -> e.toBackupListenEvent(songs[e.songId]) }
         val got = drain(CanonicalEventStream(dao.getMaxId(), 97, fetch, mapSong), 250)
         val legacy = dao.getAllSnapshot().filter { BackupEventExportRules.shouldExport(it.source) }.map(mapSong)
-            .sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER)
+            .sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER)
         assertEquals(3_000, got.size)
         assertEquals(legacy, got)
     }
@@ -198,13 +198,13 @@ class TrackListenEventExportPagingRobolectricTest {
 
         val legacyEvents = dao.getAllSnapshot().filter { BackupEventExportRules.shouldExport(it.source) }.map(::map)
         assertEquals(340, legacyEvents.size)
-        val legacyFingerprint = WavdropBackupIntegrityV2.fingerprint(small.copy(listenEvents = legacyEvents))
+        val legacyFingerprint = StereoSineBackupIntegrityV2.fingerprint(small.copy(listenEvents = legacyEvents))
         assertEquals(legacyFingerprint, receipt.fingerprint)
         assertEquals(340, receipt.manifest.counts.listenEventCount)
 
         val read = WdbkReader().read(ByteArrayInputStream(out.toByteArray()), RecoveryTestFixtures.NOW + 1_000_000L)
         assertNull(read.error)
-        assertEquals(legacyFingerprint, WavdropBackupIntegrityV2.fingerprint(read.backup!!))
+        assertEquals(legacyFingerprint, StereoSineBackupIntegrityV2.fingerprint(read.backup!!))
         assertEquals(legacyEvents.toSet(), read.backup!!.listenEvents.toSet())
     }
 }

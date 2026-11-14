@@ -33,7 +33,7 @@ class PendingHistoryFormatTest {
 
     private fun wdbk(h: PendingHistoryBackup? = history(), chunk: Int = 2) = write(full(h), eventsPerChunk = chunk).first
 
-    private fun assertRejected(r: WavdropBackupImportResult, message: String? = null) {
+    private fun assertRejected(r: StereoSineBackupImportResult, message: String? = null) {
         assertNull("no partial backup may reach restore", r.backup)
         assertNotNull(r.error)
         assertEquals(BackupIntegrityStatus.INVALID, r.integrityStatus)
@@ -120,7 +120,7 @@ class PendingHistoryFormatTest {
             val i = e.indexOfFirst { it.first == "extensions/pending-history-events-000000.json" }
             e[i] = e[i].first to String(e[i].second, Charsets.UTF_8).replace("60000", "60001").toByteArray(Charsets.UTF_8)
         }
-        assertRejected(read(bytes), WavdropBackupParser.INTEGRITY_ERROR)
+        assertRejected(read(bytes), StereoSineBackupParser.INTEGRITY_ERROR)
     }
 
     @Test fun `wdbk - a removed or extra pending entry is rejected`() {
@@ -249,11 +249,11 @@ class PendingHistoryFormatTest {
 
     // ── legacy JSON ───────────────────────────────────────────────────────────
 
-    private fun json(h: PendingHistoryBackup?) = WavdropBackupExporterV2.toJson(full(h))
+    private fun json(h: PendingHistoryBackup?) = StereoSineBackupExporterV2.toJson(full(h))
 
     @Test fun `json - pending history round-trips through the production exporter and parser`() {
         val h = history()
-        val r = WavdropBackupParser.parse(json(h))
+        val r = StereoSineBackupParser.parse(json(h))
         assertNull(r.error)
         assertEquals(BackupIntegrityStatus.VERIFIED, r.integrityStatus)
         assertEquals(sorted(h), sorted(r.backup!!.pendingHistory!!))
@@ -264,14 +264,14 @@ class PendingHistoryFormatTest {
         for (h in listOf(null, PendingHistoryBackup.EMPTY)) {
             val text = json(h)
             assertFalse(JSONObject(text).has("pendingHistory"))
-            val r = WavdropBackupParser.parse(text)
+            val r = StereoSineBackupParser.parse(text)
             assertNull(r.error); assertNull(r.backup!!.pendingHistory)
         }
     }
 
     @Test fun `json - the primary v2 fingerprint ignores the extension and the file still verifies`() {
-        val a = WavdropBackupIntegrityV2.fingerprint(full(null))
-        val b = WavdropBackupIntegrityV2.fingerprint(full(history()))
+        val a = StereoSineBackupIntegrityV2.fingerprint(full(null))
+        val b = StereoSineBackupIntegrityV2.fingerprint(full(history()))
         assertEquals(a, b)
         assertEquals(JSONObject(json(null)).getJSONObject("integrity").getString("fingerprint"),
             JSONObject(json(history())).getJSONObject("integrity").getString("fingerprint"))
@@ -280,19 +280,19 @@ class PendingHistoryFormatTest {
     @Test fun `json - the extension has its own digest, so damage inside it is detected even though the fingerprint cannot see it`() {
         val root = JSONObject(json(history()))
         root.getJSONObject("pendingHistory").getJSONArray("stats").getJSONObject(0).put("playCount", 41)
-        val r = WavdropBackupParser.parse(root.toString(2))
+        val r = StereoSineBackupParser.parse(root.toString(2))
         assertNull(r.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, r.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, r.error)
         // and the primary sections are still protected exactly as before
         val primary = JSONObject(json(history()))
         primary.getJSONArray("trackStats").getJSONObject(0).put("playCount", 999)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, WavdropBackupParser.parse(primary.toString(2)).error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, StereoSineBackupParser.parse(primary.toString(2)).error)
     }
 
     @Test fun `json - the digest detects damage, not forgery - content edited together with its digest is accepted`() {
         // Documented limitation: neither the digest nor the primary fingerprint is a signature.
         val edited = history().let { h -> h.copy(core = h.core.copy(tracks = h.core.tracks.map { it.copy(title = "Edited") })) }
-        val r = WavdropBackupParser.parse(json(edited))
+        val r = StereoSineBackupParser.parse(json(edited))
         assertNull(r.error)
         assertEquals("Edited", r.backup!!.pendingHistory!!.core.tracks.first().title)
     }
@@ -303,15 +303,15 @@ class PendingHistoryFormatTest {
         val orphan = h.copy(events = h.events + h.events.first().copy(trackOriginKey = "nope|9", originFingerprint = "zzz"))
         val badKey = h.copy(core = h.core.copy(tracks = h.core.tracks.map { it.copy(originKey = "forged") }))
         for ((label, bad) in listOf("duplicate track" to dupKey, "orphan child" to orphan, "forged origin key" to badKey)) {
-            val r = WavdropBackupParser.parse(json(bad))
+            val r = StereoSineBackupParser.parse(json(bad))
             assertNull("$label", r.backup)
             assertNotNull("$label", r.error)
         }
     }
 
     @Test fun `json - malformed section shapes are rejected and a newer version is skipped with a warning`() {
-        fun parseWith(change: (JSONObject) -> Unit): WavdropBackupImportResult {
-            val root = JSONObject(json(history())); change(root); return WavdropBackupParser.parse(root.toString(2))
+        fun parseWith(change: (JSONObject) -> Unit): StereoSineBackupImportResult {
+            val root = JSONObject(json(history())); change(root); return StereoSineBackupParser.parse(root.toString(2))
         }
         assertNotNull(parseWith { it.put("pendingHistory", JSONObject.NULL) }.error)
         assertNotNull(parseWith { it.put("pendingHistory", "oops") }.error)

@@ -236,7 +236,7 @@ class ListenEventRestorePlannerTest {
         // Simulates reinstall: backup URIs are dead, but the tier matcher resolves
         // the backup song to the rescanned library song with a new id.
         val rescanned = song(42L, uri = "content://media/NEW/42")
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt = "2026-06-01T00:00:00Z",
             songs = listOf(
                 BackupSong(
@@ -249,7 +249,7 @@ class ListenEventRestorePlannerTest {
             trackStats = emptyList(),
             importBaselines = emptyList(),
         )
-        val resolved = WavdropBackupStatsMatcher.resolveBackupSongIds(backup, listOf(rescanned))
+        val resolved = StereoSineBackupStatsMatcher.resolveBackupSongIds(backup, listOf(rescanned))
 
         val plan = ListenEventRestorePlanner.plan(
             events = listOf(event(songId = 1L, occurredAt = epochMs(2026, 6, 5), uri = "content://media/OLD/1")),

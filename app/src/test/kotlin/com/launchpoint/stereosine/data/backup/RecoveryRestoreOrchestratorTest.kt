@@ -29,12 +29,12 @@ class RecoveryRestoreOrchestratorTest {
         val fail: Boolean = false,
         val gate: CompletableDeferred<Unit>? = null,
     ) : RecoveryDatabaseApplier {
-        override suspend fun applyRecovery(backup: WavdropBackup): WavdropBackupImportApplyResult {
+        override suspend fun applyRecovery(backup: StereoSineBackup): StereoSineBackupImportApplyResult {
             calls += "db:start"
             gate?.await()
             if (fail) throw IllegalStateException("tx failed")
             calls += "db:done"
-            return WavdropBackupImportApplyResult(
+            return StereoSineBackupImportApplyResult(
                 matchedTracks = 1, unmatchedTracks = 0, statsUpdated = 1,
                 restoreMode = BackupRestoreMode.RECOVERY, recovery = RecoveryRestoreSummary(matchedTracks = 1),
             )

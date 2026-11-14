@@ -41,7 +41,7 @@ class RecoveryRestoreRoomTest {
 
     private lateinit var db: StereoSineDatabase
     private lateinit var recovery: RecoveryRestoreRepository
-    private lateinit var merge: WavdropBackupImportRepository
+    private lateinit var merge: StereoSineBackupImportRepository
 
     @Before fun setUp() {
         db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
@@ -50,7 +50,7 @@ class RecoveryRestoreRoomTest {
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
-        merge = WavdropBackupImportRepository(
+        merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )

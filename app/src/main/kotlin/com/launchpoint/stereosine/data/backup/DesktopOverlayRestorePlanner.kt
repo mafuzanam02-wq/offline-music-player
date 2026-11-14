@@ -70,14 +70,14 @@ object DesktopOverlayRestorePlanner {
         val matchedByDesktopId = mutableMapOf<String, Song>()
 
         if (overlay.trackStats.isNotEmpty()) {
-            // Batch-resolve all overlay track stats in a single WavdropBackupStatsMatcher.match()
+            // Batch-resolve all overlay track stats in a single StereoSineBackupStatsMatcher.match()
             // call. The previous approach called resolve() once per track, which built a new
             // Resolver (8 hash maps over the full local library) for every single overlay track —
             // O(N×M) total. The batch assigns each overlay track a synthetic Long id so all N
             // tracks are resolved against the one Resolver — O(M + N) total.
             val statsMatchStart = System.currentTimeMillis()
-            val batchResult = WavdropBackupStatsMatcher.match(
-                WavdropBackup(
+            val batchResult = StereoSineBackupStatsMatcher.match(
+                StereoSineBackup(
                     exportedAt = "",
                     songs = overlay.trackStats.mapIndexed { i, s ->
                         BackupSong(
@@ -277,8 +277,8 @@ object DesktopOverlayRestorePlanner {
             )
         }
 
-        val resolvedBySyntheticId = WavdropBackupStatsMatcher.resolveBackupSongIds(
-            WavdropBackup(
+        val resolvedBySyntheticId = StereoSineBackupStatsMatcher.resolveBackupSongIds(
+            StereoSineBackup(
                 exportedAt = "",
                 songs = songs,
                 trackStats = emptyList(),
@@ -376,5 +376,5 @@ object DesktopOverlayRestorePlanner {
         val requestedKeys: Int,
     )
 
-    private const val TAG = "WavdropOverlayPlanner"
+    private const val TAG = "StereoSineOverlayPlanner"
 }

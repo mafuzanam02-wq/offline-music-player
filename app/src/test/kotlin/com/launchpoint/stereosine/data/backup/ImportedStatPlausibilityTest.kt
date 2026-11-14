@@ -34,7 +34,7 @@ class ImportedStatPlausibilityTest {
         totalListeningTimeMs: Long = 180_000L,
         lastPlayedAt: Long = realisticLastPlayed,
         lastListenedAt: Long = realisticLastListened,
-    ) = WavdropBackup(
+    ) = StereoSineBackup(
         exportedAt = "",
         exportedAtMs = 1_782_230_400_000L,
         backupId = "00000000-0000-0000-0000-000000000001",
@@ -54,8 +54,8 @@ class ImportedStatPlausibilityTest {
         importBaselines = emptyList(),
     )
 
-    private fun parseV2(backup: WavdropBackup) =
-        WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(backup), nowMs)
+    private fun parseV2(backup: StereoSineBackup) =
+        StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(backup), nowMs)
 
     private fun ghostSong() = Song(
         id = 44L,
@@ -98,14 +98,14 @@ class ImportedStatPlausibilityTest {
     fun `playCount above maximum is rejected`() {
         val result = parseV2(v2Backup(playCount = ImportedStatPlausibility.MAX_PLAY_COUNT + 1))
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
     }
 
     @Test
     fun `playCount near Int MAX is rejected`() {
         val result = parseV2(v2Backup(playCount = Int.MAX_VALUE))
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
     }
 
     // ── 4. Negative playCount is rejected ─────────────────────────────────────
@@ -114,7 +114,7 @@ class ImportedStatPlausibilityTest {
     fun `negative playCount is rejected`() {
         val result = parseV2(v2Backup(playCount = -1))
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
     }
 
     // ── 5. skipCount above maximum is rejected ────────────────────────────────
@@ -123,7 +123,7 @@ class ImportedStatPlausibilityTest {
     fun `skipCount above maximum is rejected`() {
         val result = parseV2(v2Backup(skipCount = ImportedStatPlausibility.MAX_SKIP_COUNT + 1))
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
     }
 
     // ── 6. totalListeningTimeMs above maximum is rejected ─────────────────────
@@ -134,7 +134,7 @@ class ImportedStatPlausibilityTest {
             v2Backup(totalListeningTimeMs = ImportedStatPlausibility.MAX_TOTAL_LISTENING_TIME_MS + 1),
         )
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
     }
 
     // ── 7. Timestamp within allowed skew imports ──────────────────────────────
@@ -153,14 +153,14 @@ class ImportedStatPlausibilityTest {
         val beyondSkew = nowMs + ImportedStatPlausibility.CLOCK_SKEW_ALLOWANCE_MS + 1
         val result = parseV2(v2Backup(lastPlayedAt = beyondSkew))
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
     }
 
     @Test
     fun `lastListenedAt far in the future is rejected`() {
         val result = parseV2(v2Backup(lastListenedAt = nowMs + 365L * 24 * 60 * 60 * 1000))
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, result.error)
     }
 
     // ── Fingerprint is unchanged by validation ────────────────────────────────
@@ -170,20 +170,20 @@ class ImportedStatPlausibilityTest {
         // The exporter computes a correct fingerprint over the implausible model;
         // rejection is by plausibility, not integrity — proving no mutation occurred.
         val implausible = v2Backup(playCount = Int.MAX_VALUE)
-        val json = WavdropBackupExporterV2.toJson(implausible)
-        val parsed = WavdropBackupParser.parse(json, nowMs)
+        val json = StereoSineBackupExporterV2.toJson(implausible)
+        val parsed = StereoSineBackupParser.parse(json, nowMs)
         assertNull(parsed.backup)
         // Not an integrity error — the fingerprint matched.
-        assertEquals(WavdropBackupParser.IMPLAUSIBLE_STATS_ERROR, parsed.error)
+        assertEquals(StereoSineBackupParser.IMPLAUSIBLE_STATS_ERROR, parsed.error)
     }
 
     // ── 10. Re-import remains idempotent ──────────────────────────────────────
 
     @Test
     fun `re-import of realistic backup is deterministic`() {
-        val json = WavdropBackupExporterV2.toJson(v2Backup())
-        val first = WavdropBackupParser.parse(json, nowMs)
-        val second = WavdropBackupParser.parse(json, nowMs)
+        val json = StereoSineBackupExporterV2.toJson(v2Backup())
+        val first = StereoSineBackupParser.parse(json, nowMs)
+        val second = StereoSineBackupParser.parse(json, nowMs)
         assertNotNull(first.backup)
         assertNotNull(second.backup)
         assertEquals(first.backup!!.trackStats, second.backup!!.trackStats)

@@ -12,7 +12,7 @@ import org.junit.Test
 /**
  * P1-B.2: Authoritative No-Op Protection and Pre-Flight Compliance.
  *
- * All mergeability decisions go through [WavdropMergePreviewAnalyzer.analyze] — the
+ * All mergeability decisions go through [StereoSineMergePreviewAnalyzer.analyze] — the
  * same shared pure function used by preview and by the apply-time recheck inside the
  * Room transaction. These tests exercise that shared function, which is the single
  * source of truth for the no-op determination.
@@ -99,16 +99,16 @@ class MergeNoOpProtectionTest {
     )
 
     private fun analyze(
-        backup: WavdropBackup,
+        backup: StereoSineBackup,
         currentSongs: List<Song> = emptyList(),
         existingStats: Map<Long, TrackStatsEntity> = emptyMap(),
         existingEventFingerprints: Set<String> = emptySet(),
         existingListenEvents: ListenEventRestorePlanner.ExistingListenEvents = ListenEventRestorePlanner.ExistingListenEvents.EMPTY,
         existingBaselines: List<com.launchpoint.stereosine.data.local.entity.ImportBaselineEntity> = emptyList(),
-        existingLyrics: Map<WavdropMergePreviewAnalyzer.ExistingLyricsKey, Long> = emptyMap(),
+        existingLyrics: Map<StereoSineMergePreviewAnalyzer.ExistingLyricsKey, Long> = emptyMap(),
         existingPlaylists: Map<String, Set<Long>> = emptyMap(),
         existingQuarantineOriginKeys: Set<String> = emptySet(),
-    ) = WavdropMergePreviewAnalyzer.analyze(
+    ) = StereoSineMergePreviewAnalyzer.analyze(
         backup                       = backup,
         currentSongs                 = currentSongs,
         existingQuarantineOriginKeys = existingQuarantineOriginKeys,
@@ -125,7 +125,7 @@ class MergeNoOpProtectionTest {
     @Test
     fun `all backup stat values equal to local — no-op, apply must not write`() {
         val songId = 1L
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(BackupSong(songId, "content://media/$songId", "Track $songId", "Artist", "Album", 0L, 180_000L, 0L, 0, 0)),
             trackStats      = listOf(backupStats(songId, playCount = 10, listeningMs = 5_000L)),
@@ -142,7 +142,7 @@ class MergeNoOpProtectionTest {
     @Test
     fun `all backup stat values lower than local — no-op`() {
         val songId = 1L
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(BackupSong(songId, "content://media/$songId", "Track $songId", "Artist", "Album", 0L, 180_000L, 0L, 0, 0)),
             trackStats      = listOf(backupStats(songId, playCount = 5, listeningMs = 1_000L)),
@@ -160,7 +160,7 @@ class MergeNoOpProtectionTest {
     @Test
     fun `local state advances to match backup between preview and apply — second call returns no-op`() {
         val songId = 1L
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(BackupSong(songId, "content://media/$songId", "Track $songId", "Artist", "Album", 0L, 180_000L, 0L, 0, 0)),
             trackStats      = listOf(backupStats(songId, playCount = 30)),
@@ -184,7 +184,7 @@ class MergeNoOpProtectionTest {
     @Test
     fun `local playCount higher but backup lastPlayedAt newer — mergeable, retained count is 1`() {
         val songId = 1L
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(BackupSong(songId, "content://media/$songId", "Track $songId", "Artist", "Album", 0L, 180_000L, 0L, 0, 0)),
             trackStats      = listOf(backupStats(songId, playCount = 30, lastPlayedAt = 2_000_000L)),
@@ -218,7 +218,7 @@ class MergeNoOpProtectionTest {
 
     @Test
     fun `preferences-only backup — no-op, preferences must not be applied`() {
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = emptyList(),
             trackStats      = emptyList(),
@@ -247,7 +247,7 @@ class MergeNoOpProtectionTest {
     fun `all events already present and all playlist entries exist — no-op`() {
         val songId = 1L
         val event  = backupEvent(songId, occurredAt = 1_000_000L)
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(BackupSong(songId, "content://media/$songId", "Track $songId", "Artist", "Album", 0L, 180_000L, 0L, 0, 0)),
             trackStats      = emptyList(),
@@ -275,7 +275,7 @@ class MergeNoOpProtectionTest {
     fun `backup has one new listen event — hasMergeableData true`() {
         val songId = 1L
         val event  = backupEvent(songId, occurredAt = 2_000_000L)
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(BackupSong(songId, "content://media/$songId", "Track $songId", "Artist", "Album", 0L, 180_000L, 0L, 0, 0)),
             trackStats      = emptyList(),
@@ -293,7 +293,7 @@ class MergeNoOpProtectionTest {
     fun `backup has stats but no matching local songs — quarantine makes it mergeable`() {
         // P2-A: unmatched backup tracks are quarantined, not silently discarded.
         // The import is mergeable; apply writes them to pending_* tables.
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(BackupSong(99L, "content://media/99", "Ghost", "A", "B", 0L, 180_000L, 0L, 0, 0)),
             trackStats      = listOf(backupStats(99L, playCount = 50)),
@@ -305,7 +305,7 @@ class MergeNoOpProtectionTest {
         assertEquals(1, result.newPendingTrackCount)
 
         // The apply-side no-op result (when apply finds nothing) still carries no "retained" claim.
-        val noOpResult = WavdropBackupImportApplyResult(
+        val noOpResult = StereoSineBackupImportApplyResult(
             matchedTracks   = 0,
             unmatchedTracks = 1,
             statsUpdated    = 0,

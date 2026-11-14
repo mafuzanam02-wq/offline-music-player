@@ -27,7 +27,7 @@ class BackupParseTrustBoundaryTest {
 
     // ── Shared fixtures ───────────────────────────────────────────────────────
 
-    private fun minimalBackup() = WavdropBackup(
+    private fun minimalBackup() = StereoSineBackup(
         exportedAt      = "2026-06-23T12:00:00Z",
         songs           = listOf(
             BackupSong(
@@ -48,7 +48,7 @@ class BackupParseTrustBoundaryTest {
     )
 
     /** Full export with checksum + manifest — current exporter output. */
-    private fun verifiedJson(): String = WavdropBackupExporter.toJson(minimalBackup())
+    private fun verifiedJson(): String = StereoSineBackupExporter.toJson(minimalBackup())
 
     /** A v1 backup JSON without payloadSha256 or manifest — simulates a legacy backup. */
     private fun legacyJson(): String = """
@@ -82,7 +82,7 @@ class BackupParseTrustBoundaryTest {
 
     @Test
     fun `valid v1 with checksum produces VERIFIED status`() {
-        val result = WavdropBackupParser.parse(verifiedJson())
+        val result = StereoSineBackupParser.parse(verifiedJson())
 
         assertNotNull("Expected a parsed backup", result.backup)
         assertNull(result.error)
@@ -93,7 +93,7 @@ class BackupParseTrustBoundaryTest {
 
     @Test
     fun `legacy v1 without checksum produces UNVERIFIED_LEGACY status`() {
-        val result = WavdropBackupParser.parse(legacyJson())
+        val result = StereoSineBackupParser.parse(legacyJson())
 
         assertNotNull("Legacy backup must parse successfully: ${result.error}", result.backup)
         assertNull(result.error)
@@ -107,7 +107,7 @@ class BackupParseTrustBoundaryTest {
             remove("manifest")
         }.toString(2)
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNotNull("Stripped backup must parse: ${result.error}", result.backup)
         assertNull(result.error)
@@ -123,10 +123,10 @@ class BackupParseTrustBoundaryTest {
             put("payloadSha256", zeroed)
         }.toString(2)
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull("Backup must be null on checksum mismatch", result.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
 
@@ -135,10 +135,10 @@ class BackupParseTrustBoundaryTest {
         val json = verifiedJson().replace("\"playCount\": 5", "\"playCount\": 9999")
         assertTrue("Tamper target not found in JSON", json.contains("9999"))
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
 
@@ -150,10 +150,10 @@ class BackupParseTrustBoundaryTest {
             getJSONObject("manifest").put("songCount", 99)
         }.toString(2)
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
 
@@ -174,7 +174,7 @@ class BackupParseTrustBoundaryTest {
             }
         """.trimIndent()
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
         assertNotNull(result.error)
@@ -212,7 +212,7 @@ class BackupParseTrustBoundaryTest {
             }
         """.trimIndent()
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
         assertNotNull(result.error)
@@ -251,7 +251,7 @@ class BackupParseTrustBoundaryTest {
             }
         """.trimIndent()
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
         assertNotNull(result.error)
@@ -267,10 +267,10 @@ class BackupParseTrustBoundaryTest {
     @Test
     fun `version 3 returns newer-version message`() {
         // v2 is now supported; use v3 to trigger the newer-version message.
-        val result = WavdropBackupParser.parse(minimalJsonWithout().replace("\"version\":1", "\"version\":3"))
+        val result = StereoSineBackupParser.parse(minimalJsonWithout().replace("\"version\":1", "\"version\":3"))
 
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.NEWER_VERSION_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.NEWER_VERSION_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
 
@@ -278,10 +278,10 @@ class BackupParseTrustBoundaryTest {
     fun `far-future version returns newer-version message`() {
         val json = JSONObject(verifiedJson()).put("version", 99).toString(2)
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.NEWER_VERSION_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.NEWER_VERSION_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
 
@@ -291,7 +291,7 @@ class BackupParseTrustBoundaryTest {
     fun `missing version field returns clear missing-field message`() {
         // "version" is in requiredRootFields so its absence is caught before the
         // version-parse block; the result is a clear, distinct required-field error.
-        val result = WavdropBackupParser.parse(minimalJsonWithout("version"))
+        val result = StereoSineBackupParser.parse(minimalJsonWithout("version"))
 
         assertNull(result.backup)
         assertEquals("Missing field: version", result.error)
@@ -311,7 +311,7 @@ class BackupParseTrustBoundaryTest {
             }
         """.trimIndent()
 
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
         assertEquals("This file does not appear to be a valid StereoSine backup.", result.error)
@@ -323,7 +323,7 @@ class BackupParseTrustBoundaryTest {
     @Test
     fun `valid v1 export round-trips with VERIFIED status and correct data`() {
         val original = minimalBackup()
-        val result   = WavdropBackupParser.parse(WavdropBackupExporter.toJson(original))
+        val result   = StereoSineBackupParser.parse(StereoSineBackupExporter.toJson(original))
 
         assertNotNull("Round-trip parse failed: ${result.error}", result.backup)
         assertNull(result.error)
@@ -336,7 +336,7 @@ class BackupParseTrustBoundaryTest {
 
     @Test
     fun `UNVERIFIED_LEGACY status signals that a legacy warning should be shown`() {
-        val result = WavdropBackupParser.parse(legacyJson())
+        val result = StereoSineBackupParser.parse(legacyJson())
 
         assertEquals(BackupIntegrityStatus.UNVERIFIED_LEGACY, result.integrityStatus)
         // The ViewModel maps this status to a non-null legacyWarning string.
@@ -348,7 +348,7 @@ class BackupParseTrustBoundaryTest {
 
     @Test
     fun `VERIFIED status signals that no legacy warning should be shown`() {
-        val result = WavdropBackupParser.parse(verifiedJson())
+        val result = StereoSineBackupParser.parse(verifiedJson())
 
         assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
         val shouldShowWarning = result.integrityStatus == BackupIntegrityStatus.UNVERIFIED_LEGACY

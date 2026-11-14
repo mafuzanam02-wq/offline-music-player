@@ -39,7 +39,7 @@ class CanonicalExportOrderReductionTest {
         val e1 = entity(1, songId = 1).toBackupListenEvent(songs[1L])
         val e2 = entity(2, songId = 2).toBackupListenEvent(songs[2L])
         assertTrue(e1.contentUri > e2.contentUri && e1.title > e2.title && e1.artist > e2.artist && e1.album > e2.album)
-        assertTrue("songId must win over the metadata", WavdropBackupIntegrityV2.EVENT_ORDER.compare(e1, e2) < 0)
+        assertTrue("songId must win over the metadata", StereoSineBackupIntegrityV2.EVENT_ORDER.compare(e1, e2) < 0)
         assertEquals(listOf(1L, 2L), dbOrder(listOf(entity(2, 2), entity(1, 1))).map { it.songId })
     }
 
@@ -62,7 +62,7 @@ class CanonicalExportOrderReductionTest {
         // ...and songId still orders missing-song events against present songs, whatever the present songs' text is.
         val present = entity(10, songId = 100).toBackupListenEvent(song(100, "", "", "", ""))
         val missingLow = entity(11, songId = 5).toBackupListenEvent(null)
-        assertTrue(WavdropBackupIntegrityV2.EVENT_ORDER.compare(missingLow, present) < 0)
+        assertTrue(StereoSineBackupIntegrityV2.EVENT_ORDER.compare(missingLow, present) < 0)
     }
 
     // ── D: database order, mapped, is exactly the fingerprint order ───────────────────────────────
@@ -87,7 +87,7 @@ class CanonicalExportOrderReductionTest {
             )
         }
         val mapped = dbOrder(rows).map { it.toBackupListenEvent(songs[it.songId]) }
-        val order = WavdropBackupIntegrityV2.EVENT_ORDER
+        val order = StereoSineBackupIntegrityV2.EVENT_ORDER
         for (i in 1 until mapped.size) assertTrue("row $i out of canonical order", order.compare(mapped[i - 1], mapped[i]) <= 0)
         // Exactly what the legacy path emitted: the getAllSnapshot() order stably sorted by the comparator.
         val legacy = LegacyExportOrder.snapshot(rows).map { it.toBackupListenEvent(songs[it.songId]) }.sortedWith(order)
@@ -97,7 +97,7 @@ class CanonicalExportOrderReductionTest {
     // ── id tie-breaker cannot change the semantic fingerprint ─────────────────────────────────────
 
     private fun fingerprintOf(events: List<BackupListenEvent>) =
-        WavdropBackupIntegrityV2.fingerprint(WdbkTestSupport.fullBackup(eventCount = 0, overlay = false).copy(listenEvents = events))
+        StereoSineBackupIntegrityV2.fingerprint(WdbkTestSupport.fullBackup(eventCount = 0, overlay = false).copy(listenEvents = events))
 
     @Test fun `rows tied on every canonical field are byte-identical events so their id order cannot change the fingerprint`() {
         val s = song(3, "content://t", "T", "A", "B")
@@ -116,8 +116,8 @@ class CanonicalExportOrderReductionTest {
         val s = song(3, "content://t", "T", "A", "B")
         for ((nullId, emptyId) in listOf(1L to 2L, 2L to 1L)) {
             val rows = listOf(entity(nullId, 3, eventId = null), entity(emptyId, 3, eventId = ""))
-            val legacy = LegacyExportOrder.snapshot(rows).map { it.toBackupListenEvent(s) }.sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER)
-            assertEquals(0, WavdropBackupIntegrityV2.EVENT_ORDER.compare(legacy[0], legacy[1]))
+            val legacy = LegacyExportOrder.snapshot(rows).map { it.toBackupListenEvent(s) }.sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER)
+            assertEquals(0, StereoSineBackupIntegrityV2.EVENT_ORDER.compare(legacy[0], legacy[1]))
             val export = dbOrder(rows).map { it.toBackupListenEvent(s) }
             assertEquals("null id=$nullId empty id=$emptyId", legacy, export)
             assertEquals(fingerprintOf(legacy), fingerprintOf(export))

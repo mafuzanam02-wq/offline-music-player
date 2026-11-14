@@ -5,7 +5,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 
-/** Detailed Recovery counts, kept apart from the Merge counters in [WavdropBackupImportApplyResult]. */
+/** Detailed Recovery counts, kept apart from the Merge counters in [StereoSineBackupImportApplyResult]. */
 data class RecoveryRestoreSummary(
     val matchedTracks: Int = 0,
     val unmatchedTracksPreserved: Int = 0,
@@ -37,7 +37,7 @@ object RecoveryEligibility {
     enum class Reason { INVALID, NOT_VERIFIED, LEGACY_V1 }
 
     sealed interface Result {
-        data class Eligible(val backup: WavdropBackup) : Result
+        data class Eligible(val backup: StereoSineBackup) : Result
         data class Blocked(val reason: Reason, val message: String) : Result
     }
 
@@ -45,7 +45,7 @@ object RecoveryEligibility {
         "Recovery needs a verified current-format backup. This older backup can still be merged."
     const val INVALID_MESSAGE = "This backup could not be verified, so it can't be used for Recovery."
 
-    fun evaluate(parsed: WavdropBackupImportResult): Result {
+    fun evaluate(parsed: StereoSineBackupImportResult): Result {
         val backup = parsed.backup
         if (backup == null || parsed.integrityStatus == BackupIntegrityStatus.INVALID) {
             return Result.Blocked(Reason.INVALID, parsed.error ?: INVALID_MESSAGE)
@@ -77,7 +77,7 @@ class RestoreOperationLock @Inject constructor() {
 sealed interface RecoveryRestoreOutcome {
     /** Database and settings both applied. */
     data class Success(
-        val result: WavdropBackupImportApplyResult,
+        val result: StereoSineBackupImportApplyResult,
         val snapshot: VerifiedSafetySnapshot,
     ) : RecoveryRestoreOutcome
 
@@ -104,7 +104,7 @@ sealed interface RecoveryRestoreOutcome {
      * reported as success. No compensating rollback is attempted; the verified snapshot is retained.
      */
     data class PartialRecovery(
-        val result: WavdropBackupImportApplyResult,
+        val result: StereoSineBackupImportApplyResult,
         val snapshot: VerifiedSafetySnapshot,
         val detail: String,
     ) : RecoveryRestoreOutcome
@@ -141,16 +141,16 @@ class RecoveryRestoreOrchestrator @Inject constructor(
     private val backupExecutionSerializer: BackupExecutionSerializer,
 ) {
     suspend fun restore(rawBackupJson: String): RecoveryRestoreOutcome =
-        restoreFrom { WavdropBackupParser.parse(rawBackupJson) }
+        restoreFrom { StereoSineBackupParser.parse(rawBackupJson) }
 
     /**
      * Same Recovery, for a backup whose original text is not held (a WDBK container). [revalidate] must re-read and
      * re-verify the selected document from its source and return the verdict; the semantics below are identical.
      */
-    suspend fun restoreFrom(revalidate: suspend () -> WavdropBackupImportResult): RecoveryRestoreOutcome =
+    suspend fun restoreFrom(revalidate: suspend () -> StereoSineBackupImportResult): RecoveryRestoreOutcome =
         restoreLock.tryRun { restoreOwned(revalidate) } ?: RecoveryRestoreOutcome.RestoreInProgress
 
-    private suspend fun restoreOwned(revalidate: suspend () -> WavdropBackupImportResult): RecoveryRestoreOutcome {
+    private suspend fun restoreOwned(revalidate: suspend () -> StereoSineBackupImportResult): RecoveryRestoreOutcome {
         // A. Validate the selected backup again, from its original source, independent of anything the preview showed.
         val backup = when (val e = RecoveryEligibility.evaluate(revalidate())) {
             is RecoveryEligibility.Result.Eligible -> e.backup

@@ -2,7 +2,7 @@ package com.launchpoint.stereosine.data.backup.wdbk
 
 import com.launchpoint.stereosine.data.backup.BackupIntegrityStatus
 import com.launchpoint.stereosine.data.backup.BackupSaveValidator
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -30,7 +30,7 @@ interface BackupFolder {
 /**
  * Writes a WDBK container and proves it: success is reported only after the bytes on disk have been re-opened and
  * decoded by the SAME [WdbkReader] real imports use, with the physical (per-entry SHA-256) and semantic
- * (WavdropBackupIntegrityV2 fingerprint) checks passing AND matching what the writer recorded. `ZipOutputStream`
+ * (StereoSineBackupIntegrityV2 fingerprint) checks passing AND matching what the writer recorded. `ZipOutputStream`
  * closing without error is never treated as success.
  */
 class WdbkBackupSaver(
@@ -127,7 +127,7 @@ class WdbkBackupSaver(
         if (backup == null ||
             result.integrityStatus != BackupIntegrityStatus.VERIFIED ||
             backup.backupId != receipt.backupId ||
-            WavdropBackupIntegrityV2.fingerprint(backup) != receipt.fingerprint ||
+            StereoSineBackupIntegrityV2.fingerprint(backup) != receipt.fingerprint ||
             !receipt.manifest.counts.matchesContentOf(backup)
         ) {
             throw IOException(BackupSaveValidator.VALIDATION_FAILED_MESSAGE)

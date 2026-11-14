@@ -43,7 +43,7 @@ class LiveEventIdentityRoomTest {
     private inner class Node {
         val db: StereoSineDatabase = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build().also { dbs += it }
-        val merge = WavdropBackupImportRepository(
+        val merge = StereoSineBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),
         )
@@ -55,7 +55,7 @@ class LiveEventIdentityRoomTest {
 
         init { runBlocking { db.songDao().upsertAll(listOf(songEntity(5), songEntity(6))) } }
 
-        suspend fun restore(b: WavdropBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
+        suspend fun restore(b: StereoSineBackup, mode: Mode) = if (mode == Mode.MERGE) merge.applyImport(b) else recovery.applyRecovery(b)
         suspend fun live(): List<TrackListenEventEntity> = events.getAllSnapshot()
         /** Order-independent description of every stored event row: song|at|type|listened|duration|eventId. */
         suspend fun rows(): List<String> = live().map { "${it.songId}|${it.occurredAt}|${it.eventType}|${it.listenedMs}|${it.durationMs}|${it.eventId}" }.sorted()
@@ -76,9 +76,9 @@ class LiveEventIdentityRoomTest {
             events = events, backupId = id,
         )
 
-    private fun load(f: Fmt, b: WavdropBackup): WavdropBackup {
+    private fun load(f: Fmt, b: StereoSineBackup): StereoSineBackup {
         val r = when (f) {
-            Fmt.JSON -> WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(b))
+            Fmt.JSON -> StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(b))
             Fmt.WDBK -> WdbkReader().read(ByteArrayInputStream(WdbkTestSupport.write(b).first), RecoveryTestFixtures.NOW + 1_000_000L)
         }
         assertNull(r.error, r.error)
@@ -253,7 +253,7 @@ class LiveEventIdentityRoomTest {
 
     // v1 (no ids, no durations guaranteed) and v2 compatibility
     @Test fun `a legacy v1 backup keeps source multiplicity and stays idempotent`() = runBlocking {
-        val v1 = WavdropBackup(
+        val v1 = StereoSineBackup(
             exportedAt = "2026-06-11T10:00:00Z", songs = listOf(backupSong(5)),
             trackStats = listOf(backupStats(5, 2, 0, false).copy(lastListenedAt = null)), importBaselines = emptyList(),
             listenEvents = listOf(ev(5, null), ev(5, null), ev(5, null, at = 7_000L)),

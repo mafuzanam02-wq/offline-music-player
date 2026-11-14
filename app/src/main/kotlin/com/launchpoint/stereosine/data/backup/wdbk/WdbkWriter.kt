@@ -3,9 +3,9 @@ package com.launchpoint.stereosine.data.backup.wdbk
 import com.launchpoint.stereosine.data.backup.BackupFormatVersion
 import com.launchpoint.stereosine.data.backup.BackupManifest
 import com.launchpoint.stereosine.data.backup.PendingHistoryCodec
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupExporterV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupExporterV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import org.json.JSONObject
 import java.io.FilterOutputStream
 import java.io.IOException
@@ -35,13 +35,13 @@ data class WdbkWriteReceipt(
  * accumulated as counters. (The small sections - songs, stats, playlists, ... - are still encoded one section at a time.)
  *
  * Semantic fingerprint. The v2 fingerprint canonicalizes events in sorted order, so the source must deliver events in
- * [WavdropBackupIntegrityV2.EVENT_ORDER]; they are fed to [WavdropBackupIntegrityV2.StreamingFingerprint] as they are
- * written, producing byte-for-byte the value [WavdropBackupIntegrityV2.fingerprint] gives the reconstructed model.
+ * [StereoSineBackupIntegrityV2.EVENT_ORDER]; they are fed to [StereoSineBackupIntegrityV2.StreamingFingerprint] as they are
+ * written, producing byte-for-byte the value [StereoSineBackupIntegrityV2.fingerprint] gives the reconstructed model.
  *
  * Entry order: sections, history chunks, extension, then `manifest.json` LAST, because the manifest records every
  * entry's SHA-256 and the fingerprint. The reader does not depend on physical order.
  *
- * Section JSON is produced by the same per-section codecs as the legacy v2 exporter ([WavdropBackupExporterV2]), so no
+ * Section JSON is produced by the same per-section codecs as the legacy v2 exporter ([StereoSineBackupExporterV2]), so no
  * field mapping is duplicated. The caller owns [output] (the ZIP is finished and flushed, NOT closed): the caller must
  * close it and then re-read and verify the result.
  */
@@ -100,21 +100,21 @@ class WdbkWriter(
         }
 
         // Semantic fingerprint: header + every non-event section now, events as they stream, preferences last.
-        val fingerprint = WavdropBackupIntegrityV2.StreamingFingerprint(
+        val fingerprint = StereoSineBackupIntegrityV2.StreamingFingerprint(
             snapshot.backupId, snapshot.sourceInstallationId, snapshot.exportedAtMs,
             snapshot.songs, snapshot.trackStats, snapshot.importBaselines, snapshot.lyricsOverrides, snapshot.playlists,
         )
 
-        entry(WdbkLayout.SONGS, WdbkLayout.Section.SONGS, utf8(WavdropBackupExporterV2.songsArray(snapshot.songs).toString()))
-        entry(WdbkLayout.TRACK_STATS, WdbkLayout.Section.TRACK_STATS, utf8(WavdropBackupExporterV2.trackStatsArray(snapshot.trackStats).toString()))
-        entry(WdbkLayout.IMPORT_BASELINES, WdbkLayout.Section.IMPORT_BASELINES, utf8(WavdropBackupExporterV2.baselinesArray(snapshot.importBaselines).toString()))
-        entry(WdbkLayout.LYRICS_OVERRIDES, WdbkLayout.Section.LYRICS_OVERRIDES, utf8(WavdropBackupExporterV2.lyricsOverridesArray(snapshot.lyricsOverrides).toString()))
+        entry(WdbkLayout.SONGS, WdbkLayout.Section.SONGS, utf8(StereoSineBackupExporterV2.songsArray(snapshot.songs).toString()))
+        entry(WdbkLayout.TRACK_STATS, WdbkLayout.Section.TRACK_STATS, utf8(StereoSineBackupExporterV2.trackStatsArray(snapshot.trackStats).toString()))
+        entry(WdbkLayout.IMPORT_BASELINES, WdbkLayout.Section.IMPORT_BASELINES, utf8(StereoSineBackupExporterV2.baselinesArray(snapshot.importBaselines).toString()))
+        entry(WdbkLayout.LYRICS_OVERRIDES, WdbkLayout.Section.LYRICS_OVERRIDES, utf8(StereoSineBackupExporterV2.lyricsOverridesArray(snapshot.lyricsOverrides).toString()))
         // Preferences rule (single, deterministic): the entry exists IFF the backup has preferences. An absent
         // entry reconstructs preferences == null, exactly like a v2 JSON without a "preferences" key.
         snapshot.preferences?.let { prefs ->
-            entry(WdbkLayout.PREFERENCES, WdbkLayout.Section.PREFERENCES, utf8(WavdropBackupExporterV2.platformPreferencesObject(prefs).toString()))
+            entry(WdbkLayout.PREFERENCES, WdbkLayout.Section.PREFERENCES, utf8(StereoSineBackupExporterV2.platformPreferencesObject(prefs).toString()))
         }
-        entry(WdbkLayout.PLAYLISTS, WdbkLayout.Section.PLAYLISTS, utf8(WavdropBackupExporterV2.playlistsArray(snapshot.playlists).toString()))
+        entry(WdbkLayout.PLAYLISTS, WdbkLayout.Section.PLAYLISTS, utf8(StereoSineBackupExporterV2.playlistsArray(snapshot.playlists).toString()))
 
         // History: pull, encode, write, hash, count, DROP - one bounded chunk at a time. Chunk boundaries carry no
         // meaning (the fingerprint is order-canonical), only the deterministic names and counts.
@@ -129,7 +129,7 @@ class WdbkWriter(
             entry(
                 path = WdbkLayout.historyPath(chunkIndex),
                 section = WdbkLayout.Section.LISTEN_EVENTS,
-                bytes = utf8(WavdropBackupExporterV2.listenEventsArray(chunk).toString()),
+                bytes = utf8(StereoSineBackupExporterV2.listenEventsArray(chunk).toString()),
                 chunkIndex = chunkIndex,
                 eventCount = chunk.size,
             )
@@ -181,7 +181,7 @@ class WdbkWriter(
 
         // Section counts come from the small sections plus the streamed counter - never from a full-history model.
         val counts = BackupManifest.of(
-            WavdropBackup(
+            StereoSineBackup(
                 exportedAt = "",
                 songs = snapshot.songs,
                 trackStats = snapshot.trackStats,

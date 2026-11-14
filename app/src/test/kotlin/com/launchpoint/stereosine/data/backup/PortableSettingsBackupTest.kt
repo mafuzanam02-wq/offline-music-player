@@ -31,7 +31,7 @@ class PortableSettingsBackupTest {
     private fun backup(p: BackupPreferences?) = RecoveryTestFixtures.v2Backup(preferences = p)
     private fun json(p: BackupPreferences?) = RecoveryTestFixtures.v2Json(backup(p))
     private fun parsedPrefs(json: String): BackupPreferences {
-        val r = WavdropBackupParser.parse(json)
+        val r = StereoSineBackupParser.parse(json)
         assertNull(r.error, r.error)
         assertEquals(BackupIntegrityStatus.VERIFIED, r.integrityStatus)
         return requireNotNull(r.backup?.preferences)
@@ -97,9 +97,9 @@ class PortableSettingsBackupTest {
         val text = json(original)
         val regex = Regex(find)
         assertEquals("tamper target must exist exactly once: $find", 1, regex.findAll(text).count())
-        val result = WavdropBackupParser.parse(regex.replace(text, replace))
+        val result = StereoSineBackupParser.parse(regex.replace(text, replace))
         assertNull(result.backup)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, result.error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, result.error)
         assertEquals(BackupIntegrityStatus.INVALID, result.integrityStatus)
     }
 
@@ -116,7 +116,7 @@ class PortableSettingsBackupTest {
         val text = json(prefs(home = listOf("FAVORITES", "MOST_PLAYED", "LONG_TRACKS")))
         val swapped = text.replace("\"FAVORITES\"", "\"@@\"").replace("\"MOST_PLAYED\"", "\"FAVORITES\"").replace("\"@@\"", "\"MOST_PLAYED\"")
         assertNotEquals(text, swapped)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, WavdropBackupParser.parse(swapped).error)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, StereoSineBackupParser.parse(swapped).error)
     }
 
     @Test fun `a tampered new setting inside a WDBK is rejected`() {
@@ -134,25 +134,25 @@ class PortableSettingsBackupTest {
 
     @Test fun `new settings are covered by the production fingerprint and match the independent reference`() {
         val a = backup(prefs())
-        assertEquals(ReferenceFingerprintV2.fingerprint(a), WavdropBackupIntegrityV2.fingerprint(a))
+        assertEquals(ReferenceFingerprintV2.fingerprint(a), StereoSineBackupIntegrityV2.fingerprint(a))
         for (changed in listOf(
             prefs(home = listOf("FAVORITES", "MOST_PLAYED", "LONG_TRACKS")), prefs(crossfade = 0), prefs(fadeEnabled = true),
             prefs(fadeMs = 700), prefs(previous = "RESTART_CURRENT"),
         )) {
-            assertNotEquals(WavdropBackupIntegrityV2.fingerprint(a), WavdropBackupIntegrityV2.fingerprint(backup(changed)))
+            assertNotEquals(StereoSineBackupIntegrityV2.fingerprint(a), StereoSineBackupIntegrityV2.fingerprint(backup(changed)))
         }
     }
 
     // ── Older backups ─────────────────────────────────────────────────────────
 
     @Test fun `a v2 backup written before these settings existed still verifies with its original fingerprint`() {
-        val r = WavdropBackupParser.parse(LEGACY_V2_JSON)
+        val r = StereoSineBackupParser.parse(LEGACY_V2_JSON)
         assertNull(r.error, r.error)
         assertEquals(BackupIntegrityStatus.VERIFIED, r.integrityStatus)
         val p = requireNotNull(r.backup?.preferences)
         assertNull(p.homeSmartCollections); assertNull(p.crossfadeDurationMs); assertNull(p.transportFadeEnabled)
         assertNull(p.transportFadeDurationMs); assertNull(p.previousButtonBehavior)
-        assertEquals(LEGACY_V2_FINGERPRINT, WavdropBackupIntegrityV2.fingerprint(requireNotNull(r.backup)))
+        assertEquals(LEGACY_V2_FINGERPRINT, StereoSineBackupIntegrityV2.fingerprint(requireNotNull(r.backup)))
     }
 
     @Test fun `a backup without the new settings keeps byte-identical fingerprint inputs`() {
@@ -161,7 +161,7 @@ class PortableSettingsBackupTest {
             homeVisibleSections = listOf("HERO", "STATS"), scanMode = null, selectedFolderUris = null,
             minimumTrackDurationSeconds = 45, themeMode = "DARK", showSongThumbnails = false, wrappedVisualStyle = "BOLD",
         )
-        assertEquals(LEGACY_V2_FINGERPRINT, WavdropBackupIntegrityV2.fingerprint(backup(legacyShape)))
+        assertEquals(LEGACY_V2_FINGERPRINT, StereoSineBackupIntegrityV2.fingerprint(backup(legacyShape)))
         // and the exporter does not invent the new keys
         val text = json(legacyShape)
         for (key in listOf("homeSmartCollections", "crossfadeDurationMs", "transportFadeEnabled", "transportFadeDurationMs", "previousButtonBehavior")) {
@@ -176,8 +176,8 @@ class PortableSettingsBackupTest {
             .replace(Regex("\"crossfadeDurationMs\"\\s*:\\s*4000"), "\"crossfadeDurationMs\": \"loud\"")
             .replace(Regex("\"transportFadeEnabled\"\\s*:\\s*false"), "\"transportFadeEnabled\": \"no\"")
         // a hand-edited file fails integrity; the typed parse itself must not throw
-        val r = WavdropBackupParser.parse(text)
-        assertEquals(WavdropBackupParser.INTEGRITY_ERROR, r.error)
+        val r = StereoSineBackupParser.parse(text)
+        assertEquals(StereoSineBackupParser.INTEGRITY_ERROR, r.error)
     }
 
     @Test fun `manifest preference count includes the new settings`() {

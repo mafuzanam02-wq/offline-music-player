@@ -9,7 +9,7 @@ import org.junit.Test
 /**
  * P5-REL-04B - a stale or reused MediaStore URI must not attach a backup row to a DIFFERENT artist's song.
  *
- * Policy under test (see [WavdropBackupStatsMatcher]): a URI is supporting evidence only. Besides duration and a meaningful tolerant
+ * Policy under test (see [StereoSineBackupStatsMatcher]): a URI is supporting evidence only. Besides duration and a meaningful tolerant
  * title it must not be CONTRADICTED by a known artist. Two artists contradict each other only when BOTH are known (neither blank nor
  * an "unknown" placeholder) and their tolerant keys differ. An unknown artist neither corroborates nor contradicts: it never turns a
  * URI into a match by itself (title and duration are still required) and it never rejects one. A rejected local song is excluded
@@ -41,7 +41,7 @@ class UriArtistCorroborationTest {
     )
 
     private fun backup(songs: List<BackupSong>, stats: List<BackupTrackStats>, events: List<BackupListenEvent> = emptyList()) =
-        WavdropBackup(exportedAt = "", songs = songs, trackStats = stats, importBaselines = emptyList(), listenEvents = events)
+        StereoSineBackup(exportedAt = "", songs = songs, trackStats = stats, importBaselines = emptyList(), listenEvents = events)
 
     private fun event(songId: Long, uri: String, artist: String, at: Long, id: String) = BackupListenEvent(
         songId = songId, contentUri = uri, title = "Harbor", artist = artist, album = "Album One", eventType = "PLAY",
@@ -57,7 +57,7 @@ class UriArtistCorroborationTest {
         val live = song(1, reusedUri)
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(live))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(live))
 
         assertEquals(live, result.matchedRows.single().first)
         assertEquals(1, result.diagnostics.matchedByUri)
@@ -70,7 +70,7 @@ class UriArtistCorroborationTest {
         val liveOtherArtist = song(1, reusedUri, artist = "Artist South", album = "Album Two", duration = 168_900)
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(liveOtherArtist))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(liveOtherArtist))
 
         assertTrue("the stale URI must not attach the statistics to the other artist's song", result.matchedRows.isEmpty())
         assertEquals(1, result.unmatchedCount)
@@ -83,11 +83,11 @@ class UriArtistCorroborationTest {
         val liveOtherArtist = song(1, reusedUri, artist = "Artist South", album = "Album Two", duration = 169_500)
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)))
 
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
 
         assertTrue(resolution.resolved.isEmpty())
         assertEquals(setOf(1L), resolution.rejectedLocalIds[11L])
-        assertTrue(WavdropBackupStatsMatcher.match(b, listOf(liveOtherArtist)).matchedRows.isEmpty())
+        assertTrue(StereoSineBackupStatsMatcher.match(b, listOf(liveOtherArtist)).matchedRows.isEmpty())
     }
 
     // ── D. an independently corroborated alternative is still found ──────────────
@@ -98,12 +98,12 @@ class UriArtistCorroborationTest {
         val trueSong = song(2, "content://media/new/2")
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri, plays = 42)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(uriOwner, trueSong))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(uriOwner, trueSong))
 
         assertEquals(trueSong, result.matchedRows.single().first)
         assertEquals(42, result.matchedRows.single().second.playCount)
         assertEquals(1, result.diagnostics.matchedByTagsDuration)
-        assertEquals(setOf(1L), WavdropBackupStatsMatcher.resolveBackupSongs(b, listOf(uriOwner, trueSong)).rejectedLocalIds[11L])
+        assertEquals(setOf(1L), StereoSineBackupStatsMatcher.resolveBackupSongs(b, listOf(uriOwner, trueSong)).rejectedLocalIds[11L])
     }
 
     // ── E. empty / unknown / placeholder artist ─────────────────────────────────
@@ -113,11 +113,11 @@ class UriArtistCorroborationTest {
         for (placeholder in listOf("", "   ", "Unknown Artist", "unknown artist", "<unknown>", "<UNKNOWN>")) {
             val liveKnown = song(1, reusedUri, artist = "Artist North")
             val backupUnknown = backup(listOf(bSong(11, reusedUri, artist = placeholder)), listOf(stat(11, reusedUri)))
-            assertEquals("backup artist '$placeholder'", liveKnown, WavdropBackupStatsMatcher.match(backupUnknown, listOf(liveKnown)).matchedRows.single().first)
+            assertEquals("backup artist '$placeholder'", liveKnown, StereoSineBackupStatsMatcher.match(backupUnknown, listOf(liveKnown)).matchedRows.single().first)
 
             val liveUnknown = song(1, reusedUri, artist = placeholder)
             val backupKnown = backup(listOf(bSong(11, reusedUri, artist = "Artist North")), listOf(stat(11, reusedUri)))
-            assertEquals("live artist '$placeholder'", liveUnknown, WavdropBackupStatsMatcher.match(backupKnown, listOf(liveUnknown)).matchedRows.single().first)
+            assertEquals("live artist '$placeholder'", liveUnknown, StereoSineBackupStatsMatcher.match(backupKnown, listOf(liveUnknown)).matchedRows.single().first)
         }
     }
 
@@ -126,7 +126,7 @@ class UriArtistCorroborationTest {
         val live = song(1, reusedUri, title = "Different Title", artist = "Unknown Artist")
         val b = backup(listOf(bSong(11, reusedUri, artist = "Unknown Artist")), listOf(stat(11, reusedUri)))
 
-        assertTrue(WavdropBackupStatsMatcher.match(b, listOf(live)).matchedRows.isEmpty())
+        assertTrue(StereoSineBackupStatsMatcher.match(b, listOf(live)).matchedRows.isEmpty())
     }
 
     // ── F. harmless normalization ────────────────────────────────────────────────
@@ -142,7 +142,7 @@ class UriArtistCorroborationTest {
         for ((liveArtist, backupArtist) in pairs) {
             val live = song(1, reusedUri, artist = liveArtist)
             val b = backup(listOf(bSong(11, reusedUri, artist = backupArtist)), listOf(stat(11, reusedUri)))
-            assertEquals("$liveArtist vs $backupArtist", live, WavdropBackupStatsMatcher.match(b, listOf(live)).matchedRows.single().first)
+            assertEquals("$liveArtist vs $backupArtist", live, StereoSineBackupStatsMatcher.match(b, listOf(live)).matchedRows.single().first)
         }
     }
 
@@ -155,8 +155,8 @@ class UriArtistCorroborationTest {
         val b1 = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)))
         val b2 = backup(listOf(bSong(12, "content://media/501")), listOf(stat(12, "content://media/501")))
 
-        assertTrue(WavdropBackupStatsMatcher.match(b1, listOf(otherTitle)).matchedRows.isEmpty())
-        assertTrue(WavdropBackupStatsMatcher.match(b2, listOf(otherDuration)).matchedRows.isEmpty())
+        assertTrue(StereoSineBackupStatsMatcher.match(b1, listOf(otherTitle)).matchedRows.isEmpty())
+        assertTrue(StereoSineBackupStatsMatcher.match(b2, listOf(otherDuration)).matchedRows.isEmpty())
     }
 
     // ── H. several URI candidates ────────────────────────────────────────────────
@@ -167,7 +167,7 @@ class UriArtistCorroborationTest {
         val second = song(2, reusedUri)
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(first, second))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(first, second))
 
         assertTrue(result.matchedRows.isEmpty())
         assertEquals(1, result.diagnostics.ambiguous)
@@ -179,7 +179,7 @@ class UriArtistCorroborationTest {
         val otherArtist = song(2, reusedUri, artist = "Artist South", album = "Album Two")
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(otherArtist, sameArtist))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(otherArtist, sameArtist))
 
         assertEquals(sameArtist, result.matchedRows.single().first)
         assertEquals(1, result.diagnostics.matchedByUri)
@@ -194,7 +194,7 @@ class UriArtistCorroborationTest {
         val retagged = bSong(12, "content://media/old/12")
         val b = backup(listOf(exact, retagged), listOf(stat(11, reusedUri, plays = 9), stat(12, "content://media/old/12", plays = 2)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(live))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(live))
 
         assertEquals(9, result.matchedRows.single().second.playCount)
         assertEquals(1, result.diagnostics.collisions)
@@ -210,7 +210,7 @@ class UriArtistCorroborationTest {
             event(11, reusedUri, "Artist North", at = 1_700_000_500_000L, id = "evt-2"),
         )
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri, plays = 42, skips = 5)), events)
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
 
         val plan = QuarantinePlanner.plan(b, "fp", resolution.resolved.keys, emptySet())
 
@@ -228,7 +228,7 @@ class UriArtistCorroborationTest {
         val liveOtherArtist = song(1, reusedUri, artist = "Artist South", album = "Album Two", duration = 169_000)
         val events = listOf(event(11, reusedUri, "Artist North", at = 1_700_000_000_000L, id = "evt-1"))
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)), events)
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
         val linker = BackupSongLinkResolver(listOf(liveOtherArtist), resolution.resolved, resolution.rejectedLocalIds)
 
         val plan = ListenEventRestorePlanner.plan(
@@ -244,7 +244,7 @@ class UriArtistCorroborationTest {
     fun `K - the link resolver never re-attaches a rejected song even when its tags happen to match the event`() {
         val liveOtherArtist = song(1, reusedUri, artist = "Artist South", album = "Album Two", duration = 169_000)
         val b = backup(listOf(bSong(11, reusedUri)), listOf(stat(11, reusedUri)))
-        val resolution = WavdropBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
+        val resolution = StereoSineBackupStatsMatcher.resolveBackupSongs(b, listOf(liveOtherArtist))
         val linker = BackupSongLinkResolver(listOf(liveOtherArtist), resolution.resolved, resolution.rejectedLocalIds)
 
         assertNull(linker.resolve(11, reusedUri, "Harbor", "Artist South", "Album Two"))
@@ -257,7 +257,7 @@ class UriArtistCorroborationTest {
         val live = song(1, "content://media/new/1")
         val b = backup(listOf(bSong(11, "content://media/old/11")), listOf(stat(11, "content://media/old/11")))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(live))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(live))
 
         assertEquals(live, result.matchedRows.single().first)
         assertEquals(1, result.diagnostics.matchedByTagsDuration)
@@ -268,7 +268,7 @@ class UriArtistCorroborationTest {
         val live = song(1, reusedUri, album = "Album One ", duration = 171_200, folderPath = "Music")
         val b = backup(listOf(bSong(11, reusedUri, duration = 170_000, folderPath = "Music")), listOf(stat(11, reusedUri)))
 
-        val result = WavdropBackupStatsMatcher.match(b, listOf(live))
+        val result = StereoSineBackupStatsMatcher.match(b, listOf(live))
 
         assertEquals(1, result.diagnostics.matchedByUri)
     }

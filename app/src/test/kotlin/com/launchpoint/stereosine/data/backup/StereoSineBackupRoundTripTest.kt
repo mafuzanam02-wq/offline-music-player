@@ -9,9 +9,9 @@ import org.junit.Test
  * Exporter → parser round-trip. Fails if the two sides ever drift — a field
  * added to one side but not the other surfaces here, not on a user's restore.
  */
-class WavdropBackupRoundTripTest {
+class StereoSineBackupRoundTripTest {
 
-    private fun representativeBackup() = WavdropBackup(
+    private fun representativeBackup() = StereoSineBackup(
         exportedAt     = "2026-06-11T10:00:00Z",
         appVersionCode = 42,
         appVersionName = "0.1.0-test",
@@ -94,7 +94,7 @@ class WavdropBackupRoundTripTest {
     @Test
     fun `export then parse preserves every section exactly`() {
         val original = representativeBackup()
-        val result = WavdropBackupParser.parse(WavdropBackupExporter.toJson(original))
+        val result = StereoSineBackupParser.parse(StereoSineBackupExporter.toJson(original))
 
         val parsed = result.backup
         assertNotNull("Parse failed: ${result.error}", parsed)
@@ -115,22 +115,22 @@ class WavdropBackupRoundTripTest {
     @Test
     fun `round-trip fingerprints are identical`() {
         val original = representativeBackup()
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporter.toJson(original)).backup!!
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporter.toJson(original)).backup!!
         assertEquals(
-            WavdropBackupIntegrity.payloadFingerprint(original),
-            WavdropBackupIntegrity.payloadFingerprint(parsed),
+            StereoSineBackupIntegrity.payloadFingerprint(original),
+            StereoSineBackupIntegrity.payloadFingerprint(parsed),
         )
     }
 
     @Test
     fun `empty optional sections round-trip as empty`() {
-        val minimal = WavdropBackup(
+        val minimal = StereoSineBackup(
             exportedAt      = "2026-06-11T10:00:00Z",
             songs           = emptyList(),
             trackStats      = emptyList(),
             importBaselines = emptyList(),
         )
-        val parsed = WavdropBackupParser.parse(WavdropBackupExporter.toJson(minimal)).backup
+        val parsed = StereoSineBackupParser.parse(StereoSineBackupExporter.toJson(minimal)).backup
         assertNotNull(parsed)
         parsed!!
         assertEquals(emptyList<BackupLyricsOverride>(), parsed.lyricsOverrides)

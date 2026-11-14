@@ -8,12 +8,12 @@ import com.launchpoint.stereosine.data.backup.RecoveryRestorePlanner
 import com.launchpoint.stereosine.data.backup.ListenEventRestorePlanner
 import com.launchpoint.stereosine.data.backup.PlaylistEntryRestorePlanner
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupExporterV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportResult
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupParser
-import com.launchpoint.stereosine.data.backup.WavdropMergePreviewAnalyzer
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupExporterV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportResult
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupParser
+import com.launchpoint.stereosine.data.backup.StereoSineMergePreviewAnalyzer
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.read
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.unzip
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.write
@@ -33,10 +33,10 @@ import java.util.zip.ZipInputStream
 /** The equivalence gate: the same logical backup written as legacy v2 JSON and as WDBK decodes to the same model. */
 class WdbkRoundTripTest {
 
-    private fun legacy(backup: WavdropBackup): WavdropBackupImportResult =
-        WavdropBackupParser.parse(WavdropBackupExporterV2.toJson(backup), WdbkTestSupport.NOW + 1_000_000L)
+    private fun legacy(backup: StereoSineBackup): StereoSineBackupImportResult =
+        StereoSineBackupParser.parse(StereoSineBackupExporterV2.toJson(backup), WdbkTestSupport.NOW + 1_000_000L)
 
-    private fun wdbk(backup: WavdropBackup): WavdropBackupImportResult = read(write(backup).first)
+    private fun wdbk(backup: StereoSineBackup): StereoSineBackupImportResult = read(write(backup).first)
 
     private fun song(id: Long) = Song(
         id = id, title = "Song $id", artist = "Artist", album = "Album", albumId = 1L, duration = 180_000L + id,
@@ -58,8 +58,8 @@ class WdbkRoundTripTest {
         // lyrics, preferences, playlists (order + duplicate occurrences), events (+ eventId) and the Desktop overlay.
         assertEquals(old.backup, new.backup)
         assertEquals(
-            WavdropBackupIntegrityV2.fingerprint(old.backup!!),
-            WavdropBackupIntegrityV2.fingerprint(new.backup!!),
+            StereoSineBackupIntegrityV2.fingerprint(old.backup!!),
+            StereoSineBackupIntegrityV2.fingerprint(new.backup!!),
         )
     }
 
@@ -208,7 +208,7 @@ class WdbkRoundTripTest {
         assertEquals(0, m.getJSONArray("optionalCapabilities").length())
         assertEquals(BackupManifest.of(backup).songCount, m.getJSONObject("counts").getInt("songCount"))
         assertEquals(backup.listenEvents.size, m.getJSONObject("counts").getInt("listenEventCount"))
-        assertEquals(WavdropBackupIntegrityV2.fingerprint(backup), m.getJSONObject("integrity").getString("fingerprint"))
+        assertEquals(StereoSineBackupIntegrityV2.fingerprint(backup), m.getJSONObject("integrity").getString("fingerprint"))
 
         val files = unzip(bytes)
         val entries = m.getJSONArray("entries")
@@ -232,7 +232,7 @@ class WdbkRoundTripTest {
         assertEquals(1, WdbkContainerVersion.MAJOR)
         assertEquals(0, WdbkContainerVersion.MINOR)
         assertEquals(2, WdbkContainerVersion.LOGICAL_VERSION)
-        assertEquals(WavdropBackupParser.SUPPORTED_VERSION, WdbkContainerVersion.LOGICAL_VERSION)
+        assertEquals(StereoSineBackupParser.SUPPORTED_VERSION, WdbkContainerVersion.LOGICAL_VERSION)
     }
 
     // ── Restore-semantics equivalence (decoded legacy vs decoded WDBK feed identical inputs) ──────────────────
@@ -260,7 +260,7 @@ class WdbkRoundTripTest {
         val new = wdbk(backup).backup!!
         val songs = listOf(song(1L), song(3L), song(9_007_199_254_740_993L)).associateBy { it.id }
 
-        fun events(b: WavdropBackup) = ListenEventRestorePlanner.plan(
+        fun events(b: StereoSineBackup) = ListenEventRestorePlanner.plan(
             events = b.listenEvents,
             resolveSong = { songs[it.songId] },
             nowMs = WdbkTestSupport.NOW,
@@ -268,7 +268,7 @@ class WdbkRoundTripTest {
         )
         assertEquals(events(old), events(new))
 
-        fun playlists(b: WavdropBackup) = b.playlists.map { p ->
+        fun playlists(b: StereoSineBackup) = b.playlists.map { p ->
             PlaylistEntryRestorePlanner.plan(p.songs, resolve = { songs[it.songId] }, existingSongIds = emptySet(), nextPosition = 0)
         }
         assertEquals(playlists(old), playlists(new))
@@ -280,7 +280,7 @@ class WdbkRoundTripTest {
         val new = wdbk(backup).backup!!
         val songs = listOf(song(1L), song(3L))
 
-        fun analyze(b: WavdropBackup) = WavdropMergePreviewAnalyzer.analyze(
+        fun analyze(b: StereoSineBackup) = StereoSineMergePreviewAnalyzer.analyze(
             backup = b,
             currentSongs = songs,
             existingQuarantineOriginKeys = emptySet(),
@@ -298,14 +298,14 @@ class WdbkRoundTripTest {
         val backup = WdbkTestSupport.fullBackup()
         val old = legacy(backup).backup!!
         val new = wdbk(backup).backup!!
-        fun deltas(b: WavdropBackup) = b.trackStats.map {
+        fun deltas(b: StereoSineBackup) = b.trackStats.map {
             com.launchpoint.stereosine.data.backup.StatsImportMerger.computeEffect(3, 0, 1_000L, it.playCount, it.skipCount, it.totalListeningTimeMs)
         }
         assertEquals(deltas(old), deltas(new))
     }
 
     @Test fun `a legacy v1 backup is not affected - still V1 and still not eligible for Recovery`() {
-        val v1 = WavdropBackupParser.parse(RecoveryTestFixtures.v1Json())
+        val v1 = StereoSineBackupParser.parse(RecoveryTestFixtures.v1Json())
         assertEquals(BackupFormatVersion.V1, v1.backup!!.sourceVersion)
         assertTrue(RecoveryEligibility.evaluate(v1) is RecoveryEligibility.Result.Blocked)
     }

@@ -27,7 +27,7 @@ import javax.inject.Singleton
 /** The database half of a Recovery Restore. Called only by [RecoveryRestoreOrchestrator], after a verified safety snapshot. */
 interface RecoveryDatabaseApplier {
     /** One Room transaction: it either fully applies or leaves the database exactly as it was. Throws on failure. */
-    suspend fun applyRecovery(backup: WavdropBackup): WavdropBackupImportApplyResult
+    suspend fun applyRecovery(backup: StereoSineBackup): StereoSineBackupImportApplyResult
 }
 
 /** Concise, read-only consequences of choosing Recovery for a given backup (shown before the user confirms). */
@@ -72,7 +72,7 @@ class RecoveryRestoreRepository @Inject constructor(
     /** Test seam only: invoked between write stages inside the transaction so a test can prove a mid-way failure rolls back. */
     internal var stageHook: ((String) -> Unit)? = null
 
-    override suspend fun applyRecovery(backup: WavdropBackup): WavdropBackupImportApplyResult =
+    override suspend fun applyRecovery(backup: StereoSineBackup): StereoSineBackupImportApplyResult =
         db.withTransaction {
             // ── 1. Read + decide. No writes yet. ──────────────────────────────────────────────────────────────────
             val currentSongs = loadCurrentSongs()
@@ -147,7 +147,7 @@ class RecoveryRestoreRepository @Inject constructor(
             )
             stage("pendingHistoryWritten")
 
-            WavdropBackupImportApplyResult(
+            StereoSineBackupImportApplyResult(
                 matchedTracks            = plan.matchedRows.size,
                 unmatchedTracks          = plan.unmatchedStatsRows,
                 matchDiagnostics         = plan.diagnostics,
@@ -199,11 +199,11 @@ class RecoveryRestoreRepository @Inject constructor(
      * backup carries. The same bounded, unindexed-safe scan Merge uses, restricted to surviving sources, so a row Recovery is about to
      * remove is never treated as a collision.
      */
-    private suspend fun loadSurvivingEventIds(backup: WavdropBackup): Map<String, ListenEventRestorePlanner.EventPayload> =
+    private suspend fun loadSurvivingEventIds(backup: StereoSineBackup): Map<String, ListenEventRestorePlanner.EventPayload> =
         trackListenEventDao.scanPayloadsForIds(backup.listenEvents.mapNotNullTo(HashSet()) { it.eventId }) { it.source !in EXPORTED_EVENT_SOURCES }
 
     /** Read-only impact summary for the preview. Uses the same planner as [applyRecovery]; writes nothing. */
-    suspend fun previewImpact(backup: WavdropBackup): RecoveryImpact {
+    suspend fun previewImpact(backup: StereoSineBackup): RecoveryImpact {
         val plan = RecoveryRestorePlanner.plan(backup, loadCurrentSongs(), loadSurvivingEventIds(backup))
         val restoredFavoriteIds = plan.stats.filter { it.isFavorite }.mapTo(HashSet()) { it.songId }
         val localStats = trackStatsDao.getAllStatsSnapshot()

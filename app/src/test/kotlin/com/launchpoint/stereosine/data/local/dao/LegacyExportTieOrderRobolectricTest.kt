@@ -7,7 +7,7 @@ import com.launchpoint.stereosine.data.backup.CanonicalEventStream
 import com.launchpoint.stereosine.data.backup.EventExportCursor
 import com.launchpoint.stereosine.data.backup.LegacyExportOrder
 import com.launchpoint.stereosine.data.backup.ReferenceFingerprintV2
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import com.launchpoint.stereosine.data.backup.toBackupListenEvent
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkExportSnapshot
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport
@@ -61,7 +61,7 @@ class LegacyExportTieOrderRobolectricTest {
     /** The real legacy computation: getAllSnapshot() exactly as returned (never re-sorted by id), stable-sorted by EVENT_ORDER. */
     private fun legacyEvents(): List<BackupListenEvent> = runBlocking {
         dao.getAllSnapshot().filter { BackupEventExportRules.shouldExport(it.source) }.map(::map)
-            .sortedWith(WavdropBackupIntegrityV2.EVENT_ORDER)
+            .sortedWith(StereoSineBackupIntegrityV2.EVENT_ORDER)
     }
 
     private val fetch: suspend (EventExportCursor, Long, Int) -> List<TrackListenEventEntity> = { c, upTo, limit ->
@@ -102,7 +102,7 @@ class LegacyExportTieOrderRobolectricTest {
             val legacy = legacyEvents()
             // Observed production tie order: the HIGHER id first.
             assertEquals(if (nullId > emptyId) null else "", legacy[0].eventId)
-            assertEquals(0, WavdropBackupIntegrityV2.EVENT_ORDER.compare(legacy[0], legacy[1])) // the comparator really ties them
+            assertEquals(0, StereoSineBackupIntegrityV2.EVENT_ORDER.compare(legacy[0], legacy[1])) // the comparator really ties them
             // The reference fingerprint sorts the production snapshot order itself (stable), exactly like the old exporter.
             val legacyHash = referenceFingerprint(dao.getAllSnapshot().map(::map))
             assertEquals(legacyHash, referenceFingerprint(legacy))

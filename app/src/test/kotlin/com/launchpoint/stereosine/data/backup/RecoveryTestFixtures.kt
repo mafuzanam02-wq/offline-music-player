@@ -41,7 +41,7 @@ internal object RecoveryTestFixtures {
         preferences: BackupPreferences? = null,
         overlayRawJson: String? = null,
         backupId: String = "00000000-0000-0000-0000-0000000000a1",
-    ) = WavdropBackup(
+    ) = StereoSineBackup(
         exportedAt = "", exportedAtMs = NOW, backupId = backupId,
         sourceInstallationId = "00000000-0000-0000-0000-0000000000b2", sourceVersion = BackupFormatVersion.V2,
         songs = songs, trackStats = stats, importBaselines = baselines, lyricsOverrides = lyrics, preferences = preferences,
@@ -51,10 +51,10 @@ internal object RecoveryTestFixtures {
         },
     )
 
-    fun v2Json(backup: WavdropBackup = v2Backup()): String = WavdropBackupExporterV2.toJson(backup)
+    fun v2Json(backup: StereoSineBackup = v2Backup()): String = StereoSineBackupExporterV2.toJson(backup)
 
-    fun v1Json(): String = WavdropBackupExporter.toJson(
-        WavdropBackup(
+    fun v1Json(): String = StereoSineBackupExporter.toJson(
+        StereoSineBackup(
             exportedAt = "2026-06-11T10:00:00Z",
             songs = listOf(backupSong(1L)),
             trackStats = listOf(backupStats(1L, 10, 1, false).copy(lastListenedAt = null)),

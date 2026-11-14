@@ -16,7 +16,7 @@ class RecoveryRestoreRulesTest {
 
     // ── Eligibility ───────────────────────────────────────────────────────────
 
-    private fun parse(json: String) = WavdropBackupParser.parse(json)
+    private fun parse(json: String) = StereoSineBackupParser.parse(json)
 
     @Test fun `verified v2 is eligible`() {
         assertTrue(RecoveryEligibility.evaluate(parse(RecoveryTestFixtures.v2Json())) is RecoveryEligibility.Result.Eligible)
@@ -193,8 +193,8 @@ class RecoveryRestoreRulesTest {
         assertFalse("mergeMaxStats" in r)
         assertFalse("MAX(" in r)
         // and Merge itself still uses it, untouched
-        assertTrue("trackStatsDao.mergeMaxStats(" in src("data/backup/WavdropBackupImportRepository.kt"))
-        assertTrue("trackStatsDao.setFavorite(song.id, true)" in src("data/backup/WavdropBackupImportRepository.kt"))
+        assertTrue("trackStatsDao.mergeMaxStats(" in src("data/backup/StereoSineBackupImportRepository.kt"))
+        assertTrue("trackStatsDao.setFavorite(song.id, true)" in src("data/backup/StereoSineBackupImportRepository.kt"))
     }
 
     @Test fun `clean-install recovery keeps resetting folders by default`() {
@@ -228,7 +228,7 @@ class RecoveryRestoreRulesTest {
 
     @Test fun `no schema, format or version change`() {
         assertTrue("version      = 13" in src("data/local/StereoSineDatabase.kt"))
-        assertEquals(2, WavdropBackupParser.SUPPORTED_VERSION)
+        assertEquals(2, StereoSineBackupParser.SUPPORTED_VERSION)
         val gradle = File("build.gradle.kts").readText()
         assertTrue("versionCode = 10" in gradle && "versionName = \"0.1.0-beta10\"" in gradle)
     }

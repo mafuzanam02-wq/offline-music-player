@@ -9,9 +9,9 @@ import com.launchpoint.stereosine.data.backup.BackupDocumentReadResult
 import com.launchpoint.stereosine.data.backup.BackupInputReader
 import com.launchpoint.stereosine.data.backup.BackupPresentation
 import com.launchpoint.stereosine.data.backup.BackupRejectReason
-import com.launchpoint.stereosine.data.backup.WavdropBackupDocumentReader
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportResult
-import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
+import com.launchpoint.stereosine.data.backup.StereoSineBackupDocumentReader
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportResult
+import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import com.launchpoint.stereosine.data.backup.BackupRestoreMode
 import com.launchpoint.stereosine.data.backup.RecoveryEligibility
 import com.launchpoint.stereosine.data.backup.RecoveryImpact
@@ -29,10 +29,10 @@ import com.launchpoint.stereosine.data.backup.DesktopWavdropBackup
 import com.launchpoint.stereosine.data.backup.DesktopWavdropBackupImportRepository
 import com.launchpoint.stereosine.data.backup.DesktopWavdropBackupParser
 import com.launchpoint.stereosine.data.backup.AutoBackupWorkScheduler
-import com.launchpoint.stereosine.data.backup.WavdropBackup
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportApplyResult
-import com.launchpoint.stereosine.data.backup.WavdropBackupImportRepository
-import com.launchpoint.stereosine.data.backup.WavdropBackupParser
+import com.launchpoint.stereosine.data.backup.StereoSineBackup
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportApplyResult
+import com.launchpoint.stereosine.data.backup.StereoSineBackupImportRepository
+import com.launchpoint.stereosine.data.backup.StereoSineBackupParser
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.repository.SongRepository
 import com.launchpoint.stereosine.data.settings.LibraryScanSettingsRepository
@@ -179,7 +179,7 @@ sealed interface BackupImportUiState {
      * the screen must then say so instead of announcing a complete Recovery.
      */
     data class Applied(
-        val result: WavdropBackupImportApplyResult,
+        val result: StereoSineBackupImportApplyResult,
         val partialRecoveryDetail: String? = null,
     ) : BackupImportUiState
 
@@ -203,7 +203,7 @@ sealed interface BackupImportUiState {
 @HiltViewModel
 class BackupImportPreviewViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val importRepository: WavdropBackupImportRepository,
+    private val importRepository: StereoSineBackupImportRepository,
     private val desktopImportRepository: DesktopWavdropBackupImportRepository,
     private val appSettingsRepository: AppSettingsRepository,
     private val preferenceRestorer: CleanInstallPreferenceRestorer,
@@ -218,7 +218,7 @@ class BackupImportPreviewViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<BackupImportUiState>(BackupImportUiState.Idle)
     val uiState: StateFlow<BackupImportUiState> = _uiState.asStateFlow()
 
-    private var parsedBackup: WavdropBackup? = null
+    private var parsedBackup: StereoSineBackup? = null
     private var parsedDesktopBackup: DesktopWavdropBackup? = null
     private var recoveryPreferenceResult: CleanInstallPreferenceRestoreResult? = null
 
@@ -251,7 +251,7 @@ class BackupImportPreviewViewModel @Inject constructor(
         // Content decides the format, never the file name, extension or MIME type: the unified reader sniffs the
         // bytes and routes legacy JSON (V1/V2, Desktop) or a WDBK container to the matching strict decoder.
         val document = withContext(Dispatchers.IO) {
-            WavdropBackupDocumentReader.readUri(context, uri)
+            StereoSineBackupDocumentReader.readUri(context, uri)
         }
         when (document) {
             is BackupDocumentReadResult.Rejected -> return BackupImportUiState.Error(
@@ -259,7 +259,7 @@ class BackupImportPreviewViewModel @Inject constructor(
                     BackupRejectReason.TOO_LARGE -> BackupInputReader.TOO_LARGE_MESSAGE
                     BackupRejectReason.UNREADABLE -> "Could not open the selected file."
                     BackupRejectReason.EMPTY, BackupRejectReason.NOT_A_BACKUP ->
-                        ImportFileValidation.WAVDROP_NOT_A_BACKUP_MESSAGE
+                        ImportFileValidation.STEREOSINE_NOT_A_BACKUP_MESSAGE
                 },
             )
             else -> Unit
@@ -299,18 +299,18 @@ class BackupImportPreviewViewModel @Inject constructor(
         }
 
         setStage("Parsing backup data…")
-        val wavdrop = document as BackupDocumentReadResult.Wavdrop
-        val result = wavdrop.result
+        val stereoSine = document as BackupDocumentReadResult.StereoSine
+        val result = stereoSine.result
         val backup = result.backup
-            ?: return BackupImportUiState.Error(userFacingParseError(result.error, wavdrop.container))
+            ?: return BackupImportUiState.Error(userFacingParseError(result.error, stereoSine.container))
 
         parsedBackup = backup
         parsedDesktopBackup = null
         // Legacy JSON: Recovery re-validates from the original text. WDBK: Recovery re-reads this document and requires
         // the SAME logical fingerprint (the container is not held in memory).
-        parsedBackupText = wavdrop.legacyText
-        parsedWdbkSource = if (wavdrop.container == BackupContainerKind.WDBK) {
-            WdbkRecoverySource(uri, WavdropBackupIntegrityV2.fingerprint(backup))
+        parsedBackupText = stereoSine.legacyText
+        parsedWdbkSource = if (stereoSine.container == BackupContainerKind.WDBK) {
+            WdbkRecoverySource(uri, StereoSineBackupIntegrityV2.fingerprint(backup))
         } else {
             null
         }
@@ -352,8 +352,8 @@ class BackupImportPreviewViewModel @Inject constructor(
         }
 
         return BackupImportUiState.Preview(
-            format               = WavdropBackupParser.SUPPORTED_FORMAT,
-            version              = WavdropBackupParser.SUPPORTED_VERSION,
+            format               = StereoSineBackupParser.SUPPORTED_FORMAT,
+            version              = StereoSineBackupParser.SUPPORTED_VERSION,
             exportedAt           = BackupPresentation.formatExportDate(backup),
             songCount            = backup.songs.size,
             statsCount           = backup.trackStats.size,
@@ -421,17 +421,17 @@ class BackupImportPreviewViewModel @Inject constructor(
      * Recovery's "validate again from the source" step for a WDBK: re-read and re-verify the document, then require the
      * very logical backup the user previewed (same semantic fingerprint). A file that changed in between is refused.
      */
-    private fun rereadWdbk(source: WdbkRecoverySource): suspend () -> WavdropBackupImportResult = {
-        val doc = WavdropBackupDocumentReader.readUri(context, source.uri)
-        val again = (doc as? BackupDocumentReadResult.Wavdrop)?.result
+    private fun rereadWdbk(source: WdbkRecoverySource): suspend () -> StereoSineBackupImportResult = {
+        val doc = StereoSineBackupDocumentReader.readUri(context, source.uri)
+        val again = (doc as? BackupDocumentReadResult.StereoSine)?.result
         val backup = again?.backup
         when {
-            again == null || backup == null -> again ?: WavdropBackupImportResult(
+            again == null || backup == null -> again ?: StereoSineBackupImportResult(
                 backup = null,
-                error = ImportFileValidation.WAVDROP_NOT_A_BACKUP_MESSAGE,
+                error = ImportFileValidation.STEREOSINE_NOT_A_BACKUP_MESSAGE,
                 integrityStatus = BackupIntegrityStatus.INVALID,
             )
-            WavdropBackupIntegrityV2.fingerprint(backup) != source.fingerprint -> WavdropBackupImportResult(
+            StereoSineBackupIntegrityV2.fingerprint(backup) != source.fingerprint -> StereoSineBackupImportResult(
                 backup = null,
                 error = "The backup file changed after it was selected. Choose it again.",
                 integrityStatus = BackupIntegrityStatus.INVALID,
@@ -444,16 +444,16 @@ class BackupImportPreviewViewModel @Inject constructor(
         error: String?,
         container: BackupContainerKind = BackupContainerKind.LEGACY_JSON,
     ): String = when {
-        error == null -> ImportFileValidation.WAVDROP_NOT_A_BACKUP_MESSAGE
+        error == null -> ImportFileValidation.STEREOSINE_NOT_A_BACKUP_MESSAGE
         // Every WDBK reader error is already a plain-language message (damaged / newer version / too large / ...).
         container == BackupContainerKind.WDBK -> error
         // Surfaced verbatim: created by a newer StereoSine that supports a higher version.
-        error == WavdropBackupParser.NEWER_VERSION_ERROR -> error
+        error == StereoSineBackupParser.NEWER_VERSION_ERROR -> error
         // Versioned but lower than supported — still surfaces version number.
         error.startsWith("Unsupported backup version") -> error
         // Already plain language; tells the user the file is damaged rather than wrong.
         error.startsWith("Backup integrity check failed") -> error
-        else -> ImportFileValidation.WAVDROP_NOT_A_BACKUP_MESSAGE
+        else -> ImportFileValidation.STEREOSINE_NOT_A_BACKUP_MESSAGE
     }
 
     // ── Post-restore folder selection ─────────────────────────────────────────

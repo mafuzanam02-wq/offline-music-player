@@ -131,7 +131,7 @@ class MergeRestoreTest {
 
     @Test
     fun `locally favourite track stays favourite when backup has it as not favourite`() {
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(
                 BackupSong(1L, "content://media/1", "Track", "A", "B", 0L, 180_000L, 0L, 0, 0),
@@ -140,7 +140,7 @@ class MergeRestoreTest {
             importBaselines = emptyList(),
         )
         val current = song(1L, "content://media/1")
-        val match = WavdropBackupStatsMatcher.match(backup, listOf(current))
+        val match = StereoSineBackupStatsMatcher.match(backup, listOf(current))
 
         val (_, stat) = match.matchedRows.single()
         // backup says not favourite; the repository only calls setFavorite(true),
@@ -160,7 +160,7 @@ class MergeRestoreTest {
 
     @Test
     fun `track not locally favourite becomes favourite when backup marks it favourite`() {
-        val backup = WavdropBackup(
+        val backup = StereoSineBackup(
             exportedAt      = "2026-06-23T00:00:00Z",
             songs           = listOf(
                 BackupSong(1L, "content://media/1", "Track", "A", "B", 0L, 180_000L, 0L, 0, 0),
@@ -169,7 +169,7 @@ class MergeRestoreTest {
             importBaselines = emptyList(),
         )
         val current = song(1L, "content://media/1")
-        val match = WavdropBackupStatsMatcher.match(backup, listOf(current))
+        val match = StereoSineBackupStatsMatcher.match(backup, listOf(current))
 
         val (_, stat) = match.matchedRows.single()
         assertTrue("Backup stat is favourite → setFavorite(true) will be called", stat.isFavorite)
@@ -284,7 +284,7 @@ class MergeRestoreTest {
 
     @Test
     fun `result preferencesSkipped is true when backup has preferences`() {
-        val result = WavdropBackupImportApplyResult(
+        val result = StereoSineBackupImportApplyResult(
             matchedTracks      = 0,
             unmatchedTracks    = 0,
             statsUpdated       = 0,
@@ -297,7 +297,7 @@ class MergeRestoreTest {
 
     @Test
     fun `result preferencesSkipped is false when backup has no preferences`() {
-        val result = WavdropBackupImportApplyResult(
+        val result = StereoSineBackupImportApplyResult(
             matchedTracks      = 0,
             unmatchedTracks    = 0,
             statsUpdated       = 0,
@@ -352,7 +352,7 @@ class MergeRestoreTest {
 
     @Test
     fun `result statsRetainedLocal reflects tracks where local values were kept`() {
-        val result = WavdropBackupImportApplyResult(
+        val result = StereoSineBackupImportApplyResult(
             matchedTracks      = 5,
             unmatchedTracks    = 0,
             statsUpdated       = 3,
@@ -364,7 +364,7 @@ class MergeRestoreTest {
 
     @Test
     fun `result statsRetainedLocal defaults to zero for clean installs`() {
-        val result = WavdropBackupImportApplyResult(
+        val result = StereoSineBackupImportApplyResult(
             matchedTracks  = 5,
             unmatchedTracks = 0,
             statsUpdated   = 5,

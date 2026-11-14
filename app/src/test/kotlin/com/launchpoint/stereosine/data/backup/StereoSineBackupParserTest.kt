@@ -5,11 +5,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class WavdropBackupParserTest {
+class StereoSineBackupParserTest {
 
     @Test
     fun `valid backup parses successfully`() {
-        val result = WavdropBackupParser.parse(validBackupJson())
+        val result = StereoSineBackupParser.parse(validBackupJson())
 
         assertNull(result.error)
         val backup = assertBackup(result)
@@ -21,7 +21,7 @@ class WavdropBackupParserTest {
 
     @Test
     fun `valid backup maps song fields`() {
-        val song = assertBackup(WavdropBackupParser.parse(validBackupJson())).songs.single()
+        val song = assertBackup(StereoSineBackupParser.parse(validBackupJson())).songs.single()
 
         assertEquals(42L, song.id)
         assertEquals("content://media/external/audio/media/42", song.uri)
@@ -37,7 +37,7 @@ class WavdropBackupParserTest {
 
     @Test
     fun `valid backup maps stats fields`() {
-        val stats = assertBackup(WavdropBackupParser.parse(validBackupJson())).trackStats.single()
+        val stats = assertBackup(StereoSineBackupParser.parse(validBackupJson())).trackStats.single()
 
         assertEquals(42L, stats.songId)
         assertEquals("content://media/external/audio/media/42", stats.contentUri)
@@ -50,7 +50,7 @@ class WavdropBackupParserTest {
 
     @Test
     fun `valid backup maps import baseline fields`() {
-        val baseline = assertBackup(WavdropBackupParser.parse(validBackupJson())).importBaselines.single()
+        val baseline = assertBackup(StereoSineBackupParser.parse(validBackupJson())).importBaselines.single()
 
         assertEquals(42L, baseline.songId)
         assertEquals("blackplayer_bpstat", baseline.sourceType)
@@ -62,7 +62,7 @@ class WavdropBackupParserTest {
 
     @Test
     fun `empty arrays parse successfully`() {
-        val result = WavdropBackupParser.parse(
+        val result = StereoSineBackupParser.parse(
             """
             {
               "app": "Wavdrop",
@@ -105,7 +105,7 @@ class WavdropBackupParserTest {
         // v2 is now supported; use v3 to trigger the newer-version message.
         assertError(
             validBackupJson().replace("\"version\": 1", "\"version\": 3"),
-            WavdropBackupParser.NEWER_VERSION_ERROR,
+            StereoSineBackupParser.NEWER_VERSION_ERROR,
         )
     }
 
@@ -189,14 +189,14 @@ class WavdropBackupParserTest {
         )
     }
 
-    private fun assertBackup(result: WavdropBackupImportResult): WavdropBackup {
+    private fun assertBackup(result: StereoSineBackupImportResult): StereoSineBackup {
         assertNull(result.error)
         assertNotNull(result.backup)
         return result.backup ?: error("Expected parsed backup")
     }
 
     private fun assertError(json: String, message: String) {
-        val result = WavdropBackupParser.parse(json)
+        val result = StereoSineBackupParser.parse(json)
 
         assertNull(result.backup)
         assertEquals(message, result.error)
