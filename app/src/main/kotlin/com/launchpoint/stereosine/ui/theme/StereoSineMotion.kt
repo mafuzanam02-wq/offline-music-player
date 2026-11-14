@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.IntOffset
  * conventions: completion feedback and state changes already settle around ~200–220ms, and the
  * queue placement spring already uses [Spring.StiffnessMediumLow] with restrained damping.
  */
-object WavdropMotion {
+object StereoSineMotion {
 
     /** Semantic durations in milliseconds. Kept as plain Ints so they are trivially unit-testable. */
     object Durations {

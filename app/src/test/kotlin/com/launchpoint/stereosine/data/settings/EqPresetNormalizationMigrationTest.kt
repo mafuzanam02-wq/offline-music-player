@@ -12,11 +12,11 @@ import org.junit.Test
  * after normalization runs — no DataStore dependency. Helpers mirror the migration logic exactly.
  *
  * Normalization contract:
- *   FLAT            — removes platformPresetIndex and wavdropPresetId; preserves customBandLevels
- *   PLATFORM        — removes wavdropPresetId; preserves customBandLevels; keeps platformPresetIndex
- *   CUSTOM          — removes wavdropPresetId and platformPresetIndex; preserves customBandLevels
+ *   FLAT            — removes platformPresetIndex and stereoSinePresetId; preserves customBandLevels
+ *   PLATFORM        — removes stereoSinePresetId; preserves customBandLevels; keeps platformPresetIndex
+ *   CUSTOM          — removes stereoSinePresetId and platformPresetIndex; preserves customBandLevels
  *   WAVDROP_PRESET  — removes platformPresetIndex; preserves customBandLevels;
- *                     if id is blank/unknown → falls back to FLAT and removes wavdropPresetId
+ *                     if id is blank/unknown → falls back to FLAT and removes stereoSinePresetId
  *   Invalid type    — treated as FLAT by parser; normalized to FLAT
  *
  * Migration is one-time: the marker key eq_preset_state_normalized_v1 prevents repeated runs.
@@ -25,17 +25,17 @@ class EqPresetNormalizationMigrationTest {
 
     private val savedCustomLevels = listOf(-300, 0, 200, 100, -100)
 
-    // ── 1. PLATFORM + stale wavdropId clears wavdropId ───────────────────────
+    // ── 1. PLATFORM + stale stereoSineId clears stereoSineId ───────────────────────
 
     @Test
-    fun `PLATFORM normalization clears stale wavdropPresetId`() {
+    fun `PLATFORM normalization clears stale stereoSinePresetId`() {
         val result = normalize(
             rawType        = "PLATFORM",
             platformIndex  = 5,
-            wavdropId      = "balanced",
+            stereoSineId      = "balanced",
             customLevels   = savedCustomLevels,
         )
-        assertNull("wavdropPresetId must be cleared when preset is PLATFORM", result.eqWavdropPresetId)
+        assertNull("stereoSinePresetId must be cleared when preset is PLATFORM", result.eqStereoSinePresetId)
     }
 
     @Test
@@ -49,12 +49,12 @@ class EqPresetNormalizationMigrationTest {
         assertEquals(EqPresetType.PLATFORM, normalize(rawType = "PLATFORM", platformIndex = 3).eqPresetType)
     }
 
-    // ── 2. FLAT + stale wavdropId/platformIndex clears both ──────────────────
+    // ── 2. FLAT + stale stereoSineId/platformIndex clears both ──────────────────
 
     @Test
-    fun `FLAT normalization clears stale wavdropPresetId`() {
-        val result = normalize(rawType = "FLAT", wavdropId = "clarity", platformIndex = 2)
-        assertNull("wavdropPresetId must be cleared when preset is FLAT", result.eqWavdropPresetId)
+    fun `FLAT normalization clears stale stereoSinePresetId`() {
+        val result = normalize(rawType = "FLAT", stereoSineId = "clarity", platformIndex = 2)
+        assertNull("stereoSinePresetId must be cleared when preset is FLAT", result.eqStereoSinePresetId)
     }
 
     @Test
@@ -68,12 +68,12 @@ class EqPresetNormalizationMigrationTest {
         assertEquals(EqPresetType.FLAT, normalize(rawType = "FLAT").eqPresetType)
     }
 
-    // ── 3. CUSTOM + stale wavdropId/platformIndex clears both ────────────────
+    // ── 3. CUSTOM + stale stereoSineId/platformIndex clears both ────────────────
 
     @Test
-    fun `CUSTOM normalization clears stale wavdropPresetId`() {
-        val result = normalize(rawType = "CUSTOM", wavdropId = "deep-bass", customLevels = savedCustomLevels)
-        assertNull("wavdropPresetId must be cleared when preset is CUSTOM", result.eqWavdropPresetId)
+    fun `CUSTOM normalization clears stale stereoSinePresetId`() {
+        val result = normalize(rawType = "CUSTOM", stereoSineId = "deep-bass", customLevels = savedCustomLevels)
+        assertNull("stereoSinePresetId must be cleared when preset is CUSTOM", result.eqStereoSinePresetId)
     }
 
     @Test
@@ -91,21 +91,21 @@ class EqPresetNormalizationMigrationTest {
 
     @Test
     fun `WAVDROP_PRESET normalization clears stale platformPresetIndex`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = "warm", platformIndex = 6)
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = "warm", platformIndex = 6)
         assertNull("platformPresetIndex must be cleared when preset is WAVDROP_PRESET", result.eqPlatformPresetIndex)
     }
 
     @Test
-    fun `WAVDROP_PRESET normalization keeps valid wavdropPresetId`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = "clarity")
-        assertEquals("clarity", result.eqWavdropPresetId)
+    fun `WAVDROP_PRESET normalization keeps valid stereoSinePresetId`() {
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = "clarity")
+        assertEquals("clarity", result.eqStereoSinePresetId)
     }
 
     @Test
     fun `WAVDROP_PRESET normalization preset type remains WAVDROP_PRESET for known id`() {
         assertEquals(
             EqPresetType.WAVDROP_PRESET,
-            normalize(rawType = "WAVDROP_PRESET", wavdropId = "balanced").eqPresetType,
+            normalize(rawType = "WAVDROP_PRESET", stereoSineId = "balanced").eqPresetType,
         )
     }
 
@@ -113,32 +113,32 @@ class EqPresetNormalizationMigrationTest {
 
     @Test
     fun `WAVDROP_PRESET normalization with unknown id falls back to FLAT`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = "no-such-preset")
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = "no-such-preset")
         assertEquals(
-            "unknown wavdropId must produce FLAT fallback",
+            "unknown stereoSineId must produce FLAT fallback",
             EqPresetType.FLAT,
             result.eqPresetType,
         )
     }
 
     @Test
-    fun `WAVDROP_PRESET normalization with unknown id clears wavdropPresetId`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = "no-such-preset")
-        assertNull("wavdropPresetId must be null after FLAT fallback", result.eqWavdropPresetId)
+    fun `WAVDROP_PRESET normalization with unknown id clears stereoSinePresetId`() {
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = "no-such-preset")
+        assertNull("stereoSinePresetId must be null after FLAT fallback", result.eqStereoSinePresetId)
     }
 
     @Test
     fun `WAVDROP_PRESET normalization with null id falls back to FLAT`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = null)
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = null)
         assertEquals(EqPresetType.FLAT, result.eqPresetType)
-        assertNull(result.eqWavdropPresetId)
+        assertNull(result.eqStereoSinePresetId)
     }
 
     @Test
     fun `WAVDROP_PRESET normalization with blank id falls back to FLAT`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = "   ")
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = "   ")
         assertEquals(EqPresetType.FLAT, result.eqPresetType)
-        assertNull(result.eqWavdropPresetId)
+        assertNull(result.eqStereoSinePresetId)
     }
 
     // ── 6. customBandLevels preserved in all cases ───────────────────────────
@@ -163,13 +163,13 @@ class EqPresetNormalizationMigrationTest {
 
     @Test
     fun `WAVDROP_PRESET normalization preserves customBandLevels`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = "detail", customLevels = savedCustomLevels)
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = "detail", customLevels = savedCustomLevels)
         assertEquals(savedCustomLevels, result.eqCustomBandLevels)
     }
 
     @Test
     fun `WAVDROP_PRESET unknown-id fallback preserves customBandLevels`() {
-        val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = "ghost-preset", customLevels = savedCustomLevels)
+        val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = "ghost-preset", customLevels = savedCustomLevels)
         assertEquals("customBandLevels must survive FLAT fallback", savedCustomLevels, result.eqCustomBandLevels)
     }
 
@@ -188,24 +188,24 @@ class EqPresetNormalizationMigrationTest {
         val dirtyState = AudioEnhancementSettings(
             eqPresetType          = EqPresetType.PLATFORM,
             eqPlatformPresetIndex = 3,
-            eqWavdropPresetId     = "balanced", // stale
+            eqStereoSinePresetId     = "balanced", // stale
         )
         // With marker=true, the dirty state is left untouched (migration skips).
-        val result = if (alreadyNormalized) dirtyState else normalize("PLATFORM", platformIndex = 3, wavdropId = "balanced")
+        val result = if (alreadyNormalized) dirtyState else normalize("PLATFORM", platformIndex = 3, stereoSineId = "balanced")
         // Marker prevents normalization — state unchanged.
         assertEquals(EqPresetType.PLATFORM, result.eqPresetType)
-        assertEquals("balanced", result.eqWavdropPresetId) // stale, not cleared (migration skipped)
+        assertEquals("balanced", result.eqStereoSinePresetId) // stale, not cleared (migration skipped)
     }
 
     @Test
     fun `normalization runs when marker is false`() {
         val alreadyNormalized = false
         val result = if (alreadyNormalized) {
-            AudioEnhancementSettings(eqPresetType = EqPresetType.PLATFORM, eqWavdropPresetId = "balanced")
+            AudioEnhancementSettings(eqPresetType = EqPresetType.PLATFORM, eqStereoSinePresetId = "balanced")
         } else {
-            normalize("PLATFORM", platformIndex = 3, wavdropId = "balanced")
+            normalize("PLATFORM", platformIndex = 3, stereoSineId = "balanced")
         }
-        assertNull("normalization ran — stale wavdropId cleared", result.eqWavdropPresetId)
+        assertNull("normalization ran — stale stereoSineId cleared", result.eqStereoSinePresetId)
     }
 
     // ── Invalid raw type treated as FLAT ─────────────────────────────────────
@@ -214,7 +214,7 @@ class EqPresetNormalizationMigrationTest {
     fun `invalid raw type normalizes to FLAT`() {
         val result = normalize(rawType = "CORRUPTED_VALUE")
         assertEquals(EqPresetType.FLAT, result.eqPresetType)
-        assertNull(result.eqWavdropPresetId)
+        assertNull(result.eqStereoSinePresetId)
         assertNull(result.eqPlatformPresetIndex)
     }
 
@@ -222,7 +222,7 @@ class EqPresetNormalizationMigrationTest {
     fun `null raw type normalizes to FLAT`() {
         val result = normalize(rawType = null)
         assertEquals(EqPresetType.FLAT, result.eqPresetType)
-        assertNull(result.eqWavdropPresetId)
+        assertNull(result.eqStereoSinePresetId)
         assertNull(result.eqPlatformPresetIndex)
     }
 
@@ -232,9 +232,9 @@ class EqPresetNormalizationMigrationTest {
     fun `all catalog preset ids survive WAVDROP_PRESET normalization`() {
         val ids = listOf("balanced", "deep-bass", "clarity", "warm", "detail", "late-night", "spoken-word")
         ids.forEach { id ->
-            val result = normalize(rawType = "WAVDROP_PRESET", wavdropId = id)
+            val result = normalize(rawType = "WAVDROP_PRESET", stereoSineId = id)
             assertEquals("$id should remain WAVDROP_PRESET after normalization", EqPresetType.WAVDROP_PRESET, result.eqPresetType)
-            assertEquals("$id should be preserved", id, result.eqWavdropPresetId)
+            assertEquals("$id should be preserved", id, result.eqStereoSinePresetId)
         }
     }
 
@@ -243,37 +243,37 @@ class EqPresetNormalizationMigrationTest {
     private fun normalize(
         rawType: String?,
         platformIndex: Int?      = null,
-        wavdropId: String?       = null,
+        stereoSineId: String?       = null,
         customLevels: List<Int>  = emptyList(),
     ): AudioEnhancementSettings {
         val presetType = AudioEnhancementsRepository.parseEqPresetType(rawType)
-        val parsedId   = AudioEnhancementsRepository.parseWavdropPresetId(wavdropId)
+        val parsedId   = AudioEnhancementsRepository.parseStereoSinePresetId(stereoSineId)
 
         return when (presetType) {
             EqPresetType.FLAT -> AudioEnhancementSettings(
                 eqPresetType          = EqPresetType.FLAT,
                 eqPlatformPresetIndex = null,
-                eqWavdropPresetId     = null,
+                eqStereoSinePresetId     = null,
                 eqCustomBandLevels    = customLevels,
             )
             EqPresetType.PLATFORM -> AudioEnhancementSettings(
                 eqPresetType          = EqPresetType.PLATFORM,
                 eqPlatformPresetIndex = platformIndex,
-                eqWavdropPresetId     = null,
+                eqStereoSinePresetId     = null,
                 eqCustomBandLevels    = customLevels,
             )
             EqPresetType.CUSTOM -> AudioEnhancementSettings(
                 eqPresetType          = EqPresetType.CUSTOM,
                 eqPlatformPresetIndex = null,
-                eqWavdropPresetId     = null,
+                eqStereoSinePresetId     = null,
                 eqCustomBandLevels    = customLevels,
             )
             EqPresetType.WAVDROP_PRESET -> {
-                val validId = parsedId?.takeIf { WavdropPresetCatalog.findById(it) != null }
+                val validId = parsedId?.takeIf { StereoSinePresetCatalog.findById(it) != null }
                 if (validId != null) {
                     AudioEnhancementSettings(
                         eqPresetType          = EqPresetType.WAVDROP_PRESET,
-                        eqWavdropPresetId     = validId,
+                        eqStereoSinePresetId     = validId,
                         eqPlatformPresetIndex = null,
                         eqCustomBandLevels    = customLevels,
                     )
@@ -282,7 +282,7 @@ class EqPresetNormalizationMigrationTest {
                     AudioEnhancementSettings(
                         eqPresetType          = EqPresetType.FLAT,
                         eqPlatformPresetIndex = null,
-                        eqWavdropPresetId     = null,
+                        eqStereoSinePresetId     = null,
                         eqCustomBandLevels    = customLevels,
                     )
                 }

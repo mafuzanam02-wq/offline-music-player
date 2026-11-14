@@ -234,7 +234,7 @@ class WidgetConfigSaverTest {
         assertTrue(savedBranch.contains("RESULT_OK") && savedBranch.contains("finish()"))
         val failedBranch = save.substringAfter("Result.Failed ->").substringBefore("Result.Busy ->")
         assertTrue("failure shows an error and re-enables Save instead of spinning", failedBranch.contains("saveFailed = true") && failedBranch.contains("saving = false") && !failedBranch.contains("RESULT_OK"))
-        assertTrue("the first render is awaited through the existing coordinator", src.contains("WavdropWidgetUpdater.requestUpdateAndAwait(applicationContext, id)"))
+        assertTrue("the first render is awaited through the existing coordinator", src.contains("StereoSineWidgetUpdater.requestUpdateAndAwait(applicationContext, id)"))
         assertFalse("no fire-and-forget request remains in the Save path", save.contains("requestUpdate(applicationContext"))
     }
 

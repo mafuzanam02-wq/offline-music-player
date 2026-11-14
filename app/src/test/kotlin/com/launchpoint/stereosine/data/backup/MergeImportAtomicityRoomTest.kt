@@ -6,7 +6,7 @@ import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupEvent
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupPlaylistSong
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupSong
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupStats
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.ImportBaselineDao
 import com.launchpoint.stereosine.data.local.dao.LyricsOverrideDao
 import com.launchpoint.stereosine.data.local.dao.PendingBackupExtensionDao
@@ -59,7 +59,7 @@ class MergeImportAtomicityRoomTest {
 
     private class Boom(message: String) : RuntimeException(message)
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private val trace = mutableListOf<String>()
     private var failAfter: String? = null
 
@@ -72,7 +72,7 @@ class MergeImportAtomicityRoomTest {
     }
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build()
         seedLocalState()
     }

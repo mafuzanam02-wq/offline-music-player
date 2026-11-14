@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.backup
 
 import androidx.room.Room
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.PlaylistEntity
 import com.launchpoint.stereosine.data.local.entity.PlaylistSongEntity
 import com.launchpoint.stereosine.data.local.entity.SongEntity
@@ -28,7 +28,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class BackupUriCollisionImportRoomTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var recovery: RecoveryRestoreRepository
     private lateinit var merge: WavdropBackupImportRepository
 
@@ -36,7 +36,7 @@ class BackupUriCollisionImportRoomTest {
     private val good = 6L
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java).allowMainThreadQueries().build()
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java).allowMainThreadQueries().build()
         recovery = RecoveryRestoreRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),
             db.trackListenEventDao(), db.pendingTrackDao(), db.pendingBackupExtensionDao(),

@@ -143,7 +143,7 @@ fun PullToRefreshContainer(
                 if (!currentEnabled || source != NestedScrollSource.UserInput) return Offset.Zero
                 // Reversing while displaced shrinks the pull before the list may scroll up (cancel by dragging back).
                 if (available.y < 0f && controller.isDragging) {
-                    return Offset(0f, controller.pull(available.y) { WavdropHaptics.threshold(haptics) })
+                    return Offset(0f, controller.pull(available.y) { StereoSineHaptics.threshold(haptics) })
                 }
                 return Offset.Zero
             }
@@ -151,7 +151,7 @@ fun PullToRefreshContainer(
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                 if (!currentEnabled || source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
                 // The list is at its top and did not consume the downward drag: this is a pull.
-                return Offset(0f, controller.pull(available.y) { WavdropHaptics.threshold(haptics) })
+                return Offset(0f, controller.pull(available.y) { StereoSineHaptics.threshold(haptics) })
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {

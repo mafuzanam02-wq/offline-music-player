@@ -6,7 +6,7 @@ import com.launchpoint.stereosine.data.legacy.BpstatApplyResult
 import com.launchpoint.stereosine.data.legacy.BlackPlayerStatImportRow
 import com.launchpoint.stereosine.data.legacy.ImportSourceTypes
 import com.launchpoint.stereosine.data.legacy.planBpstatMerge
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.ImportBaselineDao
 import com.launchpoint.stereosine.data.local.dao.TrackListenEventDao
 import com.launchpoint.stereosine.data.local.dao.TrackStatsDao
@@ -33,7 +33,7 @@ import javax.inject.Singleton
 
 @Singleton
 class StatsRepository @Inject constructor(
-    private val db: WavdropDatabase,
+    private val db: StereoSineDatabase,
     private val dao: TrackStatsDao,
     private val importBaselineDao: ImportBaselineDao,
     private val listenEventDao: TrackListenEventDao,

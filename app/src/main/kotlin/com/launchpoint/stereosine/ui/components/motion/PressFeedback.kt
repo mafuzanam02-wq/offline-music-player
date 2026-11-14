@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 
 /**
  * Restrained press-feedback for tappable cards / rows / buttons (WU-02).
@@ -23,7 +23,7 @@ import com.launchpoint.stereosine.ui.theme.WavdropMotion
  *
  * @param pressedScale peak compression, clamped to a subtle 0.985–1.0 range.
  */
-fun Modifier.wavdropPressFeedback(
+fun Modifier.stereoSinePressFeedback(
     interactionSource: InteractionSource,
     enabled: Boolean = true,
     pressedScale: Float = DEFAULT_PRESSED_SCALE,
@@ -36,10 +36,10 @@ fun Modifier.wavdropPressFeedback(
     val scale by animateFloatAsState(
         targetValue = target,
         animationSpec = tween(
-            durationMillis = WavdropMotion.Durations.PressResponse,
-            easing = WavdropMotion.Easings.Press,
+            durationMillis = StereoSineMotion.Durations.PressResponse,
+            easing = StereoSineMotion.Easings.Press,
         ),
-        label = "wavdropPressScale",
+        label = "stereoSinePressScale",
     )
 
     // Block form of graphicsLayer keeps the read in the draw phase and avoids per-frame allocation.

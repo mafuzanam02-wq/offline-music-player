@@ -122,10 +122,10 @@ import com.launchpoint.stereosine.ui.components.PrimaryDestination
 import com.launchpoint.stereosine.data.settings.NowPlayingTimeDisplayMode
 import com.launchpoint.stereosine.ui.components.PrimaryNavigationBar
 import com.launchpoint.stereosine.ui.components.toShape
-import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 import com.launchpoint.stereosine.data.settings.NowPlayingBackground
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -842,7 +842,7 @@ private fun UpperNowPlayingContent(
             }
             // Metadata fades through on track change (keyed by the displayed text); direct swap
             // under reduced motion. No large slides, no layout-wide animation.
-            WavdropFadeThrough(
+            StereoSineFadeThrough(
                 targetState = song.displayTitle,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -859,7 +859,7 @@ private fun UpperNowPlayingContent(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            WavdropFadeThrough(
+            StereoSineFadeThrough(
                 targetState = song.displayArtist,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -876,7 +876,7 @@ private fun UpperNowPlayingContent(
                 )
             }
             if (metrics.showAlbum && song.album.isNotBlank()) {
-                WavdropFadeThrough(
+                StereoSineFadeThrough(
                     targetState = song.album,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -978,7 +978,7 @@ private fun PlaybackControlsRow(
     val tintSpec = if (reducedMotion) {
         snap<Color>()
     } else {
-        tween<Color>(WavdropMotion.Durations.StandardStateChange, easing = WavdropMotion.Easings.Standard)
+        tween<Color>(StereoSineMotion.Durations.StandardStateChange, easing = StereoSineMotion.Easings.Standard)
     }
     val shuffleTint by animateColorAsState(
         targetValue = if (state.shuffleEnabled) MaterialTheme.colorScheme.primary
@@ -996,7 +996,7 @@ private fun PlaybackControlsRow(
     ) {
         IconButton(
             onClick = onToggleShuffle,
-            modifier = Modifier.size(42.dp).wavdropPressFeedback(shuffleInteraction),
+            modifier = Modifier.size(42.dp).stereoSinePressFeedback(shuffleInteraction),
             interactionSource = shuffleInteraction,
         ) {
             Icon(
@@ -1008,7 +1008,7 @@ private fun PlaybackControlsRow(
         }
         IconButton(
             onClick = onPrevious,
-            modifier = Modifier.size(44.dp).wavdropPressFeedback(previousInteraction),
+            modifier = Modifier.size(44.dp).stereoSinePressFeedback(previousInteraction),
             interactionSource = previousInteraction,
         ) {
             Icon(
@@ -1020,10 +1020,10 @@ private fun PlaybackControlsRow(
         }
         IconButton(
             onClick = onTogglePlayPause,
-            modifier = Modifier.size(58.dp).wavdropPressFeedback(playInteraction),
+            modifier = Modifier.size(58.dp).stereoSinePressFeedback(playInteraction),
             interactionSource = playInteraction,
         ) {
-            WavdropFadeThrough(targetState = state.presentedAsPlaying) { playing ->
+            StereoSineFadeThrough(targetState = state.presentedAsPlaying) { playing ->
                 Icon(
                     imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (playing) "Pause" else "Play",
@@ -1034,7 +1034,7 @@ private fun PlaybackControlsRow(
         }
         IconButton(
             onClick = onNext,
-            modifier = Modifier.size(44.dp).wavdropPressFeedback(nextInteraction),
+            modifier = Modifier.size(44.dp).stereoSinePressFeedback(nextInteraction),
             interactionSource = nextInteraction,
         ) {
             Icon(
@@ -1046,10 +1046,10 @@ private fun PlaybackControlsRow(
         }
         IconButton(
             onClick = onCycleRepeatMode,
-            modifier = Modifier.size(42.dp).wavdropPressFeedback(repeatInteraction),
+            modifier = Modifier.size(42.dp).stereoSinePressFeedback(repeatInteraction),
             interactionSource = repeatInteraction,
         ) {
-            WavdropFadeThrough(targetState = state.repeatMode) { mode ->
+            StereoSineFadeThrough(targetState = state.repeatMode) { mode ->
                 Icon(
                     imageVector = if (mode == RepeatMode.ONE) Icons.Default.RepeatOne
                                   else Icons.Default.Repeat,
@@ -1449,8 +1449,8 @@ private fun SeekBar(
     val thumbScale by animateFloatAsState(
         targetValue = if (isDragging && !reducedMotion) 1.5f else 1f,
         animationSpec = tween(
-            durationMillis = WavdropMotion.Durations.FastStateChange,
-            easing = WavdropMotion.Easings.Standard,
+            durationMillis = StereoSineMotion.Durations.FastStateChange,
+            easing = StereoSineMotion.Easings.Standard,
         ),
         label = "seekThumbScale",
     )

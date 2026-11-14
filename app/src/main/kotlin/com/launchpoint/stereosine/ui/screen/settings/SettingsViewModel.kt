@@ -205,9 +205,9 @@ class SettingsViewModel @Inject constructor(
                 initialValue = emptyList(),
             )
 
-    val eqWavdropPresetId: StateFlow<String?> =
+    val eqStereoSinePresetId: StateFlow<String?> =
         audioEnhancementsRepository.settings
-            .map { it.eqWavdropPresetId }
+            .map { it.eqStereoSinePresetId }
             .stateIn(
                 scope        = viewModelScope,
                 started      = SharingStarted.WhileSubscribed(5_000),
@@ -510,8 +510,8 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { audioEnhancementsRepository.setEqCustomBandLevels(levels) }
     }
 
-    fun setEqWavdropPreset(id: String) {
-        viewModelScope.launch { audioEnhancementsRepository.setEqWavdropPreset(id) }
+    fun setEqStereoSinePreset(id: String) {
+        viewModelScope.launch { audioEnhancementsRepository.setEqStereoSinePreset(id) }
     }
 
     fun setSleepTimer(option: SleepTimerOption, finishCurrentTrack: Boolean = false) {
@@ -632,7 +632,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private companion object {
-        const val TAG = "Wavdrop-IconSwitch"
+        const val TAG = "StereoSine-IconSwitch"
     }
 
     fun rescanLibrary() {

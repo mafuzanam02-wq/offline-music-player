@@ -55,6 +55,6 @@ class PlaybackStartupCoordinator @Inject constructor(
     }
 
     private companion object {
-        const val TAG = "Wavdrop-Startup"
+        const val TAG = "StereoSine-Startup"
     }
 }

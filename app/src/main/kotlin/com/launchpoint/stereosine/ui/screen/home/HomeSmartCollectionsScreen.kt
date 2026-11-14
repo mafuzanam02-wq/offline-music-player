@@ -52,7 +52,7 @@ import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.motion.TransientHighlightState
 import com.launchpoint.stereosine.ui.components.motion.rememberTransientHighlight
 import com.launchpoint.stereosine.ui.components.motion.transientHighlight
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 import com.launchpoint.stereosine.ui.screen.settings.SectionDivider
 import com.launchpoint.stereosine.ui.screen.settings.SectionHeader
 import com.launchpoint.stereosine.ui.screen.settings.SettingsMessageRow
@@ -269,7 +269,7 @@ private fun AvailableCollectionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,

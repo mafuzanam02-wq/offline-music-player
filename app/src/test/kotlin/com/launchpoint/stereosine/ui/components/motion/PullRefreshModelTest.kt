@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.ui.components.motion
 
 import com.launchpoint.stereosine.ui.scan.LibraryScanUiState
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -182,14 +182,14 @@ class PullRefreshModelTest {
 
     // ---- reduced motion + wiring guards (no Compose UI test dependency in unit tests) ----
     @Test fun `reduced motion policy is the shared one`() {
-        assertTrue(WavdropMotion.isReducedMotion(0f))
-        assertFalse(WavdropMotion.isReducedMotion(1f))
+        assertTrue(StereoSineMotion.isReducedMotion(0f))
+        assertFalse(StereoSineMotion.isReducedMotion(1f))
         val src = File("src/main/kotlin/com/launchpoint/stereosine/ui/components/motion/PullToRefreshContainer.kt").readText()
         assertTrue("rememberReducedMotion()" in src)
         val controller = File("src/main/kotlin/com/launchpoint/stereosine/ui/components/motion/PullRefreshController.kt").readText()
         assertTrue("reducedMotion || offsetPx == targetPx" in controller) // settle snaps instead of animating
         assertTrue("if (!reducedMotion) rotationZ" in src)         // no rotation under reduced motion
-        assertTrue("WavdropHaptics.threshold(haptics)" in src)
+        assertTrue("StereoSineHaptics.threshold(haptics)" in src)
     }
 
     @Test fun `the container reads offsets only in graphics layers so lists do not recompose per frame`() {

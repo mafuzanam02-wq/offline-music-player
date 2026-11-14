@@ -7,7 +7,7 @@ import com.launchpoint.stereosine.data.playback.PlaybackSessionSnapshot
 import com.launchpoint.stereosine.data.settings.ResumeBehaviorSettings
 
 /** Stable browse-node IDs. Never localized titles; never colliding with numeric song IDs. */
-internal object WavdropLibraryIds {
+internal object StereoSineLibraryIds {
     const val ROOT = "wavdrop_root"
     const val RECENT = "wavdrop_recent"
     const val SONGS = "wavdrop_songs"
@@ -24,12 +24,12 @@ internal object WavdropLibraryIds {
  * resumption stays occurrence-safe via onPlaybackResumption / [PlaybackResumptionMapper]; queue
  * occurrence is never encoded into a browse item ID.
  */
-internal object WavdropMediaLibrary {
+internal object StereoSineMediaLibrary {
     fun isBrowseNode(mediaId: String): Boolean =
-        mediaId == WavdropLibraryIds.ROOT ||
-            mediaId == WavdropLibraryIds.RECENT ||
-            mediaId == WavdropLibraryIds.SONGS ||
-            mediaId == WavdropLibraryIds.RECENT_ROOT
+        mediaId == StereoSineLibraryIds.ROOT ||
+            mediaId == StereoSineLibraryIds.RECENT ||
+            mediaId == StereoSineLibraryIds.SONGS ||
+            mediaId == StereoSineLibraryIds.RECENT_ROOT
 
     private fun browsableNode(id: String, title: String): MediaItem =
         MediaItem.Builder()
@@ -44,13 +44,13 @@ internal object WavdropMediaLibrary {
             )
             .build()
 
-    fun rootItem(): MediaItem = browsableNode(WavdropLibraryIds.ROOT, "StereoSine")
+    fun rootItem(): MediaItem = browsableNode(StereoSineLibraryIds.ROOT, "StereoSine")
 
-    fun recentNode(): MediaItem = browsableNode(WavdropLibraryIds.RECENT, "Recently played")
+    fun recentNode(): MediaItem = browsableNode(StereoSineLibraryIds.RECENT, "Recently played")
 
-    fun songsNode(): MediaItem = browsableNode(WavdropLibraryIds.SONGS, "Songs")
+    fun songsNode(): MediaItem = browsableNode(StereoSineLibraryIds.SONGS, "Songs")
 
-    fun recentRootNode(): MediaItem = browsableNode(WavdropLibraryIds.RECENT_ROOT, "StereoSine recent")
+    fun recentRootNode(): MediaItem = browsableNode(StereoSineLibraryIds.RECENT_ROOT, "StereoSine recent")
 
     /** Root for a library-root request: the dedicated recent root for isRecent, else the normal root. */
     fun rootFor(isRecent: Boolean): MediaItem = if (isRecent) recentRootNode() else rootItem()
@@ -101,10 +101,10 @@ internal object WavdropMediaLibrary {
 
     /** Item lookup for known nodes and songs; null for anything unknown (no first-match guessing). */
     fun item(mediaId: String, songs: List<Song>): MediaItem? = when (mediaId) {
-        WavdropLibraryIds.ROOT -> rootItem()
-        WavdropLibraryIds.RECENT -> recentNode()
-        WavdropLibraryIds.SONGS -> songsNode()
-        WavdropLibraryIds.RECENT_ROOT -> recentRootNode()
+        StereoSineLibraryIds.ROOT -> rootItem()
+        StereoSineLibraryIds.RECENT -> recentNode()
+        StereoSineLibraryIds.SONGS -> songsNode()
+        StereoSineLibraryIds.RECENT_ROOT -> recentRootNode()
         else -> mediaId.toLongOrNull()?.let { id -> songs.firstOrNull { it.id == id }?.let(::songItem) }
     }
 }

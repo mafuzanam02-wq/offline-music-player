@@ -4,31 +4,31 @@ import com.launchpoint.stereosine.data.settings.AudioEnhancementSettings
 import com.launchpoint.stereosine.data.settings.EqualizerCapabilities
 import com.launchpoint.stereosine.data.settings.EqualizerPlatformPreset
 import com.launchpoint.stereosine.data.settings.EqPresetType
-import com.launchpoint.stereosine.data.settings.WavdropPresetCatalog
+import com.launchpoint.stereosine.data.settings.StereoSinePresetCatalog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class EqWavdropPresetSlice3Test {
+class EqStereoSinePresetSlice3Test {
 
     // ── 1. WAVDROP_PRESET label shows display name, not raw id ───────────────
 
     @Test
     fun `preset label for balanced id is Balanced display name`() {
-        val displayName = WavdropPresetCatalog.findById("balanced")?.displayName
+        val displayName = StereoSinePresetCatalog.findById("balanced")?.displayName
         assertEquals("Balanced", displayName)
     }
 
     @Test
     fun `preset label for deep-bass id is Deep Bass`() {
-        assertEquals("Deep Bass", WavdropPresetCatalog.findById("deep-bass")?.displayName)
+        assertEquals("Deep Bass", StereoSinePresetCatalog.findById("deep-bass")?.displayName)
     }
 
     @Test
     fun `preset label for all catalog presets is display name not id`() {
-        WavdropPresetCatalog.all.forEach { preset ->
+        StereoSinePresetCatalog.all.forEach { preset ->
             // display name must differ from id (no raw kebab in UI)
             val label = eqPresetLabel(EqPresetType.WAVDROP_PRESET, preset.id)
             assertEquals("${preset.id} should show displayName", preset.displayName, label)
@@ -80,7 +80,7 @@ class EqWavdropPresetSlice3Test {
     @Test
     fun `all 7 StereoSine presets appear in catalog`() {
         val expectedIds = listOf("balanced", "deep-bass", "clarity", "warm", "detail", "late-night", "spoken-word")
-        val catalogIds  = WavdropPresetCatalog.all.map { it.id }
+        val catalogIds  = StereoSinePresetCatalog.all.map { it.id }
         assertEquals(expectedIds, catalogIds)
     }
 
@@ -88,22 +88,22 @@ class EqWavdropPresetSlice3Test {
 
     @Test
     fun `wavdrop section available when bandCount is 5`() {
-        assertTrue(wavdropPresetsAvailable(bandCount = 5))
+        assertTrue(stereoSinePresetsAvailable(bandCount = 5))
     }
 
     @Test
     fun `wavdrop section hidden when bandCount is 10`() {
-        assertFalse(wavdropPresetsAvailable(bandCount = 10))
+        assertFalse(stereoSinePresetsAvailable(bandCount = 10))
     }
 
     @Test
     fun `wavdrop section hidden when bandCount is 4`() {
-        assertFalse(wavdropPresetsAvailable(bandCount = 4))
+        assertFalse(stereoSinePresetsAvailable(bandCount = 4))
     }
 
     @Test
     fun `wavdrop section hidden when bandCount is 0`() {
-        assertFalse(wavdropPresetsAvailable(bandCount = 0))
+        assertFalse(stereoSinePresetsAvailable(bandCount = 0))
     }
 
     // ── 6. Auto-promote: first slider drag switches type to CUSTOM ────────────
@@ -127,10 +127,10 @@ class EqWavdropPresetSlice3Test {
     fun `initial slider levels for WAVDROP_PRESET come from catalog not custom band levels`() {
         // When preset type is WAVDROP_PRESET, the slider should display the catalog curve,
         // not the previously stored custom band levels.
-        val catalogLevels = WavdropPresetCatalog.findById("balanced")?.bandLevels
-        val initialLevels = resolveWavdropInitialLevels(
+        val catalogLevels = StereoSinePresetCatalog.findById("balanced")?.bandLevels
+        val initialLevels = resolveStereoSineInitialLevels(
             presetType       = EqPresetType.WAVDROP_PRESET,
-            wavdropPresetId  = "balanced",
+            stereoSinePresetId  = "balanced",
             customBandLevels = listOf(-300, 0, 200, 100, -100),
             bandCount        = 5,
         )
@@ -140,9 +140,9 @@ class EqWavdropPresetSlice3Test {
     @Test
     fun `initial slider levels for CUSTOM come from stored custom band levels`() {
         val storedLevels = listOf(-300, 0, 200, 100, -100)
-        val initialLevels = resolveWavdropInitialLevels(
+        val initialLevels = resolveStereoSineInitialLevels(
             presetType       = EqPresetType.CUSTOM,
-            wavdropPresetId  = null,
+            stereoSinePresetId  = null,
             customBandLevels = storedLevels,
             bandCount        = 5,
         )
@@ -158,10 +158,10 @@ class EqWavdropPresetSlice3Test {
 
     // ── Helpers mirroring the UI screen logic ─────────────────────────────────
 
-    private fun eqPresetLabel(presetType: EqPresetType, wavdropPresetId: String?): String =
+    private fun eqPresetLabel(presetType: EqPresetType, stereoSinePresetId: String?): String =
         when (presetType) {
             EqPresetType.FLAT           -> "Flat"
-            EqPresetType.WAVDROP_PRESET -> WavdropPresetCatalog.findById(wavdropPresetId)?.displayName ?: "StereoSine"
+            EqPresetType.WAVDROP_PRESET -> StereoSinePresetCatalog.findById(stereoSinePresetId)?.displayName ?: "StereoSine"
             EqPresetType.PLATFORM       -> "Platform"
             EqPresetType.CUSTOM         -> "Custom"
         }
@@ -169,15 +169,15 @@ class EqWavdropPresetSlice3Test {
     private fun shouldShowEqBandSliders(eqEnabled: Boolean, presetType: EqPresetType): Boolean =
         eqEnabled && (presetType == EqPresetType.CUSTOM || presetType == EqPresetType.WAVDROP_PRESET)
 
-    private fun wavdropPresetsAvailable(bandCount: Int): Boolean = bandCount == 5
+    private fun stereoSinePresetsAvailable(bandCount: Int): Boolean = bandCount == 5
 
-    private fun resolveWavdropInitialLevels(
+    private fun resolveStereoSineInitialLevels(
         presetType: EqPresetType,
-        wavdropPresetId: String?,
+        stereoSinePresetId: String?,
         customBandLevels: List<Int>,
         bandCount: Int,
     ): List<Int> = if (presetType == EqPresetType.WAVDROP_PRESET) {
-        WavdropPresetCatalog.findById(wavdropPresetId)
+        StereoSinePresetCatalog.findById(stereoSinePresetId)
             ?.bandLevels?.takeIf { it.size == bandCount }
             ?: List(bandCount) { 0 }
     } else {

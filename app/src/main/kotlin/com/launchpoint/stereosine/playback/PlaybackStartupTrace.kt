@@ -57,7 +57,7 @@ import java.util.WeakHashMap
  */
 internal object PlaybackStartupTrace {
 
-    const val TAG = "WavdropStartTrace"
+    const val TAG = "StereoSineStartTrace"
 
     /** Marks arriving later than this after the request are dropped and the trace closed (stale-callback noise guard). */
     internal const val TRACE_EXPIRY_MS = 30_000L

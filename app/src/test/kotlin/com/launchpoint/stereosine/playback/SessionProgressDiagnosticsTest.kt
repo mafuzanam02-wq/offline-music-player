@@ -55,7 +55,7 @@ class SessionProgressDiagnosticsTest {
     @Test fun `the line format has the required fields and no media identity`() {
         val line = formatSessionProgressLine("transition", 123L, 4_000L, 4_001L, 3, true, true, 2, false)
         assertEquals("reason=transition t=123 physical=4000 session=4001 state=3 playWhenReady=true isPlaying=true index=2 promotion=false", line)
-        assertEquals("WavdropSessionProgress", SessionProgressDiagnostics.TAG)
+        assertEquals("StereoSineSessionProgress", SessionProgressDiagnostics.TAG)
     }
 
     // ── behaviour against the real chain ───────────────────────────────────────────────────────────────────────────────

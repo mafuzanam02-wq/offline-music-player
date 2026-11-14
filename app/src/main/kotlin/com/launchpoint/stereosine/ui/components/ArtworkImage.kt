@@ -46,10 +46,10 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.launchpoint.stereosine.BuildConfig
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 import kotlinx.coroutines.delay
 
-private const val ARTWORK_TAG = "WavdropArtwork"
+private const val ARTWORK_TAG = "StereoSineArtwork"
 
 /**
  * Shared artwork surface (WC-07).
@@ -129,7 +129,7 @@ private fun ListArtworkContent(
     // A new request identity gets a brand-new image painter, so a reused row slot cannot draw the previous cover while loading.
     key(requestKey) {
         val request = remember(requestKey, reducedMotion) {
-            ArtworkRequestFactory.build(context, requestKey, if (reducedMotion) 0 else WavdropMotion.Durations.StandardStateChange)
+            ArtworkRequestFactory.build(context, requestKey, if (reducedMotion) 0 else StereoSineMotion.Durations.StandardStateChange)
         }
         var loaded by remember { mutableStateOf(false) }
         if (!loaded) ArtworkPlaceholder(placeholderIcon, Modifier.artworkPlaceholderSize())
@@ -159,7 +159,7 @@ private fun LargeArtworkContent(
     val target = remember(measured) { ArtworkSizing.largeTarget(measured.width, measured.height) }
     val requestKey = if (hasArtwork && target != null) ArtworkRequestKey(artworkUri!!, target) else null
     var state by remember { mutableStateOf<ArtworkSurfaceState<LoadedArtwork>>(ArtworkSurfaceState.Idle) }
-    val crossfadeMs = if (reducedMotion) 0 else WavdropMotion.Durations.StandardStateChange
+    val crossfadeMs = if (reducedMotion) 0 else StereoSineMotion.Durations.StandardStateChange
 
     LaunchedEffect(requestKey, hasArtwork) {
         if (!hasArtwork) {

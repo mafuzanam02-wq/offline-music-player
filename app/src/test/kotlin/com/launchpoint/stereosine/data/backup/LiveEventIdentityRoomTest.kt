@@ -6,7 +6,7 @@ import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupSong
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupStats
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkReader
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import kotlinx.coroutines.runBlocking
@@ -37,11 +37,11 @@ class LiveEventIdentityRoomTest {
     private enum class Fmt { JSON, WDBK }
     private enum class Mode { MERGE, RECOVERY }
 
-    private val dbs = mutableListOf<WavdropDatabase>()
+    private val dbs = mutableListOf<StereoSineDatabase>()
     @After fun tearDown() { dbs.forEach { runCatching { it.close() } } }
 
     private inner class Node {
-        val db: WavdropDatabase = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java)
+        val db: StereoSineDatabase = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build().also { dbs += it }
         val merge = WavdropBackupImportRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),

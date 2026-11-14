@@ -40,7 +40,7 @@ import com.launchpoint.stereosine.ui.screen.settings.CardInternalDivider
 import com.launchpoint.stereosine.ui.screen.settings.ScanModeRow
 import com.launchpoint.stereosine.ui.screen.settings.SectionHeader
 import com.launchpoint.stereosine.ui.screen.settings.SettingsGroupCard
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -65,8 +65,8 @@ class WidgetConfigActivity : ComponentActivity() {
     private val saver by lazy {
         WidgetConfigSaver(
             widgetAppearanceStore,
-            renderFirstUpdate = { id -> WavdropWidgetUpdater.requestUpdateAndAwait(applicationContext, id) },
-            reconcile = { id -> WavdropWidgetUpdater.requestUpdate(applicationContext, listOf(id)) },
+            renderFirstUpdate = { id -> StereoSineWidgetUpdater.requestUpdateAndAwait(applicationContext, id) },
+            reconcile = { id -> StereoSineWidgetUpdater.requestUpdate(applicationContext, listOf(id)) },
         )
     }
 
@@ -76,7 +76,7 @@ class WidgetConfigActivity : ComponentActivity() {
 
         appWidgetId = WidgetConfigContract.widgetIdFrom(intent)
         val ours = AppWidgetManager.getInstance(this)
-            .getAppWidgetIds(ComponentName(this, WavdropWidgetProvider::class.java))
+            .getAppWidgetIds(ComponentName(this, StereoSineWidgetProvider::class.java))
         if (!WidgetConfigContract.isUsable(appWidgetId, ours)) {
             // Missing, invalid, or someone else's id: nothing to configure.
             setResult(Activity.RESULT_CANCELED)
@@ -97,7 +97,7 @@ class WidgetConfigActivity : ComponentActivity() {
                 .collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
             val accentColor by appSettingsRepository.accentColor
                 .collectAsStateWithLifecycle(initialValue = AccentColor.MIDNIGHT_VIOLET)
-            WavdropTheme(themeMode = themeMode, accentColor = accentColor) {
+            StereoSineTheme(themeMode = themeMode, accentColor = accentColor) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     initial?.let { start ->
                         WidgetAppearanceScreen(start = start, saving = saving, saveFailed = saveFailed, onSave = ::save, onCancel = ::cancel)

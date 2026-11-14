@@ -2,7 +2,7 @@ package com.launchpoint.stereosine
 
 import com.launchpoint.stereosine.data.backup.WavdropBackupParser
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkContainerVersion
-import com.launchpoint.stereosine.data.local.WAVDROP_DATABASE_NAME
+import com.launchpoint.stereosine.data.local.DATABASE_FILE_NAME
 import com.launchpoint.stereosine.data.settings.AppIconChoice
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -80,7 +80,7 @@ class BrandIdentityTest {
         assertEquals("wavdrop_wdbk", WdbkContainerVersion.FORMAT)
         assertEquals("wavdrop_backup", WdbkContainerVersion.LOGICAL_FORMAT)
         // Persisted-store identifiers: renaming these would silently reset data in a future in-place migration.
-        assertEquals("wavdrop.db", WAVDROP_DATABASE_NAME)
+        assertEquals("wavdrop.db", DATABASE_FILE_NAME)
     }
 
     @Test fun `user-visible launcher and app names are StereoSine`() {

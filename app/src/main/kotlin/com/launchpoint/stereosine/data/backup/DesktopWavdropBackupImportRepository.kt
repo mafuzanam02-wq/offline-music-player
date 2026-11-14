@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.backup
 
 import androidx.room.withTransaction
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.PlaylistDao
 import com.launchpoint.stereosine.data.local.dao.SongDao
 import com.launchpoint.stereosine.data.local.dao.TrackListenEventDao
@@ -15,7 +15,7 @@ import javax.inject.Singleton
 
 @Singleton
 class DesktopWavdropBackupImportRepository @Inject constructor(
-    private val db: WavdropDatabase,
+    private val db: StereoSineDatabase,
     private val songDao: SongDao,
     private val trackStatsDao: TrackStatsDao,
     private val playlistDao: PlaylistDao,

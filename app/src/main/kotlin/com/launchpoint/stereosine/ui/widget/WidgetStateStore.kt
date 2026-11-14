@@ -39,7 +39,7 @@ class WidgetStateStore @Inject constructor(
         private val KEY_IS_PLAYING       = booleanPreferencesKey("wgt_is_playing")
         private val KEY_HAS_ACTIVE_MEDIA = booleanPreferencesKey("wgt_has_active_media")
         private val KEY_UPDATED_AT       = longPreferencesKey("wgt_updated_at")
-        private const val TAG            = "WavdropWidget"
+        private const val TAG            = "StereoSineWidget"
     }
 
     suspend fun save(snapshot: WidgetPlaybackSnapshot) {

@@ -7,7 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 
 /**
  * One small, reusable transition for lightweight content changes (WU-02): a text/value swap, an
@@ -18,7 +18,7 @@ import com.launchpoint.stereosine.ui.theme.WavdropMotion
  * so callers don't reach for [AnimatedContent] with bespoke specs everywhere; not for large lists.
  */
 @Composable
-fun <T> WavdropFadeThrough(
+fun <T> StereoSineFadeThrough(
     targetState: T,
     modifier: Modifier = Modifier,
     reducedMotion: Boolean = rememberReducedMotion(),
@@ -32,11 +32,11 @@ fun <T> WavdropFadeThrough(
         targetState = targetState,
         modifier = modifier,
         transitionSpec = {
-            val duration = WavdropMotion.Durations.StandardStateChange
-            fadeIn(tween(durationMillis = duration, easing = WavdropMotion.Easings.Standard))
-                .togetherWith(fadeOut(tween(durationMillis = duration, easing = WavdropMotion.Easings.Standard)))
+            val duration = StereoSineMotion.Durations.StandardStateChange
+            fadeIn(tween(durationMillis = duration, easing = StereoSineMotion.Easings.Standard))
+                .togetherWith(fadeOut(tween(durationMillis = duration, easing = StereoSineMotion.Easings.Standard)))
         },
-        label = "wavdropFadeThrough",
+        label = "stereoSineFadeThrough",
         content = { content(it) },
     )
 }

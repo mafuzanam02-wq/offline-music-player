@@ -46,6 +46,6 @@ class AppIconAliasManager @Inject constructor(
         ComponentName(context.packageName, aliasClassName)
 
     private companion object {
-        const val TAG = "Wavdrop-IconSwitch"
+        const val TAG = "StereoSine-IconSwitch"
     }
 }

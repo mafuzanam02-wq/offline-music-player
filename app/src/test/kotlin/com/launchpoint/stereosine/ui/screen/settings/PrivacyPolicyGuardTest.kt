@@ -10,7 +10,7 @@ import java.io.File
  * WPP-1: the in-app Privacy Policy is the authority for the public page at launchpointdigital.co.za/wavdrop/privacy. This
  * guard keeps one public URL constant, proves the in-app policy references it, pins the substantive disclosures the public
  * page must mirror, and proves the app still declares no INTERNET permission. It is source-text based because
- * `WavdropAbout` is private to the About screen.
+ * `StereoSineAbout` is private to the About screen.
  */
 class PrivacyPolicyGuardTest {
 

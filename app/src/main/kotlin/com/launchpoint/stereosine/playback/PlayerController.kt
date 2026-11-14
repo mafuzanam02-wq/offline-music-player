@@ -635,10 +635,10 @@ class PlayerController @Inject constructor(
     private companion object {
         const val TAG = "WavStats-PC"
         const val NO_ARMED_PLAY = -1L
-        const val SEARCH_TAG = "WavdropSearchPlayback"
-        const val GAPLESS_TAG = "WavdropGapless"
-        const val RESUME_TAG = "WavdropResume"
-        const val QUEUE_PERF_TAG = "WavdropQueuePerf"
+        const val SEARCH_TAG = "StereoSineSearchPlayback"
+        const val GAPLESS_TAG = "StereoSineGapless"
+        const val RESUME_TAG = "StereoSineResume"
+        const val QUEUE_PERF_TAG = "StereoSineQueuePerf"
         const val EXTERNAL_AUDIO_SONG_ID = com.launchpoint.stereosine.data.model.ExternalAudioIdentity.SONG_ID
         const val BLUETOOTH_RESUME_DEBOUNCE_MS = 1_500L
         const val MEDIA_ITEM_CACHE_MAX_SIZE = 12_288

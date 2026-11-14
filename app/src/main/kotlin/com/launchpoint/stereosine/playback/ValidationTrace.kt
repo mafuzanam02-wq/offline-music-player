@@ -16,10 +16,10 @@ import com.launchpoint.stereosine.BuildConfig
  *  * `window_verified`    - the adapter observed the PHYSICAL player and published the window (BoundedInstallOutcome.Active).
  *  * `window_not_verified`- terminal non-success (stale / incomplete / rejected / failed), with the reason class.
  * `elapsedMs` is a monotonic (nanoTime) duration from submission to the terminal outcome of that one operation.
- * "First audible playback" is NOT logged here: use the existing `WavdropStartTrace audio_position_advancing` line.
+ * "First audible playback" is NOT logged here: use the existing `StereoSineStartTrace audio_position_advancing` line.
  */
 internal object ValidationTrace {
-    const val TAG = "WavdropValidation"
+    const val TAG = "StereoSineValidation"
 
     @Volatile internal var enabled: Boolean = BuildConfig.DEBUG
     internal var sink: (String) -> Unit = { Log.d(TAG, it) }

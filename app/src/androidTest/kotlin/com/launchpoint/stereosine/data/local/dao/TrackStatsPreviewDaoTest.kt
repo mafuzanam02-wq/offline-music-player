@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.local.entity.TrackStatsEntity
 import kotlinx.coroutines.flow.first
@@ -19,13 +19,13 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TrackStatsPreviewDaoTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var songDao: SongDao
     private lateinit var statsDao: TrackStatsDao
 
     @Before
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build()
         songDao = db.songDao()
         statsDao = db.trackStatsDao()

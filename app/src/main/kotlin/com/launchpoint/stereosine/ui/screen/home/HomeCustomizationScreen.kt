@@ -37,8 +37,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.launchpoint.stereosine.data.settings.HomeLayoutSettingsRules
 import com.launchpoint.stereosine.data.settings.HomeSectionId
 import com.launchpoint.stereosine.data.smart.SmartCollectionBuilder
-import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,7 +127,7 @@ private fun HomeCollectionsConfigRow(
     Row(
         modifier          = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -144,7 +144,7 @@ private fun HomeCollectionsConfigRow(
             )
             Spacer(Modifier.height(2.dp))
             // WU-02 proof surface: fade-through the summary as the selection changes.
-            WavdropFadeThrough(targetState = selectionSummary.ifBlank { "Choose which 3 appear on Home" }) { summary ->
+            StereoSineFadeThrough(targetState = selectionSummary.ifBlank { "Choose which 3 appear on Home" }) { summary ->
                 Text(
                     text  = summary,
                     style = MaterialTheme.typography.bodySmall,

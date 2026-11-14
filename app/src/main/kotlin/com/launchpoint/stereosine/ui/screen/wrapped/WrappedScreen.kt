@@ -124,8 +124,8 @@ import com.launchpoint.stereosine.data.settings.WrappedFallbackTheme
 import com.launchpoint.stereosine.ui.components.ArtworkImage
 import com.launchpoint.stereosine.ui.components.CountLabels
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 import com.launchpoint.stereosine.ui.components.LoadingStateContent
 import com.launchpoint.stereosine.ui.screen.statistics.StatisticsFormatters
 import java.time.DayOfWeek
@@ -432,7 +432,7 @@ fun WrappedScreen(
                     val appearanceInteraction = remember { MutableInteractionSource() }
                     IconButton(
                         onClick = onWrappedAppearanceClick,
-                        modifier = Modifier.wavdropPressFeedback(appearanceInteraction),
+                        modifier = Modifier.stereoSinePressFeedback(appearanceInteraction),
                         interactionSource = appearanceInteraction,
                     ) {
                         Icon(
@@ -1288,7 +1288,7 @@ private fun Modifier.wrappedCardReveal(tokens: WrappedStyleTokens): Modifier {
     val progress by animateFloatAsState(
         // Under reduced motion the target is 1f from the first frame, so there is no animation.
         targetValue = if (appeared || reduceMotion) 1f else 0f,
-        animationSpec = tween(tokens.contentRevealMs, easing = WavdropMotion.Easings.Standard),
+        animationSpec = tween(tokens.contentRevealMs, easing = StereoSineMotion.Easings.Standard),
         label = "wrappedCardReveal",
     )
     val risePx = with(LocalDensity.current) { tokens.contentRevealRise.toPx() }

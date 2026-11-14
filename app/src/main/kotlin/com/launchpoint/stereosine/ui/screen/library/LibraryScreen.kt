@@ -49,7 +49,7 @@ import com.launchpoint.stereosine.ui.components.CountLabels
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.PrimaryDestination
 import com.launchpoint.stereosine.ui.components.PrimaryNavigationBar
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 import com.launchpoint.stereosine.ui.permission.AudioPermissionGate
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
 import java.text.NumberFormat
@@ -267,7 +267,7 @@ private fun LibraryNavRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,

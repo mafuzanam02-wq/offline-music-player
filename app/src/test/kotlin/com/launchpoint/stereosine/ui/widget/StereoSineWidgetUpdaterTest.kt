@@ -27,7 +27,7 @@ import org.w3c.dom.Element
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
-class WavdropWidgetUpdaterTest {
+class StereoSineWidgetUpdaterTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()
 
@@ -368,11 +368,11 @@ class WavdropWidgetUpdaterTest {
 
     @Test fun controlPendingIntentsTargetTheNonExportedReceiverWithTheirOwnActions() {
         activeLayouts.forEach { layout ->
-            WavdropWidgetUpdater.buildViews(context, layout, snapshot(), null)
+            StereoSineWidgetUpdater.buildViews(context, layout, snapshot(), null)
             val expected = listOf(
-                WavdropWidgetUpdater.RC_PREVIOUS to WidgetActionReceiver.ACTION_WIDGET_PREVIOUS,
-                WavdropWidgetUpdater.RC_PLAY_PAUSE to WidgetActionReceiver.ACTION_WIDGET_PLAY_PAUSE,
-                WavdropWidgetUpdater.RC_NEXT to WidgetActionReceiver.ACTION_WIDGET_NEXT,
+                StereoSineWidgetUpdater.RC_PREVIOUS to WidgetActionReceiver.ACTION_WIDGET_PREVIOUS,
+                StereoSineWidgetUpdater.RC_PLAY_PAUSE to WidgetActionReceiver.ACTION_WIDGET_PLAY_PAUSE,
+                StereoSineWidgetUpdater.RC_NEXT to WidgetActionReceiver.ACTION_WIDGET_NEXT,
             )
             expected.forEach { (code, action) ->
                 val pi = existingBroadcast(code, action)
@@ -388,17 +388,17 @@ class WavdropWidgetUpdaterTest {
             "request codes are distinct",
             4,
             setOf(
-                WavdropWidgetUpdater.RC_OPEN_APP, WavdropWidgetUpdater.RC_PREVIOUS,
-                WavdropWidgetUpdater.RC_PLAY_PAUSE, WavdropWidgetUpdater.RC_NEXT,
+                StereoSineWidgetUpdater.RC_OPEN_APP, StereoSineWidgetUpdater.RC_PREVIOUS,
+                StereoSineWidgetUpdater.RC_PLAY_PAUSE, StereoSineWidgetUpdater.RC_NEXT,
             ).size,
         )
     }
 
     @Test fun theBodyTapOpensTheAppAndNothingElse() {
-        WavdropWidgetUpdater.buildViews(context, R.layout.stereosine_widget_normal, snapshot(), null)
+        StereoSineWidgetUpdater.buildViews(context, R.layout.stereosine_widget_normal, snapshot(), null)
         val open = PendingIntent.getActivity(
             context,
-            WavdropWidgetUpdater.RC_OPEN_APP,
+            StereoSineWidgetUpdater.RC_OPEN_APP,
             Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -417,7 +417,7 @@ class WavdropWidgetUpdaterTest {
     }
 
     @Test fun eachControlViewIsPairedWithItsOwnActionInTheUpdaterSource() {
-        val src = source("WavdropWidgetUpdater.kt")
+        val src = source("StereoSineWidgetUpdater.kt")
         val pairs = mapOf(
             "R.id.widget_previous" to "ACTION_WIDGET_PREVIOUS",
             "R.id.widget_play_pause" to "ACTION_WIDGET_PLAY_PAUSE",
@@ -438,6 +438,6 @@ class WavdropWidgetUpdaterTest {
         val manifest = (File("src/main/AndroidManifest.xml").takeIf { it.exists() } ?: File("app/src/main/AndroidManifest.xml")).readText()
         val receiverBlock = manifest.substringAfter("android:name=\".ui.widget.WidgetActionReceiver\"").substringBefore("/>")
         assertTrue(receiverBlock.contains("android:exported=\"false\""))
-        assertFalse(source("WavdropWidgetUpdater.kt").contains("AlarmManager"))
+        assertFalse(source("StereoSineWidgetUpdater.kt").contains("AlarmManager"))
     }
 }

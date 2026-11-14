@@ -5,7 +5,7 @@ import androidx.room.Room
 import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.PlaylistEntity
 import com.launchpoint.stereosine.data.local.entity.PlaylistSongEntity
 import com.launchpoint.stereosine.data.local.entity.SongEntity
@@ -21,14 +21,14 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PlaylistRetentionDaoTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var playlistDao: PlaylistDao
     private lateinit var songDao: SongDao
 
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        db = Room.inMemoryDatabaseBuilder(context, WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(context, StereoSineDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         playlistDao = db.playlistDao()

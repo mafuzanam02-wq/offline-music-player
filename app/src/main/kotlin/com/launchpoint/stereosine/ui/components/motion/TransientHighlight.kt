@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 import kotlinx.coroutines.delay
 
 /**
@@ -50,7 +50,7 @@ class TransientHighlightState internal constructor(
 @Composable
 fun rememberTransientHighlight(
     peakAlpha: Float = DEFAULT_TRANSIENT_PEAK_ALPHA,
-    durationMillis: Int = WavdropMotion.Durations.EmphasizedTransition,
+    durationMillis: Int = StereoSineMotion.Durations.EmphasizedTransition,
 ): TransientHighlightState {
     val reducedMotion = rememberReducedMotion()
     return remember(peakAlpha, durationMillis, reducedMotion) {

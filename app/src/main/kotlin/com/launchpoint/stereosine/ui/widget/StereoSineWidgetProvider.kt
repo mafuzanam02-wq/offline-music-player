@@ -12,12 +12,12 @@ import com.launchpoint.stereosine.BuildConfig
  *
  * This class owns only widget lifecycle events. Playback state is written
  * exclusively by PlaybackService → WidgetStateStore, and RemoteViews are
- * built and pushed by WavdropWidgetUpdater.requestUpdate().
+ * built and pushed by StereoSineWidgetUpdater.requestUpdate().
  *
  * Control button taps are handled via PendingIntent.getService() pointing
  * directly to PlaybackService; no onReceive routing is needed here.
  */
-class WavdropWidgetProvider : AppWidgetProvider() {
+class StereoSineWidgetProvider : AppWidgetProvider() {
 
     /** Called by the system on the update interval or when widgets are first added. */
     override fun onUpdate(
@@ -25,7 +25,7 @@ class WavdropWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        WavdropWidgetUpdater.requestUpdate(context)
+        StereoSineWidgetUpdater.requestUpdate(context)
     }
 
     /**
@@ -45,19 +45,19 @@ class WavdropWidgetProvider : AppWidgetProvider() {
             val maxH = newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
             Log.d(TAG, "[provider] optionsChanged id=$appWidgetId minW=${minW}dp minH=${minH}dp maxW=${maxW}dp maxH=${maxH}dp")
         }
-        WavdropWidgetUpdater.requestUpdate(context)
+        StereoSineWidgetUpdater.requestUpdate(context)
     }
 
     /** Widget instances removed by the user: forget their appearance settings. */
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val pending = goAsync()
-        WavdropWidgetUpdater.withAppearanceStore(context, onDone = { pending.finish() }) { it.remove(appWidgetIds.toList()) }
+        StereoSineWidgetUpdater.withAppearanceStore(context, onDone = { pending.finish() }) { it.remove(appWidgetIds.toList()) }
     }
 
     /** The last StereoSine widget was removed: nothing left to remember. */
     override fun onDisabled(context: Context) {
         val pending = goAsync()
-        WavdropWidgetUpdater.withAppearanceStore(context, onDone = { pending.finish() }) { it.clearAll() }
+        StereoSineWidgetUpdater.withAppearanceStore(context, onDone = { pending.finish() }) { it.clearAll() }
     }
 
     /**
@@ -66,10 +66,10 @@ class WavdropWidgetProvider : AppWidgetProvider() {
      */
     override fun onRestored(context: Context, oldWidgetIds: IntArray, newWidgetIds: IntArray) {
         val pending = goAsync()
-        WavdropWidgetUpdater.withAppearanceStore(context, onDone = { pending.finish() }) { it.migrate(oldWidgetIds, newWidgetIds) }
+        StereoSineWidgetUpdater.withAppearanceStore(context, onDone = { pending.finish() }) { it.migrate(oldWidgetIds, newWidgetIds) }
     }
 
     companion object {
-        private const val TAG = "WavdropWidget"
+        private const val TAG = "StereoSineWidget"
     }
 }

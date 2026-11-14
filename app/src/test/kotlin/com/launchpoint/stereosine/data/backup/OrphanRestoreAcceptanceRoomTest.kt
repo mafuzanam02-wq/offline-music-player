@@ -9,7 +9,7 @@ import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupStats
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkReader
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkWriter
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.settings.HomeLayoutSettingsRepository
@@ -48,13 +48,13 @@ class OrphanRestoreAcceptanceRoomTest {
     private enum class Mode { MERGE, RECOVERY }
 
     private val files = mutableListOf<File>()
-    private val dbs = mutableListOf<WavdropDatabase>()
+    private val dbs = mutableListOf<StereoSineDatabase>()
 
     @After fun tearDown() { dbs.forEach { runCatching { it.close() } }; files.forEach { it.delete() } }
 
     private fun app() = RuntimeEnvironment.getApplication()
 
-    private inner class Env(val db: WavdropDatabase) {
+    private inner class Env(val db: StereoSineDatabase) {
         private val file = File(app().cacheDir, "p17d-${UUID.randomUUID()}.preferences_pb").also { files += it }
         private val store = PreferenceDataStoreFactory.create { file }
         val merge = WavdropBackupImportRepository(
@@ -93,10 +93,10 @@ class OrphanRestoreAcceptanceRoomTest {
         SongEntity(id, it.title, it.artist, it.album, it.albumId, it.duration, it.uri, it.dateAdded, it.trackNumber, it.year, it.folderPath, it.folderName)
     }
 
-    private fun memoryDb(library: List<Long>) = Room.inMemoryDatabaseBuilder(app(), WavdropDatabase::class.java)
+    private fun memoryDb(library: List<Long>) = Room.inMemoryDatabaseBuilder(app(), StereoSineDatabase::class.java)
         .allowMainThreadQueries().build().also { dbs += it; runBlocking { it.songDao().upsertAll(library.map(::songEntity)) } }
 
-    private fun fileDb(name: String) = Room.databaseBuilder(app(), WavdropDatabase::class.java, name).allowMainThreadQueries().build().also { dbs += it }
+    private fun fileDb(name: String) = Room.databaseBuilder(app(), StereoSineDatabase::class.java, name).allowMainThreadQueries().build().also { dbs += it }
 
     // ── fixtures ──────────────────────────────────────────────────────────────
 

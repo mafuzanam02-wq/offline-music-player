@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.export
 
 import androidx.room.withTransaction
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.PlaylistDao
 import com.launchpoint.stereosine.data.local.dao.SongDao
 import com.launchpoint.stereosine.data.repository.toDomain
@@ -25,7 +25,7 @@ interface PlaylistExporter {
 
 /** Read-only: never touches playlists, songs, the queue or the player. */
 class PlaylistExportRepository @Inject constructor(
-    private val db: WavdropDatabase,
+    private val db: StereoSineDatabase,
     private val playlistDao: PlaylistDao,
     private val songDao: SongDao,
     private val pathSource: MediaPathSource,

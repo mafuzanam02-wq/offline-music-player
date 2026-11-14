@@ -14,17 +14,17 @@ class EqDebugSummaryTest {
     // ── WAVDROP_PRESET — shows catalog levels, not stored custom levels ───────
 
     @Test
-    fun `WAVDROP_PRESET summary shows wavdropId and catalog activeLevels`() {
+    fun `WAVDROP_PRESET summary shows stereoSineId and catalog activeLevels`() {
         val summary = buildEqApplyDebugSummary(
             settings = AudioEnhancementSettings(
                 eqPresetType       = EqPresetType.WAVDROP_PRESET,
-                eqWavdropPresetId  = "balanced",
+                eqStereoSinePresetId  = "balanced",
                 eqCustomBandLevels = customLevels,  // stored but must NOT appear
             ),
             bandCount = bandCount,
         )
-        assertTrue("summary must contain wavdropId", "wavdropId=balanced" in summary)
-        assertTrue("summary must contain wavdropName", "wavdropName=Balanced" in summary)
+        assertTrue("summary must contain stereoSineId", "stereoSineId=balanced" in summary)
+        assertTrue("summary must contain stereoSineName", "stereoSineName=Balanced" in summary)
         assertTrue("summary must contain catalog activeLevels=[100, 100, 0, 100, 100]",
             "activeLevels=[100, 100, 0, 100, 100]" in summary)
         assertFalse("summary must NOT reference stored custom levels",
@@ -36,12 +36,12 @@ class EqDebugSummaryTest {
         val summary = buildEqApplyDebugSummary(
             settings = AudioEnhancementSettings(
                 eqPresetType      = EqPresetType.WAVDROP_PRESET,
-                eqWavdropPresetId = "deep-bass",
+                eqStereoSinePresetId = "deep-bass",
             ),
             bandCount = bandCount,
         )
-        assertTrue("wavdropId=deep-bass" in summary)
-        assertTrue("wavdropName=Deep Bass" in summary)
+        assertTrue("stereoSineId=deep-bass" in summary)
+        assertTrue("stereoSineName=Deep Bass" in summary)
         assertTrue("activeLevels=[500, 300, -100, 0, 0]" in summary)
     }
 
@@ -50,11 +50,11 @@ class EqDebugSummaryTest {
         val summary = buildEqApplyDebugSummary(
             settings = AudioEnhancementSettings(
                 eqPresetType      = EqPresetType.WAVDROP_PRESET,
-                eqWavdropPresetId = "ghost-preset",
+                eqStereoSinePresetId = "ghost-preset",
             ),
             bandCount = bandCount,
         )
-        assertTrue("wavdropId=ghost-preset" in summary)
+        assertTrue("stereoSineId=ghost-preset" in summary)
         assertTrue("activeLevels=unavailable" in summary)
     }
 
@@ -63,7 +63,7 @@ class EqDebugSummaryTest {
         val summary = buildEqApplyDebugSummary(
             settings = AudioEnhancementSettings(
                 eqPresetType      = EqPresetType.WAVDROP_PRESET,
-                eqWavdropPresetId = "balanced",
+                eqStereoSinePresetId = "balanced",
             ),
             bandCount = 10,  // catalog has 5 bands — mismatch
         )
@@ -193,7 +193,7 @@ class EqDebugSummaryTest {
         for (type in EqPresetType.entries) {
             val settings = AudioEnhancementSettings(
                 eqPresetType          = type,
-                eqWavdropPresetId     = if (type == EqPresetType.WAVDROP_PRESET) "balanced" else null,
+                eqStereoSinePresetId     = if (type == EqPresetType.WAVDROP_PRESET) "balanced" else null,
                 eqPlatformPresetIndex = if (type == EqPresetType.PLATFORM) 0 else null,
                 eqCustomBandLevels    = if (type == EqPresetType.CUSTOM) List(bandCount) { 0 } else emptyList(),
             )

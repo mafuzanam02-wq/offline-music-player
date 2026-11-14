@@ -18,7 +18,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
  * `TextHandleMove` (a light tick) may be used for fine incremental feedback where it genuinely helps
  * and is available, but is intentionally not exposed as a blanket helper to discourage overuse.
  */
-object WavdropHaptics {
+object StereoSineHaptics {
 
     /** Deliberate drag/reorder pickup. */
     fun pickup(haptics: HapticFeedback) {

@@ -149,7 +149,7 @@ class AudioOutputReconnectReceiver : BroadcastReceiver() {
     }
 
     private companion object {
-        const val RESUME_TAG = "WavdropResume"
+        const val RESUME_TAG = "StereoSineResume"
         const val BLUETOOTH_ROUTE_TIMEOUT_MS = 1_500L
     }
 }

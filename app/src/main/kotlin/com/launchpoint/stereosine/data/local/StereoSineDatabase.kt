@@ -50,7 +50,7 @@ import com.launchpoint.stereosine.data.local.entity.TrackStatsEntity
     version      = 13,
     exportSchema = true,
 )
-abstract class WavdropDatabase : RoomDatabase() {
+abstract class StereoSineDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
     abstract fun trackStatsDao(): TrackStatsDao
     abstract fun importBaselineDao(): ImportBaselineDao

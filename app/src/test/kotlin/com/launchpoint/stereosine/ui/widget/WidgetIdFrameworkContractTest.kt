@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
 class WidgetIdFrameworkContractTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()
-    private val ours get() = ComponentName(context, WavdropWidgetProvider::class.java)
+    private val ours get() = ComponentName(context, StereoSineWidgetProvider::class.java)
     private val foreign get() = ComponentName("com.example.other", "com.example.other.Provider")
 
     // A fixed positive id, as a real launcher allocates (0 is INVALID_APPWIDGET_ID). No allocation loop: nothing here can spin.

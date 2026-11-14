@@ -80,6 +80,6 @@ internal class WidgetPlaybackStateListener(
     }
 
     private companion object {
-        const val WIDGET_TAG = "WavdropWidget"
+        const val WIDGET_TAG = "StereoSineWidget"
     }
 }

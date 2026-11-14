@@ -13,22 +13,22 @@ import org.junit.Test
  * after each switch — they do not test DataStore directly.
  *
  * Key-ownership contract:
- *   FLAT            — clears platformPresetIndex, clears wavdropPresetId, preserves customBandLevels
- *   PLATFORM        — sets platformPresetIndex, clears wavdropPresetId, preserves customBandLevels
- *   CUSTOM          — clears wavdropPresetId, clears platformPresetIndex, seeds/preserves customBandLevels
+ *   FLAT            — clears platformPresetIndex, clears stereoSinePresetId, preserves customBandLevels
+ *   PLATFORM        — sets platformPresetIndex, clears stereoSinePresetId, preserves customBandLevels
+ *   CUSTOM          — clears stereoSinePresetId, clears platformPresetIndex, seeds/preserves customBandLevels
  *   CUSTOM levels   — same as CUSTOM + writes new levels
- *   WAVDROP_PRESET  — sets wavdropPresetId, clears platformPresetIndex, preserves customBandLevels
+ *   WAVDROP_PRESET  — sets stereoSinePresetId, clears platformPresetIndex, preserves customBandLevels
  */
 class EqPresetKeyClearingTest {
 
     private val savedCustomLevels = listOf(-300, 0, 200, 100, -100)
 
-    // ── 1. setEqFlatPreset — clears wavdropId and platformIndex, preserves custom ─
+    // ── 1. setEqFlatPreset — clears stereoSineId and platformIndex, preserves custom ─
 
     @Test
-    fun `FLAT clears wavdropPresetId`() {
-        val result = stateAfterFlat(wavdropPresetId = "balanced", customLevels = savedCustomLevels)
-        assertNull("wavdropPresetId should be null after FLAT", result.eqWavdropPresetId)
+    fun `FLAT clears stereoSinePresetId`() {
+        val result = stateAfterFlat(stereoSinePresetId = "balanced", customLevels = savedCustomLevels)
+        assertNull("stereoSinePresetId should be null after FLAT", result.eqStereoSinePresetId)
     }
 
     @Test
@@ -48,18 +48,18 @@ class EqPresetKeyClearingTest {
         assertEquals(EqPresetType.FLAT, stateAfterFlat().eqPresetType)
     }
 
-    // ── 2. setEqPlatformPreset — sets index, clears wavdropId, preserves custom ──
+    // ── 2. setEqPlatformPreset — sets index, clears stereoSineId, preserves custom ──
 
     @Test
     fun `PLATFORM sets platformPresetIndex`() {
-        val result = stateAfterPlatform(index = 5, wavdropPresetId = "clarity", customLevels = savedCustomLevels)
+        val result = stateAfterPlatform(index = 5, stereoSinePresetId = "clarity", customLevels = savedCustomLevels)
         assertEquals(5, result.eqPlatformPresetIndex)
     }
 
     @Test
-    fun `PLATFORM clears wavdropPresetId`() {
-        val result = stateAfterPlatform(index = 5, wavdropPresetId = "clarity", customLevels = savedCustomLevels)
-        assertNull("wavdropPresetId should be null after PLATFORM", result.eqWavdropPresetId)
+    fun `PLATFORM clears stereoSinePresetId`() {
+        val result = stateAfterPlatform(index = 5, stereoSinePresetId = "clarity", customLevels = savedCustomLevels)
+        assertNull("stereoSinePresetId should be null after PLATFORM", result.eqStereoSinePresetId)
     }
 
     @Test
@@ -73,24 +73,24 @@ class EqPresetKeyClearingTest {
         assertEquals(EqPresetType.PLATFORM, stateAfterPlatform(index = 0).eqPresetType)
     }
 
-    // ── 3. setEqCustomPreset — clears wavdropId and platformIndex, seeds/preserves custom ─
+    // ── 3. setEqCustomPreset — clears stereoSineId and platformIndex, seeds/preserves custom ─
 
     @Test
-    fun `CUSTOM clears wavdropPresetId`() {
+    fun `CUSTOM clears stereoSinePresetId`() {
         val result = stateAfterCustomPreset(
             bandCount      = 5,
-            wavdropId      = "detail",
+            stereoSineId      = "detail",
             platformIndex  = 3,
             existingLevels = savedCustomLevels,
         )
-        assertNull("wavdropPresetId should be null after CUSTOM switch", result.eqWavdropPresetId)
+        assertNull("stereoSinePresetId should be null after CUSTOM switch", result.eqStereoSinePresetId)
     }
 
     @Test
     fun `CUSTOM clears platformPresetIndex`() {
         val result = stateAfterCustomPreset(
             bandCount      = 5,
-            wavdropId      = "detail",
+            stereoSineId      = "detail",
             platformIndex  = 3,
             existingLevels = savedCustomLevels,
         )
@@ -123,9 +123,9 @@ class EqPresetKeyClearingTest {
     }
 
     @Test
-    fun `CUSTOM seeding still clears wavdropPresetId`() {
-        val result = stateAfterCustomPreset(bandCount = 5, wavdropId = "warm", existingLevels = emptyList())
-        assertNull(result.eqWavdropPresetId)
+    fun `CUSTOM seeding still clears stereoSinePresetId`() {
+        val result = stateAfterCustomPreset(bandCount = 5, stereoSineId = "warm", existingLevels = emptyList())
+        assertNull(result.eqStereoSinePresetId)
     }
 
     @Test
@@ -134,16 +134,16 @@ class EqPresetKeyClearingTest {
         assertNull(result.eqPlatformPresetIndex)
     }
 
-    // ── 5. setEqCustomBandLevels — clears wavdropId and platformIndex ─────────
+    // ── 5. setEqCustomBandLevels — clears stereoSineId and platformIndex ─────────
 
     @Test
-    fun `setEqCustomBandLevels clears wavdropPresetId`() {
+    fun `setEqCustomBandLevels clears stereoSinePresetId`() {
         val result = stateAfterCustomBandLevels(
             levels         = listOf(100, 200, 0, -100, -200),
-            wavdropId      = "balanced",
+            stereoSineId      = "balanced",
             platformIndex  = 2,
         )
-        assertNull("wavdropPresetId should be null after setEqCustomBandLevels", result.eqWavdropPresetId)
+        assertNull("stereoSinePresetId should be null after setEqCustomBandLevels", result.eqStereoSinePresetId)
     }
 
     @Test
@@ -168,47 +168,47 @@ class EqPresetKeyClearingTest {
         assertEquals(EqPresetType.CUSTOM, result.eqPresetType)
     }
 
-    // ── 6. setEqWavdropPreset — sets id, clears platformIndex, preserves custom ─
+    // ── 6. setEqStereoSinePreset — sets id, clears platformIndex, preserves custom ─
 
     @Test
-    fun `WAVDROP_PRESET sets wavdropPresetId`() {
-        val result = stateAfterWavdrop(id = "late-night", platformIndex = 4, customLevels = savedCustomLevels)
-        assertEquals("late-night", result.eqWavdropPresetId)
+    fun `WAVDROP_PRESET sets stereoSinePresetId`() {
+        val result = stateAfterStereoSine(id = "late-night", platformIndex = 4, customLevels = savedCustomLevels)
+        assertEquals("late-night", result.eqStereoSinePresetId)
     }
 
     @Test
     fun `WAVDROP_PRESET clears platformPresetIndex`() {
-        val result = stateAfterWavdrop(id = "late-night", platformIndex = 4, customLevels = savedCustomLevels)
+        val result = stateAfterStereoSine(id = "late-night", platformIndex = 4, customLevels = savedCustomLevels)
         assertNull("platformPresetIndex should be null after WAVDROP_PRESET switch", result.eqPlatformPresetIndex)
     }
 
     @Test
     fun `WAVDROP_PRESET preserves custom band levels`() {
-        val result = stateAfterWavdrop(id = "late-night", customLevels = savedCustomLevels)
+        val result = stateAfterStereoSine(id = "late-night", customLevels = savedCustomLevels)
         assertEquals("customBandLevels must survive WAVDROP_PRESET switch", savedCustomLevels, result.eqCustomBandLevels)
     }
 
     @Test
     fun `WAVDROP_PRESET preset type is WAVDROP_PRESET`() {
-        assertEquals(EqPresetType.WAVDROP_PRESET, stateAfterWavdrop(id = "balanced").eqPresetType)
+        assertEquals(EqPresetType.WAVDROP_PRESET, stateAfterStereoSine(id = "balanced").eqPresetType)
     }
 
     // ── 7. Parser regression — legacy stored states still parse correctly ─────
 
     @Test
-    fun `legacy FLAT state with stale wavdropId parses correctly`() {
-        // Represents pre-polish state: type=FLAT but wavdropId=clarity still in DataStore.
+    fun `legacy FLAT state with stale stereoSineId parses correctly`() {
+        // Represents pre-polish state: type=FLAT but stereoSineId=clarity still in DataStore.
         // The parser reads what it finds; the next mode-switch would clear the stale key.
         val type = AudioEnhancementsRepository.parseEqPresetType("FLAT")
-        val id   = AudioEnhancementsRepository.parseWavdropPresetId("clarity")
+        val id   = AudioEnhancementsRepository.parseStereoSinePresetId("clarity")
         assertEquals(EqPresetType.FLAT, type)
         assertEquals("clarity", id) // parser doesn't drop stale ids — write-path does
     }
 
     @Test
-    fun `legacy PLATFORM state with stale wavdropId parses correctly`() {
+    fun `legacy PLATFORM state with stale stereoSineId parses correctly`() {
         val type  = AudioEnhancementsRepository.parseEqPresetType("PLATFORM")
-        val id    = AudioEnhancementsRepository.parseWavdropPresetId("deep-bass")
+        val id    = AudioEnhancementsRepository.parseStereoSinePresetId("deep-bass")
         val index = 7
         assertEquals(EqPresetType.PLATFORM, type)
         assertEquals("deep-bass", id)
@@ -216,9 +216,9 @@ class EqPresetKeyClearingTest {
     }
 
     @Test
-    fun `legacy CUSTOM state with stale wavdropId parses correctly`() {
+    fun `legacy CUSTOM state with stale stereoSineId parses correctly`() {
         val type   = AudioEnhancementsRepository.parseEqPresetType("CUSTOM")
-        val id     = AudioEnhancementsRepository.parseWavdropPresetId("balanced")
+        val id     = AudioEnhancementsRepository.parseStereoSinePresetId("balanced")
         val levels = AudioEnhancementsRepository.parseBandLevels("-300,0,200,100,-100")
         assertEquals(EqPresetType.CUSTOM, type)
         assertEquals("balanced", id)
@@ -229,30 +229,30 @@ class EqPresetKeyClearingTest {
     // These mirror what DataStore would emit after each write, without touching DataStore.
 
     private fun stateAfterFlat(
-        wavdropPresetId: String? = null,
+        stereoSinePresetId: String? = null,
         platformIndex: Int?      = null,
         customLevels: List<Int>  = emptyList(),
     ) = AudioEnhancementSettings(
         eqPresetType          = EqPresetType.FLAT,
         eqPlatformPresetIndex = null,            // always cleared by setEqFlatPreset
-        eqWavdropPresetId     = null,            // always cleared by setEqFlatPreset
+        eqStereoSinePresetId     = null,            // always cleared by setEqFlatPreset
         eqCustomBandLevels    = customLevels,    // untouched
     )
 
     private fun stateAfterPlatform(
         index: Int,
-        wavdropPresetId: String? = null,
+        stereoSinePresetId: String? = null,
         customLevels: List<Int>  = emptyList(),
     ) = AudioEnhancementSettings(
         eqPresetType          = EqPresetType.PLATFORM,
         eqPlatformPresetIndex = index,
-        eqWavdropPresetId     = null,         // always cleared by setEqPlatformPreset
+        eqStereoSinePresetId     = null,         // always cleared by setEqPlatformPreset
         eqCustomBandLevels    = customLevels, // untouched
     )
 
     private fun stateAfterCustomPreset(
         bandCount: Int,
-        wavdropId: String?       = null,
+        stereoSineId: String?       = null,
         platformIndex: Int?      = null,
         existingLevels: List<Int> = emptyList(),
     ): AudioEnhancementSettings {
@@ -260,30 +260,30 @@ class EqPresetKeyClearingTest {
         return AudioEnhancementSettings(
             eqPresetType          = EqPresetType.CUSTOM,
             eqPlatformPresetIndex = null,   // always cleared by setEqCustomPreset
-            eqWavdropPresetId     = null,   // always cleared by setEqCustomPreset
+            eqStereoSinePresetId     = null,   // always cleared by setEqCustomPreset
             eqCustomBandLevels    = seeded,
         )
     }
 
     private fun stateAfterCustomBandLevels(
         levels: List<Int>,
-        wavdropId: String? = null,
+        stereoSineId: String? = null,
         platformIndex: Int? = null,
     ) = AudioEnhancementSettings(
         eqPresetType          = EqPresetType.CUSTOM,
         eqPlatformPresetIndex = null,   // always cleared by setEqCustomBandLevels
-        eqWavdropPresetId     = null,   // always cleared by setEqCustomBandLevels
+        eqStereoSinePresetId     = null,   // always cleared by setEqCustomBandLevels
         eqCustomBandLevels    = levels,
     )
 
-    private fun stateAfterWavdrop(
+    private fun stateAfterStereoSine(
         id: String,
         platformIndex: Int?     = null,
         customLevels: List<Int> = emptyList(),
     ) = AudioEnhancementSettings(
         eqPresetType          = EqPresetType.WAVDROP_PRESET,
-        eqWavdropPresetId     = id,
-        eqPlatformPresetIndex = null,         // always cleared by setEqWavdropPreset
+        eqStereoSinePresetId     = id,
+        eqPlatformPresetIndex = null,         // always cleared by setEqStereoSinePreset
         eqCustomBandLevels    = customLevels, // untouched
     )
 }

@@ -5,7 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.launchpoint.stereosine.data.backup.AutoBackupRepository
 import com.launchpoint.stereosine.data.backup.AutoBackupWorkScheduler
-import com.launchpoint.stereosine.ui.widget.WavdropWidgetUpdater
+import com.launchpoint.stereosine.ui.widget.StereoSineWidgetUpdater
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 @HiltAndroidApp
 class StereoSineApp : Application(), Configuration.Provider {
 
-    @Inject lateinit var widgetUpdater: WavdropWidgetUpdater
+    @Inject lateinit var widgetUpdater: StereoSineWidgetUpdater
     @Inject lateinit var autoBackupRepository: AutoBackupRepository
     @Inject lateinit var autoBackupWorkScheduler: AutoBackupWorkScheduler
     @Inject lateinit var workerFactory: HiltWorkerFactory
@@ -40,7 +40,7 @@ class StereoSineApp : Application(), Configuration.Provider {
     }
 
     companion object {
-        // Widget V1 — AppWidgetProvider (WavdropWidgetProvider) is registered in
+        // Widget V1 — AppWidgetProvider (StereoSineWidgetProvider) is registered in
         // AndroidManifest.xml. Flip this flag to false to disable widget update calls.
         const val ENABLE_WIDGET = true
     }

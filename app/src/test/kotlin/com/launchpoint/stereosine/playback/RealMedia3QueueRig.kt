@@ -138,5 +138,5 @@ internal class RealMedia3QueueRig(
 @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 internal class AckCallback : MediaSession.Callback {
     override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
-        PlaybackService.withWavdropCommands(session, controller)
+        PlaybackService.withStereoSineCommands(session, controller)
 }

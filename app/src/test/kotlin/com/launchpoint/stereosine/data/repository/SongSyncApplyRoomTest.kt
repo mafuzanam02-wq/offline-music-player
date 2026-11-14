@@ -3,7 +3,7 @@ package com.launchpoint.stereosine.data.repository
 import androidx.room.Room
 import androidx.room.withTransaction
 import androidx.sqlite.db.SimpleSQLiteQuery
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.SongDao
 import com.launchpoint.stereosine.data.local.entity.PlaylistEntity
 import com.launchpoint.stereosine.data.local.entity.PlaylistSongEntity
@@ -35,7 +35,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class SongSyncApplyRoomTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var realSongDao: SongDao
     private val counting = Counting()
 
@@ -46,7 +46,7 @@ class SongSyncApplyRoomTest {
 
     @Before
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java).allowMainThreadQueries().build()
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java).allowMainThreadQueries().build()
         realSongDao = db.songDao()
     }
 

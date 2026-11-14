@@ -97,10 +97,10 @@ import com.launchpoint.stereosine.ui.components.PrimaryDestination
 import com.launchpoint.stereosine.ui.components.PrimaryNavigationBar
 import com.launchpoint.stereosine.ui.components.SongRow
 import com.launchpoint.stereosine.ui.components.SongRowWithOverflow
-import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropItemPlacement
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 import com.launchpoint.stereosine.ui.permission.AudioPermissionGate
 import com.launchpoint.stereosine.ui.viewmodel.PlaylistActionsViewModel
 import kotlinx.coroutines.delay
@@ -679,7 +679,7 @@ private fun HomeDashboardContent(
                         PlaylistPreviewRow(
                             playlist = playlist,
                             onClick = { onPlaylistClick(playlist.id) },
-                            modifier = wavdropItemPlacement(reduceMotion),
+                            modifier = stereoSineItemPlacement(reduceMotion),
                         )
                     }
                 }
@@ -699,7 +699,7 @@ private fun HomeDashboardContent(
                         SmartCollectionPreviewRow(
                             collection = collection,
                             onClick = { onSmartCollectionClick(collection.type) },
-                            modifier = wavdropItemPlacement(reduceMotion),
+                            modifier = stereoSineItemPlacement(reduceMotion),
                         )
                     }
                 }
@@ -777,7 +777,7 @@ private fun WrappedPreviewCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -851,7 +851,7 @@ private fun WrappedSeedCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -1024,7 +1024,7 @@ private fun ResumeSessionCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -1194,7 +1194,7 @@ private fun DashboardPreviewRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -1220,7 +1220,7 @@ private fun DashboardPreviewRow(
             )
             // Fade-through small subtitle changes in place (e.g. a playlist's song count) — no-op
             // under reduced motion, single small Text so it stays cheap.
-            WavdropFadeThrough(targetState = subtitle) { value ->
+            StereoSineFadeThrough(targetState = subtitle) { value ->
                 Text(
                     text = value,
                     style = MaterialTheme.typography.bodySmall,

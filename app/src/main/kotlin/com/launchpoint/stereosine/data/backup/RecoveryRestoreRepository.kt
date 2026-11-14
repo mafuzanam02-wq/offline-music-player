@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.backup
 
 import androidx.room.withTransaction
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.ImportBaselineDao
 import com.launchpoint.stereosine.data.local.dao.LyricsOverrideDao
 import com.launchpoint.stereosine.data.local.dao.PendingBackupExtensionDao
@@ -58,7 +58,7 @@ data class RecoveryImpact(
  */
 @Singleton
 class RecoveryRestoreRepository @Inject constructor(
-    private val db: WavdropDatabase,
+    private val db: StereoSineDatabase,
     private val songDao: SongDao,
     private val trackStatsDao: TrackStatsDao,
     private val lyricsOverrideDao: LyricsOverrideDao,
@@ -99,7 +99,7 @@ class RecoveryRestoreRepository @Inject constructor(
             lyricsOverrideDao.deleteAllLyricsForRecovery()
             importBaselineDao.deleteAllBaselinesForRecovery()
             stage("lyricsAndBaselinesCleared")
-            playlistDao.clearWavdropPlaylistsForRecovery()
+            playlistDao.clearStereoSinePlaylistsForRecovery()
             pendingBackupExtensionDao.deleteByRootNameForRecovery(DESKTOP_OVERLAY_ROOT)
             stage("playlistsCleared")
 

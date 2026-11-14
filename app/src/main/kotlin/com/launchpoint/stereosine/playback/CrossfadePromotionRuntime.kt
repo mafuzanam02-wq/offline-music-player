@@ -357,7 +357,7 @@ internal class CrossfadePromotionRuntime<P : Player>(
     private var tickLogGate = 0
 
     private companion object {
-        const val TAG = "WavdropCrossfade"
+        const val TAG = "StereoSineCrossfade"
     }
 }
 

@@ -7,7 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -19,7 +19,7 @@ val DefaultOffsetAnimator: OffsetAnimator = { from, to, onValue ->
     animate(
         initialValue = from,
         targetValue = to,
-        animationSpec = tween(WavdropMotion.Durations.EmphasizedTransition, easing = WavdropMotion.Easings.Emphasized),
+        animationSpec = tween(StereoSineMotion.Durations.EmphasizedTransition, easing = StereoSineMotion.Easings.Emphasized),
     ) { value, _ -> onValue(value) }
 }
 

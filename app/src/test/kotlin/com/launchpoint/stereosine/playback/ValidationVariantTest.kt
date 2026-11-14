@@ -12,8 +12,8 @@ class ValidationVariantTest {
 
     @Test fun committedGateIsOnAndTheOrdinaryBuildHasNoValidationOverride() {
         assertTrue(PhysicalQueuePolicy.BOUNDED_WINDOW_ENABLED)
-        // The unit-test run is an ordinary debug build: the validation override is off unless -PwavdropValidationBounded=true.
-        if (System.getProperty("wavdrop.expectValidationBounded") == null) {
+        // The unit-test run is an ordinary debug build: the validation override is off unless -PstereosineValidationBounded=true.
+        if (System.getProperty("stereosine.expectValidationBounded") == null) {
             assertFalse(PhysicalQueuePolicy.VALIDATION_BOUNDED)
             assertEquals("bounded", PhysicalQueuePolicy.variantLabel) // driven by the committed gate; the override is absent
         }
@@ -28,7 +28,7 @@ class ValidationVariantTest {
     @Test fun releaseBuildConfigIsHardCodedFalseInBuildScript() {
         val script = File("build.gradle.kts").readText()
         val release = script.substringAfter("        release {").substringBefore("proguardFiles")
-        assertTrue(release.contains("""buildConfigField("boolean", "WAVDROP_VALIDATION_BOUNDED", "false")"""))
+        assertTrue(release.contains("""buildConfigField("boolean", "STEREOSINE_VALIDATION_BOUNDED", "false")"""))
         assertFalse(release.contains("validationBounded"))
         val debug = script.substringAfter("        debug {").substringBefore("        release {")
         assertTrue(debug.contains("validationBounded.toString()"))
@@ -150,19 +150,19 @@ class ValidationVariantTest {
         assertTrue(src.contains("var enabled: Boolean = BuildConfig.DEBUG"))
         // BuildConfig.DEBUG is false for the release build type by Android's definition; the override constant is hard-coded false there.
         val script = File(root, "app/build.gradle.kts").readText()
-        assertTrue(script.substringAfter("        release {").substringBefore("proguardFiles").contains("\"WAVDROP_VALIDATION_BOUNDED\", \"false\""))
+        assertTrue(script.substringAfter("        release {").substringBefore("proguardFiles").contains("\"STEREOSINE_VALIDATION_BOUNDED\", \"false\""))
     }
 
 
     @Test fun captureScriptExcludesGloballySharedCrashTags() {
         val root = repoRoot() ?: return
-        val script = File(root, "scripts/Capture-WavdropValidation.ps1").readText()
+        val script = File(root, "scripts/Capture-StereoSineValidation.ps1").readText()
         val tags = script.substringAfter("\$tags = @(").substringBefore(")")
         assertFalse(tags, tags.contains("AndroidRuntime"))
         assertFalse(tags, tags.contains("-b crash") || tags.contains("crash"))
         assertTrue(tags.contains("'*:S'"))
-        listOf("WavdropValidation", "WavdropStartTrace", "WavdropQueuePerf", "WavdropSessionPerf", "WavdropSessionProgress",
-            "WavdropCrossfade", "WavdropNextSlot", "WavdropResume", "Wavdrop-Startup", "WavStats-PC").forEach {
+        listOf("StereoSineValidation", "StereoSineStartTrace", "StereoSineQueuePerf", "StereoSineSessionPerf", "StereoSineSessionProgress",
+            "StereoSineCrossfade", "StereoSineNextSlot", "StereoSineResume", "StereoSine-Startup", "WavStats-PC").forEach {
             assertTrue("missing tag $it", tags.contains("'$it:"))
         }
         assertFalse(script.contains("-b crash"))
@@ -177,7 +177,7 @@ class ValidationVariantTest {
         val fresh = File(root, "scripts/__wavdrop_new_out_${System.nanoTime()}")
         assertFalse(fresh.exists())
         val process = ProcessBuilder(
-            ps, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", File(root, "scripts/Capture-WavdropValidation.ps1").path,
+            ps, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", File(root, "scripts/Capture-StereoSineValidation.ps1").path,
             "-Label", "t", "-OutRoot", fresh.path,
         ).redirectErrorStream(true).start()
         val output = process.inputStream.bufferedReader().readText()
@@ -191,7 +191,7 @@ class ValidationVariantTest {
     @Test fun releaseOverrideStaysFalseAndReleaseTasksAreRefusedWithTheProperty() {
         val script = File("build.gradle.kts").readText()
         val release = script.substringAfter("        release {").substringBefore("proguardFiles")
-        assertTrue(release.contains("""buildConfigField("boolean", "WAVDROP_VALIDATION_BOUNDED", "false")"""))
+        assertTrue(release.contains("""buildConfigField("boolean", "STEREOSINE_VALIDATION_BOUNDED", "false")"""))
         val guard = script.substringAfter("if (validationBounded) {").substringBefore("android {")
         assertTrue(guard.contains("""name.contains("Release", ignoreCase = true)"""))
         assertTrue(guard.contains("throw GradleException"))

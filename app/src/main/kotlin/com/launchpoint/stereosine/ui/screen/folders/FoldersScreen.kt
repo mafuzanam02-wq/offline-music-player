@@ -53,8 +53,8 @@ import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropItemPlacement
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
 import kotlinx.coroutines.launch
 
@@ -206,7 +206,7 @@ private fun FolderListContent(
             contentPadding = PaddingValues(start = 0.dp, top = 4.dp, end = 32.dp, bottom = 4.dp),
         ) {
             items(folders, key = { it.folderKey }) { folder ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     FolderRow(folder = folder, onClick = { onFolderClick(folder.folderKey) })
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
@@ -241,7 +241,7 @@ private fun FolderRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,

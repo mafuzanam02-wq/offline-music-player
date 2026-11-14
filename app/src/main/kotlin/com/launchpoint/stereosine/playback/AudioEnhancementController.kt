@@ -10,7 +10,7 @@ import com.launchpoint.stereosine.data.settings.AudioEnhancementsRepository
 import com.launchpoint.stereosine.data.settings.EqualizerCapabilities
 import com.launchpoint.stereosine.data.settings.EqualizerPlatformPreset
 import com.launchpoint.stereosine.data.settings.EqPresetType
-import com.launchpoint.stereosine.data.settings.WavdropPresetCatalog
+import com.launchpoint.stereosine.data.settings.StereoSinePresetCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -67,7 +67,7 @@ internal class AudioEnhancementController(
                         TAG,
                         "[settings] emission received: eqEnabled=${settings.eqEnabled}" +
                             " preset=${settings.eqPresetType}" +
-                            " wavdropId=${settings.eqWavdropPresetId}" +
+                            " stereoSineId=${settings.eqStereoSinePresetId}" +
                             " platformIndex=${settings.eqPlatformPresetIndex}" +
                             " customLevels.size=${settings.eqCustomBandLevels.size}",
                     )
@@ -175,8 +175,8 @@ internal class AudioEnhancementController(
             EqPresetType.FLAT -> applyFlat(eq)
 
             EqPresetType.WAVDROP_PRESET -> {
-                val id = settings.eqWavdropPresetId
-                val preset = WavdropPresetCatalog.findById(id)
+                val id = settings.eqStereoSinePresetId
+                val preset = StereoSinePresetCatalog.findById(id)
                 if (preset == null) {
                     Log.w(TAG, "[applyPreset] WAVDROP_PRESET id=$id not found in catalog — flat fallback")
                     applyFlat(eq)
@@ -354,6 +354,6 @@ internal class AudioEnhancementController(
     }
 
     private companion object {
-        private const val TAG = "WavdropAudioEffects"
+        private const val TAG = "StereoSineAudioEffects"
     }
 }

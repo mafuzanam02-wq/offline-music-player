@@ -15,7 +15,7 @@ import com.launchpoint.stereosine.data.backup.WavdropBackupIntegrityV2
 import com.launchpoint.stereosine.data.backup.toBackupListenEvent
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkExportSnapshot
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkWriter
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import kotlinx.coroutines.runBlocking
@@ -40,13 +40,13 @@ import java.io.ByteArrayOutputStream
 @RunWith(AndroidJUnit4::class)
 class LegacyExportTieOrderInstrumentedTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var dao: TrackListenEventDao
 
     @Before fun setUp() = openDb()
 
     private fun openDb() {
-        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build()
         dao = db.trackListenEventDao()
     }

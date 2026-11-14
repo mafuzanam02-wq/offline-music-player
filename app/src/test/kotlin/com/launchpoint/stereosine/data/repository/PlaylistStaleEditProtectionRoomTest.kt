@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.repository
 
 import androidx.room.Room
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.playlists.PlaylistPositionEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -24,11 +24,11 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class PlaylistStaleEditProtectionRoomTest {
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var repo: PlaylistRepository
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java).allowMainThreadQueries().build()
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java).allowMainThreadQueries().build()
         repo = PlaylistRepository(db, db.playlistDao())
     }
     @After fun tearDown() = db.close()

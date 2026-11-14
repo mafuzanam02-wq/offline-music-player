@@ -16,9 +16,9 @@ import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.settings.ThemeMode
 import com.launchpoint.stereosine.playback.PlaybackStartupCoordinator
 import com.launchpoint.stereosine.playback.PlayerController
-import com.launchpoint.stereosine.ui.navigation.WavdropNavGraph
+import com.launchpoint.stereosine.ui.navigation.StereoSineNavGraph
 import com.launchpoint.stereosine.ui.components.LocalProgressPlayer
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -40,9 +40,9 @@ class MainActivity : ComponentActivity() {
             val accentColor by appSettingsRepository.accentColor
                 .collectAsStateWithLifecycle(initialValue = AccentColor.MIDNIGHT_VIOLET)
             val progressPlayer by playerController.progressPlayer.collectAsStateWithLifecycle()
-            WavdropTheme(themeMode = themeMode, accentColor = accentColor) {
+            StereoSineTheme(themeMode = themeMode, accentColor = accentColor) {
                 CompositionLocalProvider(LocalProgressPlayer provides progressPlayer) {
-                    WavdropNavGraph()
+                    StereoSineNavGraph()
                 }
             }
         }

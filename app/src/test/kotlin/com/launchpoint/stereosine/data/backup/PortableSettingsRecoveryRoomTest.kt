@@ -4,7 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.model.SmartCollectionType
 import com.launchpoint.stereosine.data.settings.AppIconAliasManager
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
@@ -52,10 +52,10 @@ class PortableSettingsRecoveryRoomTest {
     }
 
     private val files = mutableListOf<File>()
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java).allowMainThreadQueries().build()
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java).allowMainThreadQueries().build()
     }
     @After fun tearDown() { db.close(); files.forEach { it.delete() } }
 

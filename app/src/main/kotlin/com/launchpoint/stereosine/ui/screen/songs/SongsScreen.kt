@@ -81,9 +81,9 @@ import com.launchpoint.stereosine.ui.components.PrimaryDestination
 import com.launchpoint.stereosine.ui.components.PrimaryNavigationBar
 import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.components.SongRowWithOverflow
-import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropItemPlacement
+import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
 import com.launchpoint.stereosine.ui.permission.AudioPermissionGate
 import com.launchpoint.stereosine.ui.screen.home.HomeUiState
 import com.launchpoint.stereosine.ui.screen.home.HomeViewModel
@@ -393,7 +393,7 @@ private fun SongListContent(
                         contentAlignment = Alignment.CenterEnd,
                     ) {
                         TextButton(onClick = { sortMenuExpanded = true }) {
-                            WavdropFadeThrough(targetState = sortMode.label) { label ->
+                            StereoSineFadeThrough(targetState = sortMode.label) { label ->
                                 Text(
                                     text = label,
                                     style = MaterialTheme.typography.labelLarge,
@@ -430,7 +430,7 @@ private fun SongListContent(
             }
             items(songs, key = { it.id }) { song ->
                 val isFavorite = song.id in favoriteSongIds
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     SongRowWithOverflow(
                         song             = song,
                         isCurrent        = song.id == currentSongId,

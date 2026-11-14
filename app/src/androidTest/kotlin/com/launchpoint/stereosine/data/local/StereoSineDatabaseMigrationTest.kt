@@ -25,12 +25,12 @@ import org.junit.runner.RunWith
  * MigrationTestHelper tears down the file after each test method automatically.
  */
 @RunWith(AndroidJUnit4::class)
-class WavdropDatabaseMigrationTest {
+class StereoSineDatabaseMigrationTest {
 
     @get:Rule
     val helper: MigrationTestHelper = MigrationTestHelper(
         InstrumentationRegistry.getInstrumentation(),
-        WavdropDatabase::class.java,
+        StereoSineDatabase::class.java,
         emptyList(),
         FrameworkSQLiteOpenHelperFactory(),
     )

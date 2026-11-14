@@ -99,9 +99,9 @@ class LibraryScanPresetStructureGuardTest {
         val classifier = src("data/settings/LibraryScanFolderClassifier.kt")
         assertFalse(classifier.contains("Log."))
         assertFalse(src("data/settings/LibraryScanSettingsRules.kt").contains("Log."))
-        val db = src("data/local/WavdropDatabase.kt")
+        val db = src("data/local/StereoSineDatabase.kt")
         val version = Regex("""version\s*=\s*(\d+)""").find(db)!!.groupValues[1].toInt()
-        val newest = File("schemas/com.launchpoint.stereosine.data.local.WavdropDatabase").listFiles()!!
+        val newest = File("schemas/com.launchpoint.stereosine.data.local.StereoSineDatabase").listFiles()!!
             .mapNotNull { it.nameWithoutExtension.toIntOrNull() }.max()
         assertEquals("no Room schema change", newest, version)
     }

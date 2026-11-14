@@ -55,10 +55,10 @@ import com.launchpoint.stereosine.data.model.SongStatsSummary
 import com.launchpoint.stereosine.data.model.StatsDashboardSummary
 import com.launchpoint.stereosine.ui.components.ArtworkImage
 import com.launchpoint.stereosine.ui.components.LoadingStateContent
-import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropItemPlacement
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -316,7 +316,7 @@ private fun OverviewCard(
             Column {
                 // Fade the value through when a refresh changes it (discrete change only);
                 // direct swap under reduced motion.
-                WavdropFadeThrough(targetState = value) { shownValue ->
+                StereoSineFadeThrough(targetState = value) { shownValue ->
                     Text(
                         text = shownValue,
                         style = MaterialTheme.typography.titleLarge,
@@ -353,7 +353,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.statsSection(
     // Recently Played) doesn't produce duplicate LazyColumn keys and crash Compose.
     items(songs, key = { "${sectionKey}_${it.song.id}" }) { summary ->
         val reducedMotion = rememberReducedMotion()
-        Column(modifier = wavdropItemPlacement(reducedMotion)) {
+        Column(modifier = stereoSineItemPlacement(reducedMotion)) {
             SongStatsRow(
                 summary = summary,
                 metric = metric(summary),
@@ -401,7 +401,7 @@ private fun SongStatsRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,

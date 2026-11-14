@@ -5,7 +5,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-val WavdropTypography = Typography(
+val StereoSineTypography = Typography(
     titleLarge = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize   = 22.sp,

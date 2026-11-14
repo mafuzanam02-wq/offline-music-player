@@ -2,7 +2,7 @@ package com.launchpoint.stereosine.data.repository
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import com.launchpoint.stereosine.data.local.entity.TrackStatsEntity
 import com.launchpoint.stereosine.data.mediastore.MediaStoreScanException
@@ -42,7 +42,7 @@ class SongRepositoryPresetExclusionSyncRoomTest {
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var settingsRepo: LibraryScanSettingsRepository
     private lateinit var repo: SongRepository
 
@@ -59,7 +59,7 @@ class SongRepositoryPresetExclusionSyncRoomTest {
 
     @Before
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java).allowMainThreadQueries().build()
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java).allowMainThreadQueries().build()
         settingsRepo = LibraryScanSettingsRepository(
             PreferenceDataStoreFactory.create(produceFile = { temporaryFolder.newFile("scan-${System.nanoTime()}.preferences_pb") }),
         )

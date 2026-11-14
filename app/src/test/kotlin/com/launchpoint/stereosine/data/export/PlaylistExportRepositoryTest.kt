@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.export
 
 import androidx.room.Room
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.PlaylistEntity
 import com.launchpoint.stereosine.data.local.entity.PlaylistSongEntity
 import com.launchpoint.stereosine.data.local.entity.SongEntity
@@ -20,7 +20,7 @@ import java.io.ByteArrayOutputStream
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class PlaylistExportRepositoryTest {
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
 
     private class FakePaths(val map: Map<Long, String>) : MediaPathSource {
         val calls = mutableListOf<Set<Long>>()
@@ -31,7 +31,7 @@ class PlaylistExportRepositoryTest {
     }
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build()
     }
 

@@ -31,7 +31,7 @@ import com.launchpoint.stereosine.data.settings.ThemeMode
 import com.launchpoint.stereosine.data.settings.WrappedBackgroundIntensity
 import com.launchpoint.stereosine.data.settings.WrappedFallbackTheme
 import com.launchpoint.stereosine.data.settings.WrappedVisualStyle
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import java.io.File
 import java.nio.file.Files
 import java.time.DayOfWeek
@@ -141,7 +141,7 @@ class WrappedVideoEncodeInstrumentedTest {
         if (!contentSet) {
             contentSet = true
             rule.setContent {
-                WavdropTheme(themeMode = ThemeMode.DARK) {
+                StereoSineTheme(themeMode = ThemeMode.DARK) {
                     Box(Modifier.background(MaterialTheme.colorScheme.background)) { hostState.value?.Content() }
                 }
             }

@@ -12,7 +12,7 @@ import org.junit.Test
  * P1-D1 + P1-D2 — Backup Format v2 and lastListenedAt preservation tests.
  *
  * Covers required tests 1–16 and 19–25 from the slice contract.
- * Migration tests (17–18) live in WavdropDatabaseMigrationTest (instrumentation).
+ * Migration tests (17–18) live in StereoSineDatabaseMigrationTest (instrumentation).
  */
 class WavdropBackupV2Test {
 

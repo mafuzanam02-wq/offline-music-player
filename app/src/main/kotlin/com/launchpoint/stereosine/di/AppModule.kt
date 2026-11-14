@@ -17,8 +17,8 @@ import com.launchpoint.stereosine.data.local.MIGRATION_9_10
 import com.launchpoint.stereosine.data.local.MIGRATION_10_11
 import com.launchpoint.stereosine.data.local.MIGRATION_11_12
 import com.launchpoint.stereosine.data.local.MIGRATION_12_13
-import com.launchpoint.stereosine.data.local.WAVDROP_DATABASE_NAME
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.DATABASE_FILE_NAME
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.ImportBaselineDao
 import com.launchpoint.stereosine.data.local.dao.LyricsOverrideDao
 import com.launchpoint.stereosine.data.local.dao.PendingBackupExtensionDao
@@ -35,7 +35,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-private val Context.wavdropPreferencesDataStore by preferencesDataStore(
+private val Context.stereoSinePreferencesDataStore by preferencesDataStore(
     name = "wavdrop_preferences",
 )
 
@@ -45,8 +45,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): WavdropDatabase =
-        Room.databaseBuilder(context, WavdropDatabase::class.java, WAVDROP_DATABASE_NAME)
+    fun provideDatabase(@ApplicationContext context: Context): StereoSineDatabase =
+        Room.databaseBuilder(context, StereoSineDatabase::class.java, DATABASE_FILE_NAME)
             .addMigrations(
                 MIGRATION_1_2,
                 MIGRATION_2_3,
@@ -67,33 +67,33 @@ object AppModule {
     @Singleton
     fun providePreferencesDataStore(
         @ApplicationContext context: Context,
-    ): DataStore<Preferences> = context.wavdropPreferencesDataStore
+    ): DataStore<Preferences> = context.stereoSinePreferencesDataStore
 
     @Provides
-    fun provideSongDao(db: WavdropDatabase): SongDao = db.songDao()
+    fun provideSongDao(db: StereoSineDatabase): SongDao = db.songDao()
 
     @Provides
-    fun provideTrackStatsDao(db: WavdropDatabase): TrackStatsDao = db.trackStatsDao()
+    fun provideTrackStatsDao(db: StereoSineDatabase): TrackStatsDao = db.trackStatsDao()
 
     @Provides
-    fun provideImportBaselineDao(db: WavdropDatabase): ImportBaselineDao = db.importBaselineDao()
+    fun provideImportBaselineDao(db: StereoSineDatabase): ImportBaselineDao = db.importBaselineDao()
 
     @Provides
-    fun providePlaylistDao(db: WavdropDatabase): PlaylistDao = db.playlistDao()
+    fun providePlaylistDao(db: StereoSineDatabase): PlaylistDao = db.playlistDao()
 
     @Provides
-    fun provideTrackListenEventDao(db: WavdropDatabase): TrackListenEventDao = db.trackListenEventDao()
+    fun provideTrackListenEventDao(db: StereoSineDatabase): TrackListenEventDao = db.trackListenEventDao()
 
     @Provides
-    fun provideLyricsOverrideDao(db: WavdropDatabase): LyricsOverrideDao = db.lyricsOverrideDao()
+    fun provideLyricsOverrideDao(db: StereoSineDatabase): LyricsOverrideDao = db.lyricsOverrideDao()
 
     @Provides
-    fun providePendingTrackDao(db: WavdropDatabase): PendingTrackDao = db.pendingTrackDao()
+    fun providePendingTrackDao(db: StereoSineDatabase): PendingTrackDao = db.pendingTrackDao()
 
     @Provides
-    fun provideTrackIdentityDao(db: WavdropDatabase): TrackIdentityDao = db.trackIdentityDao()
+    fun provideTrackIdentityDao(db: StereoSineDatabase): TrackIdentityDao = db.trackIdentityDao()
 
     @Provides
-    fun providePendingBackupExtensionDao(db: WavdropDatabase): PendingBackupExtensionDao =
+    fun providePendingBackupExtensionDao(db: StereoSineDatabase): PendingBackupExtensionDao =
         db.pendingBackupExtensionDao()
 }

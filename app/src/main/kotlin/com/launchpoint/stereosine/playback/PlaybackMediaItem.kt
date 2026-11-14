@@ -7,7 +7,8 @@ import androidx.media3.common.MediaMetadata
 import com.launchpoint.stereosine.data.artwork.ArtworkResolver
 import com.launchpoint.stereosine.data.model.Song
 
-internal const val WAVDROP_ALBUM_ID_EXTRA = "wavdrop_album_id"
+// Bundle key literal is a persisted/queue-visible identifier: unchanged on purpose.
+internal const val ALBUM_ID_EXTRA = "wavdrop_album_id"
 
 /**
  * The album-art reference published to system media surfaces (notification, lock screen), or null when the song has no album id.
@@ -33,7 +34,7 @@ internal fun Song.toPlaybackMediaItem(): MediaItem =
                 .setArtist(displayArtist)
                 .setAlbumTitle(album)
                 .setArtworkUri(artworkUriOrNull())
-                .setExtras(Bundle().apply { putLong(WAVDROP_ALBUM_ID_EXTRA, albumId) })
+                .setExtras(Bundle().apply { putLong(ALBUM_ID_EXTRA, albumId) })
                 .build()
         )
         .build()

@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 
 /**
  * Vertical A-Z fast-scroll index shown on the trailing edge of long lists.
@@ -62,8 +62,8 @@ fun AlphabetSideIndex(
             snap()
         } else {
             tween(
-                durationMillis = WavdropMotion.Durations.StandardStateChange,
-                easing = WavdropMotion.Easings.Standard,
+                durationMillis = StereoSineMotion.Durations.StandardStateChange,
+                easing = StereoSineMotion.Easings.Standard,
             )
         },
         label = "alphabetIndexAlpha",

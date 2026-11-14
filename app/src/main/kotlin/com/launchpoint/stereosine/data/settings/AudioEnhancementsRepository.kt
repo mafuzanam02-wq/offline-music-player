@@ -40,7 +40,7 @@ class AudioEnhancementsRepository @Inject constructor(
                 eqPresetType          = parseEqPresetType(prefs[EQ_PRESET_TYPE]),
                 eqPlatformPresetIndex = prefs[EQ_PLATFORM_PRESET_INDEX],
                 eqCustomBandLevels    = parseBandLevels(prefs[EQ_CUSTOM_BAND_LEVELS]),
-                eqWavdropPresetId     = parseWavdropPresetId(prefs[EQ_WAVDROP_PRESET_ID]),
+                eqStereoSinePresetId     = parseStereoSinePresetId(prefs[EQ_STEREOSINE_PRESET_ID]),
             )
         }
         .distinctUntilChanged()
@@ -53,7 +53,7 @@ class AudioEnhancementsRepository @Inject constructor(
         dataStore.edit { prefs ->
             prefs[EQ_PRESET_TYPE] = EqPresetType.FLAT.name
             prefs.remove(EQ_PLATFORM_PRESET_INDEX)
-            prefs.remove(EQ_WAVDROP_PRESET_ID)
+            prefs.remove(EQ_STEREOSINE_PRESET_ID)
             // eqCustomBandLevels intentionally preserved for round-trip back to Custom
         }
     }
@@ -62,7 +62,7 @@ class AudioEnhancementsRepository @Inject constructor(
         dataStore.edit { prefs ->
             prefs[EQ_PRESET_TYPE]        = EqPresetType.PLATFORM.name
             prefs[EQ_PLATFORM_PRESET_INDEX] = index
-            prefs.remove(EQ_WAVDROP_PRESET_ID)
+            prefs.remove(EQ_STEREOSINE_PRESET_ID)
             // eqCustomBandLevels intentionally preserved for round-trip back to Custom
         }
     }
@@ -77,7 +77,7 @@ class AudioEnhancementsRepository @Inject constructor(
                 prefs[EQ_CUSTOM_BAND_LEVELS] = List(bandCount) { 0 }.joinToString(",")
             }
             prefs[EQ_PRESET_TYPE] = EqPresetType.CUSTOM.name
-            prefs.remove(EQ_WAVDROP_PRESET_ID)
+            prefs.remove(EQ_STEREOSINE_PRESET_ID)
             prefs.remove(EQ_PLATFORM_PRESET_INDEX)
         }
     }
@@ -86,7 +86,7 @@ class AudioEnhancementsRepository @Inject constructor(
         dataStore.edit { prefs ->
             prefs[EQ_PRESET_TYPE]     = EqPresetType.CUSTOM.name
             prefs[EQ_CUSTOM_BAND_LEVELS] = levels.joinToString(",")
-            prefs.remove(EQ_WAVDROP_PRESET_ID)
+            prefs.remove(EQ_STEREOSINE_PRESET_ID)
             prefs.remove(EQ_PLATFORM_PRESET_INDEX)
         }
     }
@@ -114,25 +114,25 @@ class AudioEnhancementsRepository @Inject constructor(
             when (presetType) {
                 EqPresetType.FLAT -> {
                     prefs.remove(EQ_PLATFORM_PRESET_INDEX)
-                    prefs.remove(EQ_WAVDROP_PRESET_ID)
+                    prefs.remove(EQ_STEREOSINE_PRESET_ID)
                 }
                 EqPresetType.PLATFORM -> {
-                    prefs.remove(EQ_WAVDROP_PRESET_ID)
+                    prefs.remove(EQ_STEREOSINE_PRESET_ID)
                     // eq_platform_preset_index is the active key — leave it
                 }
                 EqPresetType.CUSTOM -> {
-                    prefs.remove(EQ_WAVDROP_PRESET_ID)
+                    prefs.remove(EQ_STEREOSINE_PRESET_ID)
                     prefs.remove(EQ_PLATFORM_PRESET_INDEX)
                     // eq_custom_band_levels preserved
                 }
                 EqPresetType.WAVDROP_PRESET -> {
                     prefs.remove(EQ_PLATFORM_PRESET_INDEX)
-                    val id = parseWavdropPresetId(prefs[EQ_WAVDROP_PRESET_ID])
-                    val validInCatalog = id != null && WavdropPresetCatalog.findById(id) != null
+                    val id = parseStereoSinePresetId(prefs[EQ_STEREOSINE_PRESET_ID])
+                    val validInCatalog = id != null && StereoSinePresetCatalog.findById(id) != null
                     if (!validInCatalog) {
                         // Unknown or blank StereoSine id — fall back to FLAT safely.
                         prefs[EQ_PRESET_TYPE] = EqPresetType.FLAT.name
-                        prefs.remove(EQ_WAVDROP_PRESET_ID)
+                        prefs.remove(EQ_STEREOSINE_PRESET_ID)
                     }
                     // eq_custom_band_levels preserved
                 }
@@ -142,12 +142,12 @@ class AudioEnhancementsRepository @Inject constructor(
         }
     }
 
-    // Switches to a Wavdrop-owned preset. Custom band levels are intentionally
+    // Switches to a StereoSine-owned preset. Custom band levels are intentionally
     // preserved so they survive a round-trip through any preset type.
-    suspend fun setEqWavdropPreset(id: String) {
+    suspend fun setEqStereoSinePreset(id: String) {
         dataStore.edit { prefs ->
             prefs[EQ_PRESET_TYPE]       = EqPresetType.WAVDROP_PRESET.name
-            prefs[EQ_WAVDROP_PRESET_ID] = id
+            prefs[EQ_STEREOSINE_PRESET_ID] = id
             prefs.remove(EQ_PLATFORM_PRESET_INDEX)
             // eqCustomBandLevels intentionally preserved for round-trip back to Custom
         }
@@ -158,7 +158,7 @@ class AudioEnhancementsRepository @Inject constructor(
         private val EQ_PRESET_TYPE                = stringPreferencesKey("eq_preset_type")
         private val EQ_PLATFORM_PRESET_INDEX      = intPreferencesKey("eq_platform_preset_index")
         private val EQ_CUSTOM_BAND_LEVELS         = stringPreferencesKey("eq_custom_band_levels")
-        private val EQ_WAVDROP_PRESET_ID          = stringPreferencesKey("eq_wavdrop_preset_id")
+        private val EQ_STEREOSINE_PRESET_ID          = stringPreferencesKey("eq_wavdrop_preset_id")
         private val EQ_PRESET_STATE_NORMALIZED_V1 = booleanPreferencesKey("eq_preset_state_normalized_v1")
 
         // Extracted for unit-testability — no DataStore dependency.
@@ -170,7 +170,7 @@ class AudioEnhancementsRepository @Inject constructor(
             return raw.split(",").mapNotNull { runCatching { it.trim().toInt() }.getOrNull() }
         }
 
-        internal fun parseWavdropPresetId(raw: String?): String? =
+        internal fun parseStereoSinePresetId(raw: String?): String? =
             raw?.trim()?.takeIf { it.isNotEmpty() }
     }
 }

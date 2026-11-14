@@ -244,7 +244,7 @@ class WidgetConfigRollbackConsistencyTest {
 
     @Test fun theActivityReconcilesThroughTheExistingUpdaterWithNoSecondRenderingPipeline() {
         val src = File("src/main/kotlin/com/launchpoint/stereosine/ui/widget/WidgetConfigActivity.kt").readText()
-        assertTrue(src.contains("reconcile = { id -> WavdropWidgetUpdater.requestUpdate(applicationContext, listOf(id)) }"))
+        assertTrue(src.contains("reconcile = { id -> StereoSineWidgetUpdater.requestUpdate(applicationContext, listOf(id)) }"))
         assertTrue("the activity renders nothing itself", !src.contains("updateAppWidget"))
     }
 }

@@ -227,7 +227,7 @@ class RecoveryRestoreRulesTest {
     }
 
     @Test fun `no schema, format or version change`() {
-        assertTrue("version      = 13" in src("data/local/WavdropDatabase.kt"))
+        assertTrue("version      = 13" in src("data/local/StereoSineDatabase.kt"))
         assertEquals(2, WavdropBackupParser.SUPPORTED_VERSION)
         val gradle = File("build.gradle.kts").readText()
         assertTrue("versionCode = 10" in gradle && "versionName = \"0.1.0-beta10\"" in gradle)

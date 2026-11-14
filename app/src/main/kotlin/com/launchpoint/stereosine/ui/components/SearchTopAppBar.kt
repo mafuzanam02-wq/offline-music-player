@@ -22,7 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
-import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +72,7 @@ fun SearchTopAppBar(
         },
         actions = {
             // Fade the clear affordance in/out as the field gains/loses text; snaps under reduced motion.
-            WavdropFadeThrough(targetState = query.isNotEmpty()) { hasText ->
+            StereoSineFadeThrough(targetState = query.isNotEmpty()) { hasText ->
                 if (hasText) {
                     IconButton(onClick = { onQueryChange("") }) {
                         Icon(

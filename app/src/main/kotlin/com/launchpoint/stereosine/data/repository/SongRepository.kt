@@ -3,7 +3,7 @@
 import android.util.Log
 import androidx.room.withTransaction
 import com.launchpoint.stereosine.BuildConfig
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.library.TrackIdentityScanPlanner
 import com.launchpoint.stereosine.data.local.dao.PlaylistDao
 import com.launchpoint.stereosine.data.local.dao.SongDao
@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class SongRepository @Inject constructor(
-    private val db: WavdropDatabase,
+    private val db: StereoSineDatabase,
     private val dao: SongDao,
     private val playlistDao: PlaylistDao,
     private val scanner: MediaStoreScanner,
@@ -128,7 +128,7 @@ class SongRepository @Inject constructor(
         reconcileTrackIdentities(liveSongIds, trackIdentityDao)
 
     private companion object {
-        const val TAG = "Wavdrop-Sync"
+        const val TAG = "StereoSine-Sync"
     }
 }
 

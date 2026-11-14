@@ -4,7 +4,7 @@ import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.launchpoint.stereosine.ui.theme.WavdropMotion
+import com.launchpoint.stereosine.ui.theme.StereoSineMotion
 
 /**
  * Single source of truth for the OS "Remove animations" accessibility flag (WU-02).
@@ -25,6 +25,6 @@ fun rememberReducedMotion(): Boolean {
             Settings.Global.ANIMATOR_DURATION_SCALE,
             1f,
         )
-        WavdropMotion.isReducedMotion(scale)
+        StereoSineMotion.isReducedMotion(scale)
     }
 }

@@ -557,7 +557,7 @@ internal val HOME_SMART_COLLECTION_PRIORITY = listOf(
     SmartCollectionType.SHORT_TRACKS,
 )
 
-private const val SEARCH_TAG = "WavdropSearchPlayback"
+private const val SEARCH_TAG = "StereoSineSearchPlayback"
 
 internal data class HomeWrappedYearSelection(
     val year: Int,

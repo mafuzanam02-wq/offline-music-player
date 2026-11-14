@@ -38,7 +38,7 @@ import com.launchpoint.stereosine.data.model.WrappedSummary
 import com.launchpoint.stereosine.data.settings.ThemeMode
 import com.launchpoint.stereosine.data.settings.WrappedBackgroundIntensity
 import com.launchpoint.stereosine.data.settings.WrappedFallbackTheme
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import java.io.File
 import java.time.ZoneOffset
 import kotlin.math.abs
@@ -122,7 +122,7 @@ class WrappedIntroArtworkRenderSpikeTest {
                     LocalWrappedStaticRender provides true,
                     LocalWrappedExportArtwork provides artwork,
                 ) {
-                    WavdropTheme(themeMode = theme) {
+                    StereoSineTheme(themeMode = theme) {
                         Box(
                             Modifier
                                 .requiredSize(360.dp, 640.dp)
@@ -268,7 +268,7 @@ class WrappedIntroArtworkRenderSpikeTest {
             ) {
                 val layer = rememberGraphicsLayer()
                 layerRef = layer
-                WavdropTheme(themeMode = ThemeMode.DARK) {
+                StereoSineTheme(themeMode = ThemeMode.DARK) {
                     Box(
                         Modifier.requiredSize(360.dp, 640.dp)
                             .drawWithContent { layer.record { this@drawWithContent.drawContent() }; drawLayer(layer) }

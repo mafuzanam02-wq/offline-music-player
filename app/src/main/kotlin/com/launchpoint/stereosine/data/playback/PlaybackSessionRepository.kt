@@ -145,6 +145,6 @@ class PlaybackSessionRepository @Inject constructor(
     }
 
     private companion object {
-        const val SESSION_PERF_TAG = "WavdropSessionPerf"
+        const val SESSION_PERF_TAG = "StereoSineSessionPerf"
     }
 }

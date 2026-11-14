@@ -30,7 +30,7 @@ import com.launchpoint.stereosine.data.model.ListeningAnalyticsEmptyState
 import com.launchpoint.stereosine.data.model.WrappedPeriod
 import com.launchpoint.stereosine.data.model.WrappedSummary
 import com.launchpoint.stereosine.data.settings.ThemeMode
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -95,7 +95,7 @@ class WrappedOverviewRenderSpikeTest {
                     LocalDensity provides Density(density = 2f, fontScale = 1f),
                     LocalWrappedStaticRender provides staticRender,
                 ) {
-                    WavdropTheme(themeMode = ThemeMode.DARK) {
+                    StereoSineTheme(themeMode = ThemeMode.DARK) {
                         Box(
                             Modifier
                                 .requiredSize(360.dp, 640.dp)

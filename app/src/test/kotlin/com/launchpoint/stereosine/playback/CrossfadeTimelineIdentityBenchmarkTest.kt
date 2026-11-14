@@ -14,7 +14,7 @@ import org.robolectric.annotation.Config
  * numbers can be reported before/after a change. It deliberately asserts nothing about wall-clock time (a flaky timing assertion
  * is exactly what this project does not want); the deterministic regression guards live in [CrossfadeTimelineIdentityTest].
  *
- * Opt-in: `-Dwavdrop.bench=1` (forwarded as the `wavdrop.bench` system property), otherwise the test is a no-op.
+ * Opt-in: `-Dstereosine.bench=1` (forwarded as the `stereosine.bench` system property), otherwise the test is a no-op.
  * Operations are measured SEPARATELY:
  *  - setMediaItems: full queue install on a physical player (the architecture's O(N) queue copy; identity-independent)
  *  - stateRebuild:  one façade state evaluation (Media3 converts the physical timeline and builds the PlaylistTimeline)
@@ -30,9 +30,11 @@ class CrossfadeTimelineIdentityBenchmarkTest {
     private fun ms(from: Long) = (System.nanoTime() - from) / 1_000_000
 
     @Test fun report() {
-        if (System.getProperty("wavdrop.bench") == null && System.getenv("WAVDROP_BENCH") == null) return
+        // Legacy `wavdrop.bench` / `WAVDROP_BENCH` opt-ins stay accepted so existing local invocations keep working.
+        val optedIn = listOf(System.getProperty("stereosine.bench"), System.getProperty("wavdrop.bench"), System.getenv("STEREOSINE_BENCH"), System.getenv("WAVDROP_BENCH")).any { it != null }
+        if (!optedIn) return
         val context = RuntimeEnvironment.getApplication()
-        val sizes = (System.getenv("WAVDROP_BENCH_SIZES") ?: "100,1000,5000,10000,25000").split(",").map { it.trim().toInt() }
+        val sizes = ((System.getenv("STEREOSINE_BENCH_SIZES") ?: System.getenv("WAVDROP_BENCH_SIZES")) ?: "100,1000,5000,10000,25000").split(",").map { it.trim().toInt() }
         for (n in sizes) {
             val items = (1L..n).map { RealMedia3QueueRig.song(it % 50 + 1).toPlaybackMediaItem() } // heavy duplicate song ids
             val p1 = TestMediaSource.newPlayer(context)

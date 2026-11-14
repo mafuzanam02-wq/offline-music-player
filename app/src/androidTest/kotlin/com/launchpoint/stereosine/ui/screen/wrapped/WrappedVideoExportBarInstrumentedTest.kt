@@ -16,7 +16,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.launchpoint.stereosine.data.settings.ThemeMode
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -37,7 +37,7 @@ class WrappedVideoExportBarInstrumentedTest {
     private var shared: File? = null
 
     private fun show() = rule.setContent {
-        WavdropTheme(themeMode = ThemeMode.DARK) {
+        StereoSineTheme(themeMode = ThemeMode.DARK) {
             WrappedVideoExportBar(
                 state = state.value,
                 exportEnabled = enabled.value,

@@ -115,7 +115,7 @@ internal class NextSlotPreparationDriver(
     }
 
     private companion object {
-        const val TAG = "WavdropNextSlot"
+        const val TAG = "StereoSineNextSlot"
     }
 }
 

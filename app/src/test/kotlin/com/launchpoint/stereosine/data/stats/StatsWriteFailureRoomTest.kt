@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.stats
 
 import androidx.room.Room
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.TrackListenEventDao
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import com.launchpoint.stereosine.data.local.entity.TrackStatsEntity
@@ -42,11 +42,11 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class StatsWriteFailureRoomTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var realEvents: TrackListenEventDao
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build()
         realEvents = db.trackListenEventDao()
     }

@@ -97,9 +97,9 @@ class QueueSaveStructureGuardTest {
     }
 
     @Test fun `no schema, backup, permission, manifest or dependency change`() {
-        val db = src("data/local/WavdropDatabase.kt")
+        val db = src("data/local/StereoSineDatabase.kt")
         val version = Regex("""version\s*=\s*(\d+)""").find(db)!!.groupValues[1].toInt()
-        val newest = File("schemas/com.launchpoint.stereosine.data.local.WavdropDatabase").listFiles()!!
+        val newest = File("schemas/com.launchpoint.stereosine.data.local.StereoSineDatabase").listFiles()!!
             .mapNotNull { it.nameWithoutExtension.toIntOrNull() }.max()
         assertEquals("no Room schema change", newest, version)
         for (f in File("src/main/kotlin/com/launchpoint/stereosine/data/backup").walkTopDown().filter { it.isFile && it.extension == "kt" }) {

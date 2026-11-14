@@ -1,7 +1,7 @@
 package com.launchpoint.stereosine.data.repository
 
 import androidx.room.withTransaction
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.PlaylistDao
 import com.launchpoint.stereosine.data.local.entity.PlaylistEntity
 import com.launchpoint.stereosine.data.local.entity.PlaylistSongEntity
@@ -63,7 +63,7 @@ data class AddToPlaylistResult(val added: Int, val skipped: Int) {
 
 @Singleton
 class PlaylistRepository @Inject constructor(
-    private val db: WavdropDatabase,
+    private val db: StereoSineDatabase,
     private val dao: PlaylistDao,
 ) {
     fun observePlaylists(): Flow<List<PlaylistSummary>> =

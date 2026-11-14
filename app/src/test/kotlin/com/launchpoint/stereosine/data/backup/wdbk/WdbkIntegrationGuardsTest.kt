@@ -150,9 +150,9 @@ class WdbkIntegrationGuardsTest {
     }
 
     @Test fun `room schema is untouched by WDBK-1`() {
-        val db = src("data/local/WavdropDatabase.kt")
+        val db = src("data/local/StereoSineDatabase.kt")
         val version = Regex("""version\s*=\s*(\d+)""").find(db)!!.groupValues[1]
-        val newest = File("schemas/com.launchpoint.stereosine.data.local.WavdropDatabase").listFiles()!!
+        val newest = File("schemas/com.launchpoint.stereosine.data.local.StereoSineDatabase").listFiles()!!
             .mapNotNull { it.nameWithoutExtension.toIntOrNull() }.max()
         assertEquals(newest, version.toInt())
     }

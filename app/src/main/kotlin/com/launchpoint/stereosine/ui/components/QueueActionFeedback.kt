@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
  * A short snackbar, shown only from a [QueueActionResult] the controller verified against its committed queue, so success is never
  * claimed prematurely and a failure never says an item was added. Snackbars are announced by TalkBack by default and carry no
  * custom animation, so reduced-motion needs nothing extra; there is deliberately NO haptic (an ordinary tap is not a "significant
- * state change" under [com.launchpoint.stereosine.ui.components.motion.WavdropHaptics]).
+ * state change" under [com.launchpoint.stereosine.ui.components.motion.StereoSineHaptics]).
  */
 object QueueActionFeedback {
 

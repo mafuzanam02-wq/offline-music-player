@@ -9,7 +9,7 @@ import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupStats
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkReader
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkWriter
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.settings.HomeLayoutSettingsRepository
@@ -45,12 +45,12 @@ class OrphanHistoryRoomTest {
     private enum class Mode { MERGE, RECOVERY }
 
     private val files = mutableListOf<File>()
-    private val dbs = mutableListOf<WavdropDatabase>()
+    private val dbs = mutableListOf<StereoSineDatabase>()
 
     @After fun tearDown() { dbs.forEach { it.close() }; files.forEach { it.delete() } }
 
     private inner class Node(libraryIds: List<Long> = listOf(5L)) {
-        val db: WavdropDatabase = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java)
+        val db: StereoSineDatabase = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build().also { dbs += it }
         private val file = File(RuntimeEnvironment.getApplication().cacheDir, "p17c-${UUID.randomUUID()}.preferences_pb").also { files += it }
         private val store = PreferenceDataStoreFactory.create { file }

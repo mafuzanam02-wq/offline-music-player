@@ -105,8 +105,8 @@ class WidgetAppearanceRenderTest {
         }
         // and building the views for every appearance/no-snapshot combination never throws
         WidgetBackgroundStyle.entries.forEach { style ->
-            WavdropWidgetUpdater.buildViews(context, R.layout.stereosine_widget_idle, null, null, look(style))
-            WavdropWidgetUpdater.buildViews(context, R.layout.stereosine_widget_normal, null, null, look(style))
+            StereoSineWidgetUpdater.buildViews(context, R.layout.stereosine_widget_idle, null, null, look(style))
+            StereoSineWidgetUpdater.buildViews(context, R.layout.stereosine_widget_normal, null, null, look(style))
         }
     }
 
@@ -118,8 +118,8 @@ class WidgetAppearanceRenderTest {
         ).forEach { layout ->
             WidgetBackgroundStyle.entries.forEach { style ->
                 WidgetArtworkIntensity.entries.forEach { intensity ->
-                    assertNotNull(WavdropWidgetUpdater.buildViews(context, layout, snapshot(true), bitmap, look(style, intensity), resolveColor = ::presetArgb))
-                    assertNotNull(WavdropWidgetUpdater.buildViews(context, layout, snapshot(false), null, look(style, intensity)))
+                    assertNotNull(StereoSineWidgetUpdater.buildViews(context, layout, snapshot(true), bitmap, look(style, intensity), resolveColor = ::presetArgb))
+                    assertNotNull(StereoSineWidgetUpdater.buildViews(context, layout, snapshot(false), null, look(style, intensity)))
                 }
             }
         }
@@ -135,11 +135,11 @@ class WidgetAppearanceRenderTest {
     @Test fun controlAndOpenAppPendingIntentsAreTheSameForEveryAppearance() {
         WidgetBackgroundStyle.entries.forEach { style ->
             WidgetArtworkIntensity.entries.forEach { intensity ->
-                WavdropWidgetUpdater.buildViews(context, R.layout.stereosine_widget_normal, snapshot(true), null, look(style, intensity))
+                StereoSineWidgetUpdater.buildViews(context, R.layout.stereosine_widget_normal, snapshot(true), null, look(style, intensity))
                 listOf(
-                    WavdropWidgetUpdater.RC_PREVIOUS to WidgetActionReceiver.ACTION_WIDGET_PREVIOUS,
-                    WavdropWidgetUpdater.RC_PLAY_PAUSE to WidgetActionReceiver.ACTION_WIDGET_PLAY_PAUSE,
-                    WavdropWidgetUpdater.RC_NEXT to WidgetActionReceiver.ACTION_WIDGET_NEXT,
+                    StereoSineWidgetUpdater.RC_PREVIOUS to WidgetActionReceiver.ACTION_WIDGET_PREVIOUS,
+                    StereoSineWidgetUpdater.RC_PLAY_PAUSE to WidgetActionReceiver.ACTION_WIDGET_PLAY_PAUSE,
+                    StereoSineWidgetUpdater.RC_NEXT to WidgetActionReceiver.ACTION_WIDGET_NEXT,
                 ).forEach { (code, action) ->
                     val pi = broadcast(code, action)
                     assertNotNull("$action missing for $style/$intensity", pi)
@@ -147,7 +147,7 @@ class WidgetAppearanceRenderTest {
                     assertEquals(WidgetActionReceiver::class.java.name, shadowOf(pi).savedIntent.component?.className)
                 }
                 val open = PendingIntent.getActivity(
-                    context, WavdropWidgetUpdater.RC_OPEN_APP,
+                    context, StereoSineWidgetUpdater.RC_OPEN_APP,
                     Intent(context, com.launchpoint.stereosine.MainActivity::class.java),
                     PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
                 )
@@ -234,14 +234,14 @@ class WidgetAppearanceRenderTest {
     }
 
     @Test fun theProviderCleansUpAndMigratesAppearanceOnLauncherEvents() {
-        val src = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/WavdropWidgetProvider.kt").readText()
+        val src = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/StereoSineWidgetProvider.kt").readText()
         assertTrue(src.substringAfter("override fun onDeleted").substringBefore("override fun onDisabled").contains("it.remove(appWidgetIds.toList())"))
         assertTrue(src.substringAfter("override fun onDisabled").substringBefore("override fun onRestored").contains("clearAll()"))
         assertTrue(src.substringAfter("override fun onRestored").contains("it.migrate(oldWidgetIds, newWidgetIds)"))
     }
 
     @Test fun theUpdaterRoutesEveryRequestThroughTheSerialisingCoordinatorAndAddsNoNewBroadcastSurface() {
-        val src = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/WavdropWidgetUpdater.kt").readText()
+        val src = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/StereoSineWidgetUpdater.kt").readText()
         assertEquals("no direct launches of performUpdate outside the coordinator", 1, Regex("""performUpdate\(it, target\)""").findAll(src).count())
         assertTrue(src.contains("coordinator.request(null)") && src.contains("coordinator.request(appWidgetIds)"))
         assertFalse(src.contains("AlarmManager"))
@@ -250,7 +250,7 @@ class WidgetAppearanceRenderTest {
     }
 
     @Test fun noPlaybackServiceOrPlaybackPackageChangesAreNeededForAppearance() {
-        val updater = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/WavdropWidgetUpdater.kt").readText()
+        val updater = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/StereoSineWidgetUpdater.kt").readText()
         assertFalse(updater.contains("PlaybackService::class"))
         assertFalse(updater.contains("import com.launchpoint.stereosine.playback.PlaybackService"))
         assertNull(Regex("""import com\.launchpoint\.wavdrop\.playback""").find(updater))
@@ -285,21 +285,21 @@ class WidgetAppearanceRenderTest {
         val bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
         WidgetArtworkIntensity.entries.forEach { intensity ->
             val asked = mutableListOf<Int>()
-            WavdropWidgetUpdater.buildViews(
+            StereoSineWidgetUpdater.buildViews(
                 context, R.layout.stereosine_widget_normal, snapshot(true), bitmap, look(WidgetBackgroundStyle.ARTWORK, intensity),
                 resolveColor = { _, res -> asked += res; presetArgb(res) },
             )
             assertEquals("Artwork/$intensity resolves its own preset once", listOf(intensity.scrimColorRes), asked)
 
             val solidAsked = mutableListOf<Int>()
-            WavdropWidgetUpdater.buildViews(
+            StereoSineWidgetUpdater.buildViews(
                 context, R.layout.stereosine_widget_normal, snapshot(true), bitmap, look(WidgetBackgroundStyle.SOLID, intensity),
                 resolveColor = { _, res -> solidAsked += res; presetArgb(res) },
             )
             assertTrue("Solid never paints an overlay", solidAsked.isEmpty())
 
             val noArtAsked = mutableListOf<Int>()
-            WavdropWidgetUpdater.buildViews(
+            StereoSineWidgetUpdater.buildViews(
                 context, R.layout.stereosine_widget_normal, snapshot(true), null, look(WidgetBackgroundStyle.ARTWORK, intensity),
                 resolveColor = { _, res -> noArtAsked += res; presetArgb(res) },
             )
@@ -330,7 +330,7 @@ class WidgetAppearanceRenderTest {
     }
 
     @Test fun theUpdaterNoLongerFeedsAColorResourceIntoSetBackgroundResource() {
-        val src = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/WavdropWidgetUpdater.kt").readText()
+        val src = mainFile("kotlin/com/launchpoint/stereosine/ui/widget/StereoSineWidgetUpdater.kt").readText()
         assertFalse(src.contains("\"setBackgroundResource\", state.scrimColorRes"))
         assertTrue(src.contains("views.setScrimColor(R.id.widget_scrim, resolveColor(context, state.scrimColorRes))"))
         // the only remaining setBackgroundResource use is the play/pause DRAWABLE selector

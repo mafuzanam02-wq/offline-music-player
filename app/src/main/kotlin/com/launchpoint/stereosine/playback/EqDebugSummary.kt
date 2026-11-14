@@ -2,7 +2,7 @@ package com.launchpoint.stereosine.playback
 
 import com.launchpoint.stereosine.data.settings.AudioEnhancementSettings
 import com.launchpoint.stereosine.data.settings.EqPresetType
-import com.launchpoint.stereosine.data.settings.WavdropPresetCatalog
+import com.launchpoint.stereosine.data.settings.StereoSinePresetCatalog
 
 // Builds the source-specific debug summary that appears in the [apply] EQ log line.
 // Pure function — no Android or DataStore dependencies — so it can be unit-tested directly.
@@ -19,15 +19,15 @@ internal fun buildEqApplyDebugSummary(
         "preset=FLAT activeLevels=${List(bandCount) { 0 }}"
 
     EqPresetType.WAVDROP_PRESET -> {
-        val id     = settings.eqWavdropPresetId
-        val preset = WavdropPresetCatalog.findById(id)
+        val id     = settings.eqStereoSinePresetId
+        val preset = StereoSinePresetCatalog.findById(id)
         when {
             preset == null ->
-                "preset=WAVDROP_PRESET wavdropId=$id activeLevels=unavailable(id_not_in_catalog→flat)"
+                "preset=WAVDROP_PRESET stereoSineId=$id activeLevels=unavailable(id_not_in_catalog→flat)"
             preset.bandLevels.size != bandCount ->
-                "preset=WAVDROP_PRESET wavdropId=${preset.id} activeLevels=unavailable(band_mismatch→flat)"
+                "preset=WAVDROP_PRESET stereoSineId=${preset.id} activeLevels=unavailable(band_mismatch→flat)"
             else ->
-                "preset=WAVDROP_PRESET wavdropId=${preset.id} wavdropName=${preset.displayName} activeLevels=${preset.bandLevels}"
+                "preset=WAVDROP_PRESET stereoSineId=${preset.id} stereoSineName=${preset.displayName} activeLevels=${preset.bandLevels}"
         }
     }
 

@@ -107,5 +107,5 @@ interface PlaylistDao {
      * stored here and are never touched. Playlists are fully exported, so the safety snapshot covers what is removed.
      */
     @Query("DELETE FROM playlists")
-    suspend fun clearWavdropPlaylistsForRecovery()
+    suspend fun clearStereoSinePlaylistsForRecovery()
 }

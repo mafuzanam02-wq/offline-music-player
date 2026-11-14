@@ -99,7 +99,7 @@ private fun AccentColor.toPrimaryColors() = when (this) {
 }
 
 @Composable
-fun WavdropTheme(
+fun StereoSineTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     accentColor: AccentColor = AccentColor.MIDNIGHT_VIOLET,
     content: @Composable () -> Unit,
@@ -142,7 +142,7 @@ fun WavdropTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography  = WavdropTypography,
+        typography  = StereoSineTypography,
         content     = content,
     )
 }

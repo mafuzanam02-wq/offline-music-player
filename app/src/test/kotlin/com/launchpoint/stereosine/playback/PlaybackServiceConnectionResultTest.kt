@@ -27,7 +27,7 @@ class PlaybackServiceConnectionResultTest {
             val controller = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
                 context.packageName, 0, 0, 0, 0, true, Bundle.EMPTY, true,
             )
-            val actual = PlaybackService.withWavdropCommands(session, controller)
+            val actual = PlaybackService.withStereoSineCommands(session, controller)
 
             val requiredPlayerCommands = listOf(
                 Player.COMMAND_PLAY_PAUSE,

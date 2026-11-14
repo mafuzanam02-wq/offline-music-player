@@ -11,15 +11,15 @@
 
 .EXAMPLE
   # One-shot: dump what the device buffer holds right now, plus device info and memory
-  .\scripts\Capture-WavdropValidation.ps1 -Label full-A1 -Mode Snapshot
+  .\scripts\Capture-StereoSineValidation.ps1 -Label full-A1 -Mode Snapshot
 
 .EXAMPLE
   # Live: stream until Ctrl+C (run it BEFORE the test action; the buffer is not cleared)
-  .\scripts\Capture-WavdropValidation.ps1 -Label bounded-B3 -Mode Live
+  .\scripts\Capture-StereoSineValidation.ps1 -Label bounded-B3 -Mode Live
 
 .EXAMPLE
   # Memory sample only
-  .\scripts\Capture-WavdropValidation.ps1 -Label bounded-peak -Mode Meminfo
+  .\scripts\Capture-StereoSineValidation.ps1 -Label bounded-peak -Mode Meminfo
 #>
 [CmdletBinding()]
 param(
@@ -89,8 +89,8 @@ $info | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $dir 'device-info
 if (-not $info.installed) { Write-Warning "$Package is not installed on this device." }
 
 # StereoSine tags only; '*:S' silences everything else.
-$tags = @('WavdropValidation:D', 'WavdropStartTrace:D', 'WavdropQueuePerf:D', 'WavdropSessionPerf:D', 'WavdropSessionProgress:D',
-          'WavdropCrossfade:D', 'WavdropNextSlot:D', 'WavdropResume:D', 'Wavdrop-Startup:D', 'WavStats-PC:W', '*:S')
+$tags = @('StereoSineValidation:D', 'StereoSineStartTrace:D', 'StereoSineQueuePerf:D', 'StereoSineSessionPerf:D', 'StereoSineSessionProgress:D',
+          'StereoSineCrossfade:D', 'StereoSineNextSlot:D', 'StereoSineResume:D', 'StereoSine-Startup:D', 'WavStats-PC:W', '*:S')
 # Deliberately no AndroidRuntime tag: it is shared by every app on the device and would collect unrelated apps' crash reports.
 # WavDrop-only crash diagnostics are a separate, explicitly requested procedure (see docs/qa/P5-F-DEVICE-VALIDATION.md).
 

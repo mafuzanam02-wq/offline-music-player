@@ -58,8 +58,8 @@ import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropItemPlacement
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
 import kotlinx.coroutines.launch
 
@@ -219,7 +219,7 @@ private fun ArtistListContent(
             contentPadding = PaddingValues(start = 0.dp, top = 4.dp, end = 32.dp, bottom = 4.dp),
         ) {
             items(artists, key = { it.artistKey }) { artist ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     ArtistRow(artist = artist, onClick = { onArtistClick(artist.artistKey) })
                     HorizontalDivider(
                         color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
@@ -257,7 +257,7 @@ private fun ArtistRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,

@@ -23,7 +23,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import com.launchpoint.stereosine.data.local.entity.TrackStatsEntity
@@ -33,7 +33,7 @@ import com.launchpoint.stereosine.data.repository.StatsRepository
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.settings.LibraryScanSettingsRepository
 import com.launchpoint.stereosine.data.settings.ThemeMode
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,7 +67,7 @@ class WrappedScreenVideoExportInstrumentedTest {
     private val slideBase get() = wrappedExportBaseDir(ctx.cacheDir)
     private val evidence get() = File(ctx.getExternalFilesDir(null)!!, "vid02c").also { it.mkdirs() }
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var dsScope: CoroutineScope
     private val show = mutableStateOf(true)
     private var videosBefore = emptySet<String>()
@@ -78,7 +78,7 @@ class WrappedScreenVideoExportInstrumentedTest {
         videoDir.mkdirs(); slideBase.mkdirs()
         videosBefore = videoDir.list().orEmpty().toSet()
         slidesBefore = slideBase.list().orEmpty().toSet()
-        db = Room.inMemoryDatabaseBuilder(ctx, WavdropDatabase::class.java).allowMainThreadQueries().build()
+        db = Room.inMemoryDatabaseBuilder(ctx, StereoSineDatabase::class.java).allowMainThreadQueries().build()
         dsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 
@@ -131,7 +131,7 @@ class WrappedScreenVideoExportInstrumentedTest {
             vm = WrappedViewModel(songRepo, statsRepo, AppSettingsRepository(store))
         }
         rule.setContent {
-            WavdropTheme(themeMode = ThemeMode.DARK) {
+            StereoSineTheme(themeMode = ThemeMode.DARK) {
                 if (show.value) {
                     WrappedScreen(
                         onNavigateBack = {}, onTrackDetailsClick = {}, onArtistClick = {}, onAlbumClick = {},

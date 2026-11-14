@@ -3,7 +3,7 @@ package com.launchpoint.stereosine.data.backup
 import android.util.Log
 import androidx.room.withTransaction
 import com.launchpoint.stereosine.BuildConfig
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.dao.ImportBaselineDao
 import com.launchpoint.stereosine.data.local.dao.LyricsOverrideDao
 import com.launchpoint.stereosine.data.local.dao.PendingBackupExtensionDao
@@ -30,7 +30,7 @@ import javax.inject.Singleton
 
 @Singleton
 class WavdropBackupImportRepository @Inject constructor(
-    private val db: WavdropDatabase,
+    private val db: StereoSineDatabase,
     private val songDao: SongDao,
     private val trackStatsDao: TrackStatsDao,
     private val lyricsOverrideDao: LyricsOverrideDao,

@@ -70,7 +70,7 @@ internal class SessionProgressDiagnostics(
     }
 
     companion object {
-        const val TAG = "WavdropSessionProgress"
+        const val TAG = "StereoSineSessionProgress"
 
         /** Slow, bounded: far longer than any UI tick, only while playing, DEBUG builds only. */
         const val HEARTBEAT_MS = 10_000L

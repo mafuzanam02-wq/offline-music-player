@@ -5,7 +5,7 @@ data class AudioEnhancementSettings(
     val eqPresetType: EqPresetType = EqPresetType.FLAT,
     val eqPlatformPresetIndex: Int? = null,
     val eqCustomBandLevels: List<Int> = emptyList(),
-    val eqWavdropPresetId: String? = null,
+    val eqStereoSinePresetId: String? = null,
 )
 
 enum class EqPresetType { FLAT, WAVDROP_PRESET, PLATFORM, CUSTOM }

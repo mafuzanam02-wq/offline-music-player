@@ -40,3 +40,51 @@ move (`git mv`-equivalent renames), `StereoSineApp`, manifest + alias + intent-a
 (`StereoSine`), user-visible prose, theme/resource/asset renames, Wrapped export file prefixes, Room schema dir,
 `.idea/.name`, capture-script default package (so it never targets the old app), tests updated, plus
 `BrandIdentityTest`.
+
+---
+
+# BRAND-02 — Active Kotlin symbols and internal tooling (completed)
+
+Baseline HEAD `bd70dbe67dd1477d5767ff4cb54955e421cf5484`. Behaviour is unchanged; no persisted identifier, schema,
+application ID, backup metadata or signing value was touched.
+
+## Renamed (code-only symbols and source files)
+- Types/objects: `WavdropDatabase`→`StereoSineDatabase`, `WavdropTheme`/`WavdropTypography`/`WavdropMotion`/`WavdropHaptics`/
+  `WavdropFadeThrough`, `WavdropNavGraph`/`WavdropNavViewModel`, `WavdropWidgetProvider`/`WavdropWidgetUpdater`/
+  `WavdropWidgetEntryPoint`, `WavdropMediaLibrary`/`WavdropLibraryIds`, `WavdropPreset`/`WavdropPresetCatalog`/
+  `WavdropPresetResolver`, `WavdropAbout`, `WavdropSessionCallback` (all → `StereoSine…`).
+- Functions/properties: `parseWavdropPresetId`, `resolveWavdropBandLevels`, `resolveWavdropInitialLevels`, `setEqWavdropPreset`,
+  `onSelectWavdropPreset`, `wavdropPresetsAvailable`, `stateAfterWavdrop`, `withWavdropCommands`,
+  `clearWavdropPlaylistsForRecovery`, `eqWavdropPresetId`, `wavdropPresetId`, `wavdropId`/`wavdropName` (debug summary text),
+  `EQ_WAVDROP_PRESET_ID`, `wavdropPreferencesDataStore`, `wavdrop{FadeThrough,ItemPlacement,PressFeedback,PressScale}`.
+- Constants: `WAVDROP_DATABASE_NAME`→`DATABASE_FILE_NAME`, `WAVDROP_ALBUM_ID_EXTRA`→`ALBUM_ID_EXTRA` (values unchanged).
+- 18 Kotlin source files (11 main + 7 test) plus the capture script renamed to match; schema directory
+  `schemas/…WavdropDatabase` → `schemas/…StereoSineDatabase` (Room derives it from the class name; JSON content byte-identical).
+- Manifest: only `.ui.widget.WavdropWidgetProvider` → `.ui.widget.StereoSineWidgetProvider` (exported status unchanged).
+- Log tags (non-backup): `Wavdrop{Validation,StartTrace,QueuePerf,SessionPerf,SessionProgress,Crossfade,NextSlot,Resume,Gapless,
+  AudioSession,AudioEffects,Artwork,SearchPlayback,Widget}` and `Wavdrop-{Startup,Sync,IconSwitch}` → `StereoSine…`.
+- Tooling: `WAVDROP_VALIDATION_BOUNDED`→`STEREOSINE_VALIDATION_BOUNDED` (BuildConfig, debug-only; release stays hard-coded false);
+  Gradle `-PstereosineValidationBounded` (legacy `-PwavdropValidationBounded` kept as a documented alias);
+  `stereosine.bench` / `STEREOSINE_BENCH[_SIZES]` (legacy `wavdrop.bench` / `WAVDROP_BENCH[_SIZES]` still accepted);
+  `stereosine.expectValidationBounded`; `scripts/Capture-WavdropValidation.ps1`→`Capture-StereoSineValidation.ps1`
+  (default output folder is now `%USERPROFILE%\stereosine-validation-logs`).
+
+## Deliberately preserved (compatibility)
+`wavdrop_backup`, `wavdrop_wdbk`, `.wdbk` markers, backup writer metadata (`app`, `packageName`, `database`) and filenames
+(`wavdrop-backup[-date].wdbk`), `wavdrop.db`, DataStore names (`wavdrop_preferences`, `wavdrop_widget_appearance`,
+`wavdrop_widget_state`), key `eq_wavdrop_preset_id`, WorkManager `wavdrop_auto_backup_due_check`, `EqPresetType.WAVDROP_PRESET`,
+stored event sources (`wavdrop_playback`, `wavdrop_desktop_playback`, `wavdrop_json`) and the constants `SOURCE_WAVDROP_PLAYBACK`,
+`ImportSourceTypes.WAVDROP_JSON` that carry them, MediaLibrary ids (`wavdrop_root|recent|recent_root|songs`), extra key
+`wavdrop_album_id`, `WAVDROP_UPLOAD_*` signing variables. Pinned by `PersistenceContractTest`.
+
+## Retained active symbols — backup/restore subsystem (next slice)
+`WavdropBackup*`, `DesktopWavdropBackup*`, `WavdropMergePreviewAnalyzer`, `BackupDocumentReadResult.Wavdrop`,
+`ImportFileValidation.WAVDROP_*_MESSAGE`, `isLikelyWavdropBackup*`, backup log tags (`WavdropBackup`, `WavdropRestore`,
+`WavdropImportApply`, `WavdropOverlayPlanner`, `WavdropPreview`) and their test classes. They name the legacy format and move
+together with the backup writer-metadata/filename decision.
+
+## Remaining risks
+- Renaming the widget provider class changes the component name: a widget already placed from a pre-BRAND-02 StereoSine build
+  would be dropped on update. Not a risk for installs that never shipped the BRAND-01 identity.
+- Docs under `docs/` and root `*.md` still carry the old name (historical/QA); `VersionConfigTest` ties `WHATS_NEW.md`'s title to it.
+- Residual user-visible old text: "Always saves as wavdrop-backup.wdbk" in Backup settings (filename decision pending).

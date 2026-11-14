@@ -40,7 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.launchpoint.stereosine.data.settings.EqualizerCapabilities
 import com.launchpoint.stereosine.data.settings.EqualizerPlatformPreset
 import com.launchpoint.stereosine.data.settings.EqPresetType
-import com.launchpoint.stereosine.data.settings.WavdropPresetCatalog
+import com.launchpoint.stereosine.data.settings.StereoSinePresetCatalog
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +53,7 @@ fun SettingsEqualizerScreen(
     val eqPresetType          by viewModel.eqPresetType.collectAsStateWithLifecycle()
     val eqPlatformPresetIndex by viewModel.eqPlatformPresetIndex.collectAsStateWithLifecycle()
     val eqCustomBandLevels    by viewModel.eqCustomBandLevels.collectAsStateWithLifecycle()
-    val eqWavdropPresetId     by viewModel.eqWavdropPresetId.collectAsStateWithLifecycle()
+    val eqStereoSinePresetId     by viewModel.eqStereoSinePresetId.collectAsStateWithLifecycle()
     val eqCapabilities        by viewModel.eqCapabilities.collectAsStateWithLifecycle()
     var showPresetDialog by remember { mutableStateOf(false) }
 
@@ -67,7 +67,7 @@ fun SettingsEqualizerScreen(
 
     val eqPresetLabel = when (eqPresetType) {
         EqPresetType.FLAT           -> "Flat"
-        EqPresetType.WAVDROP_PRESET -> WavdropPresetCatalog.findById(eqWavdropPresetId)?.displayName ?: "StereoSine"
+        EqPresetType.WAVDROP_PRESET -> StereoSinePresetCatalog.findById(eqStereoSinePresetId)?.displayName ?: "StereoSine"
         EqPresetType.PLATFORM       -> caps.platformPresets.getOrNull(eqPlatformPresetIndex ?: -1)?.name ?: "Flat"
         EqPresetType.CUSTOM         -> "Custom"
     }
@@ -115,7 +115,7 @@ fun SettingsEqualizerScreen(
                 if (eqPresetType == EqPresetType.CUSTOM || eqPresetType == EqPresetType.WAVDROP_PRESET) {
                     item {
                         val initialLevels = if (eqPresetType == EqPresetType.WAVDROP_PRESET) {
-                            WavdropPresetCatalog.findById(eqWavdropPresetId)
+                            StereoSinePresetCatalog.findById(eqStereoSinePresetId)
                                 ?.bandLevels?.takeIf { it.size == caps.bandCount }
                                 ?: List(caps.bandCount) { 0 }
                         } else {
@@ -144,13 +144,13 @@ fun SettingsEqualizerScreen(
     if (showPresetDialog) {
         EqPresetDialog(
             presetType              = eqPresetType,
-            wavdropPresetId         = eqWavdropPresetId,
+            stereoSinePresetId         = eqStereoSinePresetId,
             platformPresetIndex     = eqPlatformPresetIndex,
             capabilities            = caps,
-            wavdropPresetsAvailable = caps.bandCount == 5,
+            stereoSinePresetsAvailable = caps.bandCount == 5,
             onSelectFlat            = { viewModel.setEqFlat(); showPresetDialog = false },
             onSelectCustom          = { viewModel.setEqCustomPreset(caps.bandCount); showPresetDialog = false },
-            onSelectWavdropPreset   = { id -> viewModel.setEqWavdropPreset(id); showPresetDialog = false },
+            onSelectStereoSinePreset   = { id -> viewModel.setEqStereoSinePreset(id); showPresetDialog = false },
             onSelectPlatformPreset  = { index -> viewModel.setEqPlatformPreset(index); showPresetDialog = false },
             onDismiss               = { showPresetDialog = false },
         )
@@ -295,13 +295,13 @@ private fun EqBandRow(
 @Composable
 private fun EqPresetDialog(
     presetType: EqPresetType,
-    wavdropPresetId: String?,
+    stereoSinePresetId: String?,
     platformPresetIndex: Int?,
     capabilities: EqualizerCapabilities,
-    wavdropPresetsAvailable: Boolean,
+    stereoSinePresetsAvailable: Boolean,
     onSelectFlat: () -> Unit,
     onSelectCustom: () -> Unit,
-    onSelectWavdropPreset: (String) -> Unit,
+    onSelectStereoSinePreset: (String) -> Unit,
     onSelectPlatformPreset: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -323,19 +323,19 @@ private fun EqPresetDialog(
                     onClick  = onSelectCustom,
                 )
                 // 3. StereoSine Presets (5-band devices only)
-                if (wavdropPresetsAvailable) {
+                if (stereoSinePresetsAvailable) {
                     Text(
                         text     = "StereoSine",
                         style    = MaterialTheme.typography.labelSmall,
                         color    = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
                     )
-                    WavdropPresetCatalog.all.forEach { preset ->
+                    StereoSinePresetCatalog.all.forEach { preset ->
                         PresetDialogRow(
                             label       = preset.displayName,
                             description = preset.description,
-                            selected    = presetType == EqPresetType.WAVDROP_PRESET && wavdropPresetId == preset.id,
-                            onClick     = { onSelectWavdropPreset(preset.id) },
+                            selected    = presetType == EqPresetType.WAVDROP_PRESET && stereoSinePresetId == preset.id,
+                            onClick     = { onSelectStereoSinePreset(preset.id) },
                         )
                     }
                 }

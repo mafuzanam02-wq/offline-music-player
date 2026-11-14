@@ -50,10 +50,10 @@ import com.launchpoint.stereosine.data.model.SmartCollection
 import com.launchpoint.stereosine.data.model.SmartCollectionType
 import com.launchpoint.stereosine.data.model.Song
 import com.launchpoint.stereosine.data.search.LibrarySearchIndex
-import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
-import com.launchpoint.stereosine.ui.components.motion.wavdropItemPlacement
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 
 private const val COLLAPSED_SEARCH_RESULT_LIMIT = 5
 private const val EXPANDED_SEARCH_RESULT_LIMIT  = 20
@@ -184,7 +184,7 @@ private fun GroupedSearchContentImpl(
                 SearchSectionHeader(title = "Songs", count = results.songs.size, isCapped = results.songsCapped)
             }
             items(displayedSongs, key = { "song_${it.id}" }) { song ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     SearchSongResultRow(
                         song = song,
                         query = query,
@@ -214,7 +214,7 @@ private fun GroupedSearchContentImpl(
                 SearchSectionHeader(title = "Artists", count = results.artists.size, isCapped = results.artistsCapped)
             }
             items(displayedArtists, key = { "artist_${it.artistKey}" }) { artist ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     SearchArtistRow(
                         artist = artist,
                         query = query,
@@ -243,7 +243,7 @@ private fun GroupedSearchContentImpl(
                 SearchSectionHeader(title = "Albums", count = results.albums.size, isCapped = results.albumsCapped)
             }
             items(displayedAlbums, key = { "album_${it.albumKey}" }) { album ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     SearchAlbumRow(
                         album = album,
                         query = query,
@@ -272,7 +272,7 @@ private fun GroupedSearchContentImpl(
                 SearchSectionHeader(title = "Playlists", count = results.playlists.size, isCapped = results.playlistsCapped)
             }
             items(displayedPlaylists, key = { "playlist_${it.id}" }) { playlist ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     SearchPlaylistRow(
                         playlist = playlist,
                         query = query,
@@ -301,7 +301,7 @@ private fun GroupedSearchContentImpl(
                 SearchSectionHeader(title = "Smart Collections", count = results.smartCollections.size, isCapped = results.smartCollectionsCapped)
             }
             items(displayedSmartCollections, key = { "smart_${it.type.name}" }) { collection ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     SearchSmartCollectionRow(
                         collection = collection,
                         query      = query,
@@ -330,7 +330,7 @@ private fun GroupedSearchContentImpl(
                 SearchSectionHeader(title = "Folders", count = results.folders.size, isCapped = results.foldersCapped)
             }
             items(displayedFolders, key = { "folder_${it.folderKey}" }) { folder ->
-                Column(modifier = wavdropItemPlacement(reducedMotion)) {
+                Column(modifier = stereoSineItemPlacement(reducedMotion)) {
                     SearchFolderRow(
                         folder = folder,
                         query = query,
@@ -398,7 +398,7 @@ private fun SearchArtistRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -449,7 +449,7 @@ private fun SearchAlbumRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -507,7 +507,7 @@ private fun SearchPlaylistRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -555,7 +555,7 @@ private fun SearchSmartCollectionRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -610,7 +610,7 @@ private fun SearchFolderRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -652,7 +652,7 @@ private fun SearchSectionHeader(
 ) {
     val countLabel = if (isCapped) "$count+" else "$count"
     // Fade only when the count changes (title is fixed per section), so live result updates settle.
-    WavdropFadeThrough(
+    StereoSineFadeThrough(
         targetState = countLabel,
         modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 6.dp),
     ) { label ->

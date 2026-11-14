@@ -20,10 +20,10 @@ internal object PhysicalQueuePolicy {
     const val BOUNDED_WINDOW_ENABLED = true
 
     /**
-     * P5-F: compile-time DEBUG validation override (`-PwavdropValidationBounded=true`). Hard-coded false in the release
+     * P5-F: compile-time DEBUG validation override (`-PstereosineValidationBounded=true`). Hard-coded false in the release
      * BuildConfig and in every ordinary debug build; not a setting, not a second rollout gate. Fixed for the process lifetime.
      */
-    val VALIDATION_BOUNDED: Boolean = com.launchpoint.stereosine.BuildConfig.WAVDROP_VALIDATION_BOUNDED
+    val VALIDATION_BOUNDED: Boolean = com.launchpoint.stereosine.BuildConfig.STEREOSINE_VALIDATION_BOUNDED
 
     /** Stable build-variant label for diagnostics. */
     val variantLabel: String get() = if (BOUNDED_WINDOW_ENABLED || VALIDATION_BOUNDED) "bounded" else "full"

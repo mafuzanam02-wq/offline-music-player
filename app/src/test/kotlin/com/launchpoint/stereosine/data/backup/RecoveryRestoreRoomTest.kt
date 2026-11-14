@@ -5,7 +5,7 @@ import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupEvent
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupPlaylistSong
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupSong
 import com.launchpoint.stereosine.data.backup.RecoveryTestFixtures.backupStats
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.ImportBaselineEntity
 import com.launchpoint.stereosine.data.local.entity.LyricsOverrideEntity
 import com.launchpoint.stereosine.data.local.entity.PendingBackupExtensionEntity
@@ -39,12 +39,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class RecoveryRestoreRoomTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var recovery: RecoveryRestoreRepository
     private lateinit var merge: WavdropBackupImportRepository
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build()
         recovery = RecoveryRestoreRepository(
             db, db.songDao(), db.trackStatsDao(), db.lyricsOverrideDao(), db.importBaselineDao(), db.playlistDao(),

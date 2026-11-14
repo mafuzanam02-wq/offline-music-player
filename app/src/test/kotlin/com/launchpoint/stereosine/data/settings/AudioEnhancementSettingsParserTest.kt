@@ -247,43 +247,43 @@ class AudioEnhancementSettingsParserTest {
         assertEquals("Flat", preset.name)
     }
 
-    // ── parseWavdropPresetId ──────────────────────────────────────────────────
+    // ── parseStereoSinePresetId ──────────────────────────────────────────────────
 
     @Test
-    fun `parseWavdropPresetId null returns null`() {
-        assertNull(AudioEnhancementsRepository.parseWavdropPresetId(null))
+    fun `parseStereoSinePresetId null returns null`() {
+        assertNull(AudioEnhancementsRepository.parseStereoSinePresetId(null))
     }
 
     @Test
-    fun `parseWavdropPresetId empty string returns null`() {
-        assertNull(AudioEnhancementsRepository.parseWavdropPresetId(""))
+    fun `parseStereoSinePresetId empty string returns null`() {
+        assertNull(AudioEnhancementsRepository.parseStereoSinePresetId(""))
     }
 
     @Test
-    fun `parseWavdropPresetId blank string returns null`() {
-        assertNull(AudioEnhancementsRepository.parseWavdropPresetId("   "))
+    fun `parseStereoSinePresetId blank string returns null`() {
+        assertNull(AudioEnhancementsRepository.parseStereoSinePresetId("   "))
     }
 
     @Test
-    fun `parseWavdropPresetId valid id returns that id`() {
-        assertEquals("balanced", AudioEnhancementsRepository.parseWavdropPresetId("balanced"))
+    fun `parseStereoSinePresetId valid id returns that id`() {
+        assertEquals("balanced", AudioEnhancementsRepository.parseStereoSinePresetId("balanced"))
     }
 
     @Test
-    fun `parseWavdropPresetId trims surrounding whitespace`() {
-        assertEquals("clarity", AudioEnhancementsRepository.parseWavdropPresetId("  clarity  "))
+    fun `parseStereoSinePresetId trims surrounding whitespace`() {
+        assertEquals("clarity", AudioEnhancementsRepository.parseStereoSinePresetId("  clarity  "))
     }
 
     @Test
-    fun `parseWavdropPresetId preserves kebab-case id`() {
-        assertEquals("spoken-word", AudioEnhancementsRepository.parseWavdropPresetId("spoken-word"))
+    fun `parseStereoSinePresetId preserves kebab-case id`() {
+        assertEquals("spoken-word", AudioEnhancementsRepository.parseStereoSinePresetId("spoken-word"))
     }
 
     // ── AudioEnhancementSettings — WAVDROP_PRESET model ──────────────────────
 
     @Test
-    fun `default AudioEnhancementSettings eqWavdropPresetId is null`() {
-        assertNull(AudioEnhancementSettings().eqWavdropPresetId)
+    fun `default AudioEnhancementSettings eqStereoSinePresetId is null`() {
+        assertNull(AudioEnhancementSettings().eqStereoSinePresetId)
     }
 
     @Test
@@ -291,10 +291,10 @@ class AudioEnhancementSettingsParserTest {
         val settings = AudioEnhancementSettings(
             eqEnabled         = true,
             eqPresetType      = EqPresetType.WAVDROP_PRESET,
-            eqWavdropPresetId = "balanced",
+            eqStereoSinePresetId = "balanced",
         )
         assertEquals(EqPresetType.WAVDROP_PRESET, settings.eqPresetType)
-        assertEquals("balanced", settings.eqWavdropPresetId)
+        assertEquals("balanced", settings.eqStereoSinePresetId)
     }
 
     @Test
@@ -305,20 +305,20 @@ class AudioEnhancementSettingsParserTest {
         val settings = AudioEnhancementSettings(
             eqEnabled          = true,
             eqPresetType       = EqPresetType.WAVDROP_PRESET,
-            eqWavdropPresetId  = "warm",
+            eqStereoSinePresetId  = "warm",
             eqCustomBandLevels = customLevels,
         )
         assertEquals(EqPresetType.WAVDROP_PRESET, settings.eqPresetType)
-        assertEquals("warm", settings.eqWavdropPresetId)
+        assertEquals("warm", settings.eqStereoSinePresetId)
         assertEquals(customLevels, settings.eqCustomBandLevels)
     }
 
     @Test
-    fun `AudioEnhancementSettings eqWavdropPresetId flows from settings field`() {
+    fun `AudioEnhancementSettings eqStereoSinePresetId flows from settings field`() {
         val settings = AudioEnhancementSettings(
             eqPresetType      = EqPresetType.WAVDROP_PRESET,
-            eqWavdropPresetId = "deep-bass",
+            eqStereoSinePresetId = "deep-bass",
         )
-        assertEquals("deep-bass", settings.eqWavdropPresetId)
+        assertEquals("deep-bass", settings.eqStereoSinePresetId)
     }
 }

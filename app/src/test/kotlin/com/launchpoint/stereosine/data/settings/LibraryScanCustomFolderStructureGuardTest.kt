@@ -131,9 +131,9 @@ class LibraryScanCustomFolderStructureGuardTest {
         assertFalse(manifest.contains("MANAGE_EXTERNAL_STORAGE") || manifest.contains("INTERNET"))
         val rules = src("data/settings/LibraryScanSettingsRules.kt")
         assertFalse(rules.contains("Log."))
-        val db = src("data/local/WavdropDatabase.kt")
+        val db = src("data/local/StereoSineDatabase.kt")
         val version = Regex("""version\s*=\s*(\d+)""").find(db)!!.groupValues[1].toInt()
-        val newest = File("schemas/com.launchpoint.stereosine.data.local.WavdropDatabase").listFiles()!!
+        val newest = File("schemas/com.launchpoint.stereosine.data.local.StereoSineDatabase").listFiles()!!
             .mapNotNull { it.nameWithoutExtension.toIntOrNull() }.max()
         assertEquals("no Room schema change", newest, version)
         assertTrue("a dedicated DataStore key, additive", src("data/settings/LibraryScanSettingsRepository.kt").contains("""stringSetPreferencesKey("library_custom_excluded_folder_paths")"""))

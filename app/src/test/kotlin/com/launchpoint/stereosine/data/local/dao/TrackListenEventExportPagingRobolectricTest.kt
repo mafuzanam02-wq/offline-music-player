@@ -13,7 +13,7 @@ import com.launchpoint.stereosine.data.backup.wdbk.WdbkExportSnapshot
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkReader
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkWriter
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -34,11 +34,11 @@ import java.io.ByteArrayOutputStream
 @Config(sdk = [35])
 class TrackListenEventExportPagingRobolectricTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var dao: TrackListenEventDao
 
     @Before fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java)
             .allowMainThreadQueries().build()
         dao = db.trackListenEventDao()
     }

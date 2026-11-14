@@ -149,9 +149,9 @@ private fun NavHostController.navigateNowPlaying() {
 }
 
 @Composable
-fun WavdropNavGraph(
+fun StereoSineNavGraph(
     navController: NavHostController = rememberNavController(),
-    viewModel: WavdropNavViewModel = hiltViewModel(),
+    viewModel: StereoSineNavViewModel = hiltViewModel(),
 ) {
     val startupDestination by viewModel.startupDestination.collectAsStateWithLifecycle()
     val hasCompletedOnboarding by viewModel.hasCompletedOnboarding.collectAsStateWithLifecycle()

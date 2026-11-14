@@ -2,7 +2,7 @@ package com.launchpoint.stereosine.data.stats
 
 import androidx.room.Room
 import androidx.sqlite.db.SimpleSQLiteQuery
-import com.launchpoint.stereosine.data.local.WavdropDatabase
+import com.launchpoint.stereosine.data.local.StereoSineDatabase
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import com.launchpoint.stereosine.data.repository.StatsRepository
 import java.time.DayOfWeek
@@ -29,13 +29,13 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class InsightsPlayActivityRoomTest {
 
-    private lateinit var db: WavdropDatabase
+    private lateinit var db: StereoSineDatabase
     private lateinit var repo: StatsRepository
     private val utc = ZoneId.of("UTC")
 
     @Before
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), WavdropDatabase::class.java).allowMainThreadQueries().build()
+        db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), StereoSineDatabase::class.java).allowMainThreadQueries().build()
         repo = StatsRepository(db, db.trackStatsDao(), db.importBaselineDao(), db.trackListenEventDao())
     }
 

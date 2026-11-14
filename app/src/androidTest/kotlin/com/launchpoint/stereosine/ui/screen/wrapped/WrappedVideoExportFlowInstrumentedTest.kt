@@ -30,7 +30,7 @@ import com.launchpoint.stereosine.data.settings.ThemeMode
 import com.launchpoint.stereosine.data.settings.WrappedBackgroundIntensity
 import com.launchpoint.stereosine.data.settings.WrappedFallbackTheme
 import com.launchpoint.stereosine.data.settings.WrappedVisualStyle
-import com.launchpoint.stereosine.ui.theme.WavdropTheme
+import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import java.io.File
 import java.security.MessageDigest
 import java.time.DayOfWeek
@@ -73,7 +73,7 @@ class WrappedVideoExportFlowInstrumentedTest {
     @Before fun mount() {
         removeOwnFiles()
         rule.setContent {
-            WavdropTheme(themeMode = ThemeMode.DARK) {
+            StereoSineTheme(themeMode = ThemeMode.DARK) {
                 if (show.value) {
                     val c = rememberWrappedVideoExportController()
                     SideEffect { controller = c }

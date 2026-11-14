@@ -30,7 +30,7 @@ import javax.inject.Singleton
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
-internal interface WavdropWidgetEntryPoint {
+internal interface StereoSineWidgetEntryPoint {
     fun widgetStateStore(): WidgetStateStore
     fun widgetAppearanceStore(): WidgetAppearanceStore
 }
@@ -44,14 +44,14 @@ internal interface WavdropWidgetEntryPoint {
  * start() method is a no-op because state is pushed from PlaybackService.
  */
 @Singleton
-class WavdropWidgetUpdater @Inject constructor(
+class StereoSineWidgetUpdater @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     /** No-op: state is pushed from the PlaybackService ExoPlayer listener. */
     fun start() = Unit
 
     companion object {
-        private const val TAG = "WavdropWidget"
+        private const val TAG = "StereoSineWidget"
 
         // Unique request codes for PendingIntents — must not collide with each other.
         internal const val RC_OPEN_APP  = 200
@@ -119,7 +119,7 @@ class WavdropWidgetUpdater @Inject constructor(
         private suspend fun performUpdate(context: Context, target: Set<Int>?) {
             val manager = AppWidgetManager.getInstance(context)
             val allIds = manager.getAppWidgetIds(
-                ComponentName(context, WavdropWidgetProvider::class.java)
+                ComponentName(context, StereoSineWidgetProvider::class.java)
             )
             // A targeted request drops ids that are not (or no longer) StereoSine widgets; for an AWAITED request that is a failure,
             // reported below, so a removed/foreign id can never be reported as rendered.
@@ -178,7 +178,7 @@ class WavdropWidgetUpdater @Inject constructor(
             runCatching {
                 EntryPointAccessors.fromApplication(
                     context.applicationContext,
-                    WavdropWidgetEntryPoint::class.java,
+                    StereoSineWidgetEntryPoint::class.java,
                 ).widgetAppearanceStore()
             }.onFailure {
                 Log.e(TAG, "[updater] failed to resolve WidgetAppearanceStore: ${it.message}", it)
@@ -188,7 +188,7 @@ class WavdropWidgetUpdater @Inject constructor(
             runCatching {
                 EntryPointAccessors.fromApplication(
                     context.applicationContext,
-                    WavdropWidgetEntryPoint::class.java,
+                    StereoSineWidgetEntryPoint::class.java,
                 ).widgetStateStore()
             }.onFailure {
                 Log.e(TAG, "[updater] failed to resolve WidgetStateStore: ${it.message}", it)

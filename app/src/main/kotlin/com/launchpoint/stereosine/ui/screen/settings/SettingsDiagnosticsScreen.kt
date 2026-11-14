@@ -28,7 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.launchpoint.stereosine.BuildConfig
 import com.launchpoint.stereosine.data.backup.WavdropBackupParser
-import com.launchpoint.stereosine.data.local.WAVDROP_DATABASE_NAME
+import com.launchpoint.stereosine.data.local.DATABASE_FILE_NAME
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -74,7 +74,7 @@ fun SettingsDiagnosticsScreen(
                 AboutInfoRow(label = "Version name", value = BuildConfig.VERSION_NAME)
                 AboutInfoRow(label = "Version code", value = BuildConfig.VERSION_CODE.toString())
                 AboutInfoRow(label = "Package", value = BuildConfig.APPLICATION_ID)
-                AboutInfoRow(label = "Database", value = WAVDROP_DATABASE_NAME)
+                AboutInfoRow(label = "Database", value = DATABASE_FILE_NAME)
                 AboutInfoRow(
                     label = "Backup version",
                     value = WavdropBackupParser.SUPPORTED_VERSION.toString(),

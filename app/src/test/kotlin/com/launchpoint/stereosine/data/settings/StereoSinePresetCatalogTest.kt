@@ -7,31 +7,31 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class WavdropPresetCatalogTest {
+class StereoSinePresetCatalogTest {
 
     // ── Catalog roster ────────────────────────────────────────────────────────
 
     @Test
     fun `catalog has 7 presets`() {
-        assertEquals(7, WavdropPresetCatalog.all.size)
+        assertEquals(7, StereoSinePresetCatalog.all.size)
     }
 
     @Test
     fun `all preset ids are unique`() {
-        val ids = WavdropPresetCatalog.all.map { it.id }
+        val ids = StereoSinePresetCatalog.all.map { it.id }
         assertEquals(ids.size, ids.toSet().size)
     }
 
     @Test
     fun `all preset ids are non-empty`() {
-        WavdropPresetCatalog.all.forEach { preset ->
+        StereoSinePresetCatalog.all.forEach { preset ->
             assertTrue("id empty for ${preset.displayName}", preset.id.isNotEmpty())
         }
     }
 
     @Test
     fun `catalog order matches approved order`() {
-        val ids = WavdropPresetCatalog.all.map { it.id }
+        val ids = StereoSinePresetCatalog.all.map { it.id }
         assertEquals(
             listOf("balanced", "deep-bass", "clarity", "warm", "detail", "late-night", "spoken-word"),
             ids,
@@ -40,7 +40,7 @@ class WavdropPresetCatalogTest {
 
     @Test
     fun `Clarity exists and Vocals does not`() {
-        val ids = WavdropPresetCatalog.all.map { it.id }
+        val ids = StereoSinePresetCatalog.all.map { it.id }
         assertTrue(ids.contains("clarity"))
         assertFalse(ids.contains("vocals"))
     }
@@ -49,14 +49,14 @@ class WavdropPresetCatalogTest {
 
     @Test
     fun `all presets have exactly 5 band levels`() {
-        WavdropPresetCatalog.all.forEach { preset ->
+        StereoSinePresetCatalog.all.forEach { preset ->
             assertEquals("${preset.id} has wrong band count", 5, preset.bandLevels.size)
         }
     }
 
     @Test
     fun `all band levels are within minus 1500 to 1500 mB`() {
-        WavdropPresetCatalog.all.forEach { preset ->
+        StereoSinePresetCatalog.all.forEach { preset ->
             preset.bandLevels.forEachIndexed { i, level ->
                 assertTrue(
                     "${preset.id} band[$i]=$level exceeds device range",
@@ -68,7 +68,7 @@ class WavdropPresetCatalogTest {
 
     @Test
     fun `no band level exceeds plus or minus 500 mB`() {
-        WavdropPresetCatalog.all.forEach { preset ->
+        StereoSinePresetCatalog.all.forEach { preset ->
             preset.bandLevels.forEachIndexed { i, level ->
                 assertTrue(
                     "${preset.id} band[$i]=$level exceeds conservative ±500 mB safety limit",
@@ -82,7 +82,7 @@ class WavdropPresetCatalogTest {
 
     @Test
     fun `Deep Bass has positive bass bands`() {
-        val preset = WavdropPresetCatalog.findById("deep-bass")
+        val preset = StereoSinePresetCatalog.findById("deep-bass")
         assertNotNull(preset)
         assertTrue("60 Hz should be boosted", preset!!.bandLevels[0] > 0)
         assertTrue("230 Hz should be boosted", preset.bandLevels[1] > 0)
@@ -90,7 +90,7 @@ class WavdropPresetCatalogTest {
 
     @Test
     fun `Spoken Word has negative bass bands`() {
-        val preset = WavdropPresetCatalog.findById("spoken-word")
+        val preset = StereoSinePresetCatalog.findById("spoken-word")
         assertNotNull(preset)
         assertTrue("60 Hz should be cut", preset!!.bandLevels[0] < 0)
         assertTrue("230 Hz should be cut", preset.bandLevels[1] < 0)
@@ -100,7 +100,7 @@ class WavdropPresetCatalogTest {
 
     @Test
     fun `findById balanced returns Balanced preset`() {
-        val preset = WavdropPresetCatalog.findById("balanced")
+        val preset = StereoSinePresetCatalog.findById("balanced")
         assertNotNull(preset)
         assertEquals("balanced", preset!!.id)
         assertEquals("Balanced", preset.displayName)
@@ -108,27 +108,27 @@ class WavdropPresetCatalogTest {
 
     @Test
     fun `findById null returns null`() {
-        assertNull(WavdropPresetCatalog.findById(null))
+        assertNull(StereoSinePresetCatalog.findById(null))
     }
 
     @Test
     fun `findById unknown id returns null`() {
-        assertNull(WavdropPresetCatalog.findById("unknown"))
+        assertNull(StereoSinePresetCatalog.findById("unknown"))
     }
 
     @Test
     fun `findById is case-sensitive`() {
         // ids are lowercase-kebab; uppercase variants must not match
-        assertNull(WavdropPresetCatalog.findById("Balanced"))
-        assertNull(WavdropPresetCatalog.findById("BALANCED"))
-        assertNotNull(WavdropPresetCatalog.findById("balanced"))
+        assertNull(StereoSinePresetCatalog.findById("Balanced"))
+        assertNull(StereoSinePresetCatalog.findById("BALANCED"))
+        assertNotNull(StereoSinePresetCatalog.findById("balanced"))
     }
 
     @Test
     fun `findById all known ids resolve successfully`() {
         val expectedIds = listOf("balanced", "deep-bass", "clarity", "warm", "detail", "late-night", "spoken-word")
         expectedIds.forEach { id ->
-            assertNotNull("findById($id) returned null", WavdropPresetCatalog.findById(id))
+            assertNotNull("findById($id) returned null", StereoSinePresetCatalog.findById(id))
         }
     }
 }

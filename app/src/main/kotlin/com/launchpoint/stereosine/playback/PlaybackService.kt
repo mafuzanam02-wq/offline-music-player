@@ -39,7 +39,7 @@ import com.launchpoint.stereosine.data.settings.PreviousButtonBehavior
 import com.launchpoint.stereosine.data.settings.ResumeBehaviorSettingsRepository
 import com.launchpoint.stereosine.ui.widget.WidgetPlaybackSnapshot
 import com.launchpoint.stereosine.ui.widget.WidgetStateStore
-import com.launchpoint.stereosine.ui.widget.WavdropWidgetUpdater
+import com.launchpoint.stereosine.ui.widget.StereoSineWidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -181,7 +181,7 @@ class PlaybackService : MediaLibraryService() {
                 configuredDurationMsProvider = { crossfadeConfiguredDurationMs },
                 scheduler = MainLooperCrossfadeTimingScheduler(),
                 clock = ElapsedRealtimeCrossfadeClock,
-                debugLog = if (BuildConfig.DEBUG) { message -> Log.d("WavdropCrossfade", message) } else null,
+                debugLog = if (BuildConfig.DEBUG) { message -> Log.d("StereoSineCrossfade", message) } else null,
             )
         }
         val fade = assembly.engine?.let { engine ->
@@ -325,7 +325,7 @@ class PlaybackService : MediaLibraryService() {
                     override suspend fun save(snapshot: WidgetPlaybackSnapshot) = widgetStateStore.save(snapshot)
                     override suspend fun updateIsPlaying(isPlaying: Boolean) = widgetStateStore.updateIsPlaying(isPlaying)
                     override suspend fun clear() = widgetStateStore.clear()
-                    override fun requestUpdate() = WavdropWidgetUpdater.requestUpdate(applicationContext)
+                    override fun requestUpdate() = StereoSineWidgetUpdater.requestUpdate(applicationContext)
                 },
             ),
         )
@@ -333,7 +333,7 @@ class PlaybackService : MediaLibraryService() {
         // PHYSICAL / crossfade observer (raw ExoPlayer only).
         assembly.addCurrentPlayerListener(object : Player.Listener {
 
-            // DEBUG-only: previous media item index, for the WavdropGapless transition line.
+            // DEBUG-only: previous media item index, for the StereoSineGapless transition line.
             private var lastGaplessIndex = assembly.currentPlayer.currentMediaItemIndex
 
             // CF-2F1: the authoritative primary reported a real playback error. Synchronously cancel any owned
@@ -447,7 +447,7 @@ class PlaybackService : MediaLibraryService() {
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, WavdropSessionCallback())
+        mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, StereoSineSessionCallback())
             .setSessionActivity(openAppIntent)
             .build()
 
@@ -573,12 +573,12 @@ class PlaybackService : MediaLibraryService() {
     // can invoke them. Called once per controller connection (including the system notification
     // controller). The custom layout (setCustomLayout) controls visibility; this controls
     // availability.
-    private inner class WavdropSessionCallback : MediaLibrarySession.Callback {
+    private inner class StereoSineSessionCallback : MediaLibrarySession.Callback {
     @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
     override fun onConnect(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
-    ): MediaSession.ConnectionResult = withWavdropCommands(session, controller)
+    ): MediaSession.ConnectionResult = withStereoSineCommands(session, controller)
 
     override fun onGetLibraryRoot(
         session: MediaLibrarySession,
@@ -587,7 +587,7 @@ class PlaybackService : MediaLibraryService() {
     ): ListenableFuture<LibraryResult<MediaItem>> {
         // Cheap and synchronous: no library scan. A "recent" request (System UI resumption) gets the
         // dedicated recent root, whose immediate children are the playable resumable item.
-        val root = WavdropMediaLibrary.rootFor(isRecent = params?.isRecent == true)
+        val root = StereoSineMediaLibrary.rootFor(isRecent = params?.isRecent == true)
         return Futures.immediateFuture(LibraryResult.ofItem(root, params))
     }
 
@@ -596,13 +596,13 @@ class PlaybackService : MediaLibraryService() {
         browser: MediaSession.ControllerInfo,
         mediaId: String,
     ): ListenableFuture<LibraryResult<MediaItem>> {
-        if (WavdropMediaLibrary.isBrowseNode(mediaId)) {
+        if (StereoSineMediaLibrary.isBrowseNode(mediaId)) {
             return Futures.immediateFuture(
-                LibraryResult.ofItem(checkNotNull(WavdropMediaLibrary.item(mediaId, emptyList())), null),
+                LibraryResult.ofItem(checkNotNull(StereoSineMediaLibrary.item(mediaId, emptyList())), null),
             )
         }
         return libraryFuture {
-            val item = WavdropMediaLibrary.item(mediaId, songRepository.songs.first())
+            val item = StereoSineMediaLibrary.item(mediaId, songRepository.songs.first())
             if (item != null) LibraryResult.ofItem(item, null)
             else LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
         }
@@ -616,22 +616,22 @@ class PlaybackService : MediaLibraryService() {
         pageSize: Int,
         params: LibraryParams?,
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = when (parentId) {
-        WavdropLibraryIds.ROOT -> Futures.immediateFuture(
-            LibraryResult.ofItemList(WavdropMediaLibrary.page(WavdropMediaLibrary.rootChildren(), page, pageSize), params),
+        StereoSineLibraryIds.ROOT -> Futures.immediateFuture(
+            LibraryResult.ofItemList(StereoSineMediaLibrary.page(StereoSineMediaLibrary.rootChildren(), page, pageSize), params),
         )
-        WavdropLibraryIds.SONGS -> libraryFuture {
+        StereoSineLibraryIds.SONGS -> libraryFuture {
             LibraryResult.ofItemList(
-                WavdropMediaLibrary.songChildren(songRepository.songs.first(), page, pageSize),
+                StereoSineMediaLibrary.songChildren(songRepository.songs.first(), page, pageSize),
                 params,
             )
         }
-        WavdropLibraryIds.RECENT, WavdropLibraryIds.RECENT_ROOT -> libraryFuture {
-            val items = WavdropMediaLibrary.recentChildren(
+        StereoSineLibraryIds.RECENT, StereoSineLibraryIds.RECENT_ROOT -> libraryFuture {
+            val items = StereoSineMediaLibrary.recentChildren(
                 snapshot = sessionRepository.load(),
                 settings = resumeBehaviorRepository.settings.first(),
                 songs = songRepository.songs.first(),
             )
-            LibraryResult.ofItemList(WavdropMediaLibrary.page(items, page, pageSize), params)
+            LibraryResult.ofItemList(StereoSineMediaLibrary.page(items, page, pageSize), params)
         }
         else -> Futures.immediateFuture(LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE))
     }
@@ -757,11 +757,11 @@ class PlaybackService : MediaLibraryService() {
         const val EXTRA_AUDIO_OUTPUT_KIND = "com.launchpoint.stereosine.EXTRA_AUDIO_OUTPUT_KIND"
         const val OUTPUT_BLUETOOTH = "bluetooth"
         const val OUTPUT_WIRED = "wired"
-        private const val CROSSFADE_TAG = "WavdropCrossfade"
+        private const val CROSSFADE_TAG = "StereoSineCrossfade"
         private const val CMD_TOGGLE_SHUFFLE = "com.launchpoint.stereosine.TOGGLE_SHUFFLE"
         private const val CMD_CYCLE_REPEAT = "com.launchpoint.stereosine.CYCLE_REPEAT"
         @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
-        internal fun withWavdropCommands(
+        internal fun withStereoSineCommands(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
@@ -775,10 +775,10 @@ class PlaybackService : MediaLibraryService() {
                 .build()
         }
 
-        private const val RESUME_TAG = "WavdropResume"
-        private const val AUDIO_SESSION_TAG = "WavdropAudioSession"
-        private const val GAPLESS_TAG = "WavdropGapless"
-        private const val AUDIO_EFFECTS_TAG = "WavdropAudioEffects"
+        private const val RESUME_TAG = "StereoSineResume"
+        private const val AUDIO_SESSION_TAG = "StereoSineAudioSession"
+        private const val GAPLESS_TAG = "StereoSineGapless"
+        private const val AUDIO_EFFECTS_TAG = "StereoSineAudioEffects"
         // Debug-only ADB triggers for EQ round-trip validation — never exposed in release builds.
         private const val ACTION_DEBUG_EQ_ENABLE  = "com.launchpoint.stereosine.DEBUG_EQ_ENABLE"
         private const val ACTION_DEBUG_EQ_DISABLE = "com.launchpoint.stereosine.DEBUG_EQ_DISABLE"

@@ -122,7 +122,7 @@ fun SettingsAboutScreen(
                 ClickableSettingsRow(
                     title    = "LaunchPoint Digital",
                     subtitle = "Websites, apps and digital tools",
-                    onClick  = { context.openWebsite(WavdropAbout.WEBSITE_URL) },
+                    onClick  = { context.openWebsite(StereoSineAbout.WEBSITE_URL) },
                 )
             }
             item { SectionDivider() }
@@ -130,11 +130,11 @@ fun SettingsAboutScreen(
             item {
                 ClickableSettingsRow(
                     title    = "Contact Support",
-                    subtitle = "${WavdropAbout.CONTACT_EMAIL} · Questions, feedback, or bug reports.",
+                    subtitle = "${StereoSineAbout.CONTACT_EMAIL} · Questions, feedback, or bug reports.",
                     onClick  = {
                         context.openSupportEmail(
-                            email   = WavdropAbout.CONTACT_EMAIL,
-                            subject = WavdropAbout.SUPPORT_SUBJECT,
+                            email   = StereoSineAbout.CONTACT_EMAIL,
+                            subject = StereoSineAbout.SUPPORT_SUBJECT,
                         )
                     },
                 )
@@ -195,28 +195,28 @@ fun SettingsAboutScreen(
     if (showPrivacyPolicyDialog) {
         LegalInfoDialog(
             title      = "Privacy Policy",
-            paragraphs = WavdropAbout.PRIVACY_POLICY,
+            paragraphs = StereoSineAbout.PRIVACY_POLICY,
             onDismiss  = { showPrivacyPolicyDialog = false },
         )
     }
     if (showTermsDialog) {
         LegalInfoDialog(
             title      = "Terms of Use",
-            paragraphs = WavdropAbout.TERMS_OF_USE,
+            paragraphs = StereoSineAbout.TERMS_OF_USE,
             onDismiss  = { showTermsDialog = false },
         )
     }
     if (showDisclaimerDialog) {
         LegalInfoDialog(
             title      = "Disclaimer",
-            paragraphs = WavdropAbout.DISCLAIMER,
+            paragraphs = StereoSineAbout.DISCLAIMER,
             onDismiss  = { showDisclaimerDialog = false },
         )
     }
     if (showOpenSourceDialog) {
         LegalInfoDialog(
             title      = "Open Source Licenses",
-            paragraphs = WavdropAbout.OPEN_SOURCE_LICENSES,
+            paragraphs = StereoSineAbout.OPEN_SOURCE_LICENSES,
             onDismiss  = { showOpenSourceDialog = false },
         )
     }
@@ -226,14 +226,14 @@ fun SettingsAboutScreen(
     if (showWhatWeStoreDialog) {
         LegalInfoDialog(
             title      = "What StereoSine stores",
-            paragraphs = WavdropAbout.WHAT_WE_STORE,
+            paragraphs = StereoSineAbout.WHAT_WE_STORE,
             onDismiss  = { showWhatWeStoreDialog = false },
         )
     }
     if (showDataOwnershipDialog) {
         LegalInfoDialog(
             title      = "Your music stays on this device",
-            paragraphs = WavdropAbout.DATA_OWNERSHIP,
+            paragraphs = StereoSineAbout.DATA_OWNERSHIP,
             onDismiss  = { showDataOwnershipDialog = false },
         )
     }
@@ -251,7 +251,7 @@ private fun AppIdentityCard(modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
-                text  = WavdropAbout.PRODUCT_NAME,
+                text  = StereoSineAbout.PRODUCT_NAME,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -262,7 +262,7 @@ private fun AppIdentityCard(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
             Spacer(Modifier.height(12.dp))
-            CompactInfoLine(label = "App", value = WavdropAbout.APP_NAME)
+            CompactInfoLine(label = "App", value = StereoSineAbout.APP_NAME)
             CompactInfoLine(label = "Version", value = BuildConfig.VERSION_NAME)
             CompactInfoLine(label = "Build", value = BuildConfig.VERSION_CODE.toString())
         }
@@ -322,7 +322,7 @@ private fun CompactInfoLine(
 @Composable
 private fun CopyrightRow(modifier: Modifier = Modifier) {
     Text(
-        text     = WavdropAbout.COPYRIGHT,
+        text     = StereoSineAbout.COPYRIGHT,
         style    = MaterialTheme.typography.bodySmall,
         color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         modifier = modifier
@@ -452,7 +452,7 @@ private fun Context.openSupportEmail(email: String, subject: String) {
     runCatching { startActivity(intent) }
 }
 
-private object WavdropAbout {
+private object StereoSineAbout {
     const val APP_NAME        = "StereoSine"
     const val PRODUCT_NAME    = "StereoSine"
     const val WEBSITE_URL     = "https://launchpointdigital.co.za"

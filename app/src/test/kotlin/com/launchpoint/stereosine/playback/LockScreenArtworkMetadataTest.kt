@@ -36,7 +36,7 @@ class LockScreenArtworkMetadataTest {
         assertEquals(song.displayTitle, item.mediaMetadata.title.toString())
         assertEquals(song.displayArtist, item.mediaMetadata.artist.toString())
         assertEquals(song.album, item.mediaMetadata.albumTitle.toString())
-        assertEquals(song.albumId, item.mediaMetadata.extras?.getLong(WAVDROP_ALBUM_ID_EXTRA))
+        assertEquals(song.albumId, item.mediaMetadata.extras?.getLong(ALBUM_ID_EXTRA))
     }
 
     // ── a track with valid artwork / without artwork ─────────────────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ class LockScreenArtworkMetadataTest {
 
     @Test fun browseItemsKeepTheArtworkAndTheirPlayableFlags() {
         val s = song(5, albumId = 21)
-        val item = WavdropMediaLibrary.songItem(s)
+        val item = StereoSineMediaLibrary.songItem(s)
         assertEquals(Uri.parse("content://media/external/audio/albumart/21"), item.mediaMetadata.artworkUri)
         assertMetadataPreserved(s, item)
         assertTrue(item.mediaMetadata.isPlayable == true)
@@ -136,7 +136,7 @@ class LockScreenArtworkMetadataTest {
     }
 
     @Test fun theRecentBrowseItemCarriesTheResumableSongsArtwork() {
-        val recent = WavdropMediaLibrary.recentChildren(snapshot(listOf(1, 2, 3), current = 0), ResumeBehaviorSettings(), library)
+        val recent = StereoSineMediaLibrary.recentChildren(snapshot(listOf(1, 2, 3), current = 0), ResumeBehaviorSettings(), library)
         assertEquals(1, recent.size)
         assertEquals(Uri.parse("content://media/external/audio/albumart/11"), recent.single().mediaMetadata.artworkUri)
     }

@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.launchpoint.stereosine.data.artwork.ArtworkResolver
 import com.launchpoint.stereosine.data.model.Song
 import com.launchpoint.stereosine.data.settings.ArtworkCornerStyle
-import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -66,7 +66,7 @@ fun SongRow(
 
     Row(
         modifier = modifier
-            .wavdropPressFeedback(interactionSource)
+            .stereoSinePressFeedback(interactionSource)
             .background(rowColor)
             .combinedClickable(
                 interactionSource = interactionSource,

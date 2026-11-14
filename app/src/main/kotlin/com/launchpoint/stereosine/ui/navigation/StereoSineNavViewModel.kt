@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class WavdropNavViewModel @Inject constructor(
+class StereoSineNavViewModel @Inject constructor(
     private val appSettingsRepository: AppSettingsRepository,
     private val playbackSessionRepository: PlaybackSessionRepository,
 ) : ViewModel() {

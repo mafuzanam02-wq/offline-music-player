@@ -130,7 +130,7 @@ internal class ResumptionOrderRig(bounded: Boolean = true, private val resumptio
             .setId("ord-${counter++}")
             .setCallback(object : MediaSession.Callback {
                 override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
-                    PlaybackService.withWavdropCommands(session, controller)
+                    PlaybackService.withStereoSineCommands(session, controller)
 
                 override fun onPlaybackResumption(
                     mediaSession: MediaSession,
