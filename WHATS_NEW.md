@@ -1,4 +1,8 @@
-# What's New — Wavdrop Beta 10.0
+# What's New — Wavdrop Beta 10.0 (now StereoSine)
+
+> **Note.** The app has been renamed **StereoSine** (previously Wavdrop). This summary describes the published
+> **Wavdrop Beta 10.0** release (`0.1.0-beta10`). The StereoSine-branded build is still in development: it has no
+> release date and no new version has been published.
 
 New listening features, faster libraries, and major playback reliability improvements.
 

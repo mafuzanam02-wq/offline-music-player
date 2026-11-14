@@ -1,4 +1,4 @@
-# Wavdrop Planned Work
+# StereoSine Planned Work
 
 Product-level view of upcoming work. Nothing in this file is implemented.
 When work ships, move it to RELEASE_NOTES.md and remove it here. Detailed engineering slices and
@@ -16,11 +16,23 @@ do not duplicate them here.
 
 ## Approved
 
+### StereoSine rebrand - outstanding external identity and follow-ups
+
+The in-repo rebrand (BRAND-01..04) is complete for identity, symbols, backup file names and documentation. Not done, and
+each needs separate authorization:
+
+- Create a new StereoSine signing identity (upload key and Play App Signing); the original Wavdrop key was lost.
+- Host and verify a StereoSine privacy page, then update `StereoSineAbout.PRIVACY_POLICY_URL`, the privacy guard test and
+  the Play listing. The old `/wavdrop/privacy` URL stays until then.
+- Rename the GitHub repository (`mafuzanam02-wq/wavdrop-music-player`) and update remotes/links.
+- Decide backup writer metadata (`app`, `packageName`, `database`) and the Desktop `wavdrop-desktop-lab` interop plan.
+- Rename the `WAVDROP_UPLOAD_*` signing variables and `keystore.properties.example` as part of the signing migration.
+
 ### Public Privacy Policy Page — IMPLEMENTED, PUSHED, DEPLOYED, LIVE HTTPS VALIDATED, CLOSED (WPP-1)
 
-The in-app policy carries `WavdropAbout.PRIVACY_POLICY_URL`, and the LaunchPoint Digital site serves the prerendered `/wavdrop/privacy` route. Hosting was deployed and `https://launchpointdigital.co.za/wavdrop/privacy` was opened successfully over HTTPS; the owner confirmed the QA_CHECKLIST "WPP-1" items A–I.
+The in-app policy carries `StereoSineAbout.PRIVACY_POLICY_URL`, and the LaunchPoint Digital site serves the prerendered `/wavdrop/privacy` route. Hosting was deployed and `https://launchpointdigital.co.za/wavdrop/privacy` was opened successfully over HTTPS; the owner confirmed the QA_CHECKLIST "WPP-1" items A–I.
 
-Original requirement: publish the Wavdrop Privacy Policy at `https://launchpointdigital.co.za/wavdrop/privacy`. This URL is required for the Google Play store listing Privacy Policy field before public launch. The page should publish the same text as the in-app Privacy Policy dialog. Once the page is live, add a reference line to the bottom of the in-app Privacy Policy copy pointing to the URL.
+Original requirement: publish the StereoSine Privacy Policy at `https://launchpointdigital.co.za/wavdrop/privacy`. This URL is required for the Google Play store listing Privacy Policy field before public launch. The page should publish the same text as the in-app Privacy Policy dialog. Once the page is live, add a reference line to the bottom of the in-app Privacy Policy copy pointing to the URL.
 
 ### Save queue as playlist — IMPLEMENTED (QSP-1); physical validation pending
 
@@ -30,7 +42,7 @@ Queue Sheet header menu -> "Save queue as playlist" saves the current logical qu
 
 ## Under Evaluation
 
-- **Support domain email**: ~~Migrated~~ — `WavdropAbout.CONTACT_EMAIL` and the privacy policy contact line in `SettingsAboutScreen.kt` now use `info@launchpointdigital.co.za`. Update the Play Store developer contact field to the same address before submission.
+- **Support domain email**: ~~Migrated~~ — `StereoSineAbout.CONTACT_EMAIL` and the privacy policy contact line in `SettingsAboutScreen.kt` now use `info@launchpointdigital.co.za`. Update the Play Store developer contact field to the same address before submission.
 - **Additional Delete entry points**: after Track Details Phase 1 is stable and validated,
   evaluate adding "Delete from device" to song-row overflow menus (Songs, Home, Album, Artist,
   Folder, Smart Collection screens). Requires assessment of accidental-deletion risk in
@@ -40,7 +52,7 @@ Queue Sheet header menu -> "Save queue as playlist" saves the current logical qu
   testing. The current implementation is functional but the auto-scroll and
   virtualization-interrupt paths are non-trivial to maintain.
 - **Broader folder exclusion beyond CFE-1**: CFE-1 (implemented, physical validation pending) lets a user exclude a
-  concrete folder already known to WavDrop (and its descendants) from Folder Details, managed in Settings -> Library &
+  concrete folder already known to StereoSine (and its descendants) from Folder Details, managed in Settings -> Library &
   Scanning -> Custom excluded folders. Still deferred: arbitrary free-text paths, wildcards, regex, a general allow-list,
   per-song exclusion, metadata-based filtering, automatic exclusion suggestions, a filesystem browser for exclusions, and
   exporting exclusions in backups.
@@ -68,8 +80,8 @@ Queue Sheet header menu -> "Save queue as playlist" saves the current logical qu
 ## Rejected
 
 - Silent deletion (no confirmation before removing a file from device).
-- Skipping the Wavdrop pre-confirmation dialog before `MediaStore.createDeleteRequest`.
-- Deleting externally opened audio files (opened via `ACTION_VIEW`; not part of the Wavdrop library).
+- Skipping the StereoSine pre-confirmation dialog before `MediaStore.createDeleteRequest`.
+- Deleting externally opened audio files (opened via `ACTION_VIEW`; not part of the StereoSine library).
 - Wiping `track_stats` or `track_listen_events` when the user deletes a track from device.
 - Streaming features.
 - Cloud-first music playback.

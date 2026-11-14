@@ -1,6 +1,6 @@
 # TECHNICAL DEBT REGISTER
 
-> **Wavdrop Music Player** · package `com.launchpoint.wavdrop`
+> **StereoSine** · package `com.launchpoint.stereosine`
 > Record of intentional engineering compromises. Last reviewed after CF-2C3 (post-beta9); TD-019 added after P5-STATS-19D.
 
 ---
@@ -417,7 +417,7 @@ a unique 24-hour periodic check (`AutoBackupWorkScheduler` / `AutoBackupWorker`)
 `AutoBackupRepository.runIfDue()`. Scheduling is still **best-effort** under Android/OEM constraints
 (storage-not-low constraint; the folder permission may be revoked), so UI wording stays qualified
 ("Automatic Backup Check", "Last automatic check") instead of promising exact schedules.
-**Original Implementation:** "Automatic" backup ran **when Wavdrop was opened** after the configured
+**Original Implementation:** "Automatic" backup ran **when StereoSine was opened** after the configured
 interval had elapsed — it was not background-scheduled.
 **Reason This Existed:** No `WorkManager`-based background scheduling had been implemented.
 **Risk:** Users who rarely open the app back up less often than the nominal interval suggests.

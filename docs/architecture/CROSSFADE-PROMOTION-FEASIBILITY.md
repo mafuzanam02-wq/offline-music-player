@@ -3,7 +3,7 @@
 - Status: **ACCEPTED** (physically validated by CF-2M7, section 30). The CF-2L natural-handoff architecture is **RETIRED** and was deleted by CF-2M8. The session-façade question was verified by CF-2M2 (section 25); physical rollout sign-off (CF-2N1) PASSED and production rollout ENABLED by CF-2N2 (`CrossfadeRolloutPolicy.RUNTIME_ENABLED = true`, the single gate).
 - Date: 2026-10-04
 - Baseline: `1d320a1` ("Project crossfade handoff positions safely"), `CrossfadeRolloutPolicy.RUNTIME_ENABLED = false`.
-- Scope: can WavDrop promote the already-playing incoming physical ExoPlayer to be the logical current player,
+- Scope: can StereoSine promote the already-playing incoming physical ExoPlayer to be the logical current player,
   instead of playing a second copy of B and transferring audibility back to the primary?
 - Dependency facts below were verified against the **actual Media3 1.11.1 binaries** in this repository
   (`gradle/libs.versions.toml: media3 = "1.11.1"`) by disassembling `media3-common`, `media3-exoplayer` and
@@ -40,10 +40,10 @@ completion callbacks from the retiring player are ignored by identity. One engin
 share one audio-session id; the session follows the logical player, not a physical one.
 
 Used conceptually only (see section 21 of the task). Nothing is copied: not its MediaPlayer APIs, timers,
-singleton, queue container or MediaSessionCompat mechanics; WavDrop keeps Media3, positional occurrence identity,
+singleton, queue container or MediaSessionCompat mechanics; StereoSine keeps Media3, positional occurrence identity,
 the equal-power curve and its lifecycle tests.
 
-## 4. Current WavDrop ownership (CF-2L4)
+## 4. Current StereoSine ownership (CF-2L4)
 
 ```
 MediaLibrarySession (one)  --binds-->  PreviousBehaviorPlayer : ForwardingPlayer(P1)      [P1 fixed, forever]
@@ -95,12 +95,12 @@ SessionFacade : ForwardingSimpleBasePlayer      <-- ONE stable Player identity f
 | Dynamic delegate | manual | manual | **Yes.** `setPlayer`: same-looper check (IllegalArgumentException otherwise), move listener, re-init forwarding state, `invalidateState()` | session-level only | **No** |
 | Feasibility | high effort | medium | **high, least code** | high | infeasible for swap |
 | Session continuity | stable if one façade | stable | **stable: one Player object, one session, one token** | session/token kept, but sends `ControllerCb.onPlayerChanged` (full controller resync) and restarts the legacy stub | n/a |
-| Command routing | manual | `handle*` futures | **forwarded to current delegate by default; override to add WavDrop policy** | direct to new player | direct |
+| Command routing | manual | `handle*` futures | **forwarded to current delegate by default; override to add StereoSine policy** | direct to new player | direct |
 | Listener/event behaviour | manual ListenerSet + manual diffs | derived from state diffs (free, deterministic) | derived from state diffs; **a promotion is exactly one state diff**; reason pinned via `setPositionDiscontinuity(AUTO_TRANSITION, 0)` in an overridden `getState()` | controllers infer events from a resync diff (reason not authoritative) | native |
 | Timeline | delegate's real timeline | synthesized or copied | **delegate's real timeline** (via `getCurrentTimeline`) | new player's | real |
 | currentMediaItem/position | delegate | `PositionSupplier` | **live position suppliers** over delegate (`LivePositionSuppliers`) | new player's | real |
 | Notification / AVRCP / Auto | same session -> unchanged | same | **same session, same player identity -> unchanged; AVRCP sees a normal gapless AUTO transition** | notification manager sees a "player changed" | unchanged |
-| Complexity | high | medium | **low-medium (WavDrop-specific hooks only)** | low | n/a |
+| Complexity | high | medium | **low-medium (StereoSine-specific hooks only)** | low | n/a |
 | Risk | listener fidelity bugs | placeholder-state semantics | `@UnstableApi` class (verified annotation), unproven in this codebase; **to verify**: event fidelity at swap, `controllerForCurrentRequest` inside `handle*`, `getMaxSeekToPreviousPosition` | resync visible to every controller; sleep-timer/AUTO logic sees PLAYLIST_CHANGED | n/a |
 
 **Recommendation: C.** Subclass `ForwardingSimpleBasePlayer` as `SessionFacade`. Option D is kept only as a documented
@@ -142,8 +142,8 @@ A BlackPlayer-style "single-item physical + synthetic logical timeline" is rejec
 
 ### 7.2 Why not single-item physical players
 
-It would regress ExoPlayer's native gapless (there is no `setNextMediaPlayer` equivalent in Media3; WavDrop has
-physical gapless validation and `WavdropGapless` diagnostics), force a synthetic timeline of up to
+It would regress ExoPlayer's native gapless (there is no `setNextMediaPlayer` equivalent in Media3; StereoSine has
+physical gapless validation and `StereoSineGapless` diagnostics), force a synthetic timeline of up to
 `MEDIA_ITEM_CACHE_MAX_SIZE = 12_288` items, require re-implementing all queue mutation, shuffle/repeat and bad-media
 recovery in an engine, and touch every `PlayerController` queue path. Blast radius is far larger than the problem.
 
@@ -152,7 +152,7 @@ recovery in an engine, and touch every `PlayerController` queue path. Blast radi
 NEXT slot = `setMediaItem([B])` + `prepare()` (as today's secondary). When READY (still silent), graft the neighbours
 with `addMediaItems(0, before)` and `addMediaItems(after)`. Adding items around a non-playing, already-prepared item
 does not disturb it. Cost is O(n) `MediaSource` creation on the main thread for the second player, comparable to the
-existing queue install (`WavdropQueuePerf`). **Open item:** measure on a large queue; if it is too costly the
+existing queue install (`StereoSineQueuePerf`). **Open item:** measure on a large queue; if it is too costly the
 fallback is a persistent mirror built once at queue install (memory trade-off, section 18).
 
 ## 8. Promotion moment
@@ -358,7 +358,7 @@ reconciliation, soft transfer) was not morphed but removed.
 Used conceptually: prepared second player, the early player *is* B, role promotion at start, recycle old for next, one
 logical audio-focus owner, retiring-player completion ignored, session follows logical player. Not used: MediaPlayer APIs,
 `CountDownTimer`, synchronized singleton, obfuscated code, queue container, `MediaSessionCompat` mechanics, method bodies,
-linear fade. WavDrop keeps Media3, occurrence-safe identity, equal-power fade, lifecycle tests, modern Bluetooth handling,
+linear fade. StereoSine keeps Media3, occurrence-safe identity, equal-power fade, lifecycle tests, modern Bluetooth handling,
 cold resumption and settings architecture.
 
 ## 22. Risks
@@ -411,7 +411,7 @@ same-looper `require`); `PreviousBehaviorPlayer` extracted unchanged into its ow
 injected functions); `WidgetPlaybackStateListener` extracted verbatim as the logical consumer.
 
 **Chain actually built:** `ExoPlayer -> SessionFacade -> PreviousBehaviorPlayer -> MediaLibrarySession`. This differs from the
-sketch in section 5/6, deliberately: the WavDrop policy wrapper stays **outside** the façade, so its decisions
+sketch in section 5/6, deliberately: the StereoSine policy wrapper stays **outside** the façade, so its decisions
 (`controllerForCurrentRequest`, previous semantics, explicit-transport hooks) run synchronously on the session request exactly
 as before and are not duplicated or ported into `handle*`. The physical player is the façade's swappable delegate.
 
@@ -544,7 +544,7 @@ unit on the NEXT player's application looper (a `Handler` post; never a backgrou
 Inserting every chunk at index 0 would reverse the chunk order; this forward-at-growing-index form keeps the original order and is asserted exactly
 (`addMediaItems(0,256)`, `(256,256)`, `(512,88)`...). (2) AFTER phase: chunks of `queue[to+1 until end]` are appended in order. (3) VERIFY phase: per-index `mediaId`
 diagnostics in slices of `VERIFY_SLICE_SIZE` (1,024), then the final checks. Only the final successful verification sets `Ready`; a partially grafted NEXT is
-`Grafting` and never usable. After the last chunk the repeat mode is mirrored (Media3 shuffle is never enabled; WavDrop's logical `playbackOrder` stays authoritative).
+`Grafting` and never usable. After the last chunk the repeat mode is mirrored (Media3 shuffle is never enabled; StereoSine's logical `playbackOrder` stays authoritative).
 Final checks (fail closed to `Failed(TimelineMismatch)`): `mediaItemCount == queue.size`, `currentMediaItemIndex == toPlaybackIndex`, `playWhenReady == false`, and
 per-index `mediaId` equality (diagnostic only; identity is positional). Before every chunk the turn also checks that NEXT still holds exactly `1 + beforeInserted + afterInserted`
 items with B at `beforeInserted` (an external timeline change fails closed).
@@ -583,7 +583,7 @@ prepare + graft); `SessionFacade` still delegates CURRENT and listens only to CU
 Source guards assert the preparation code contains no `play`, `seekTo`, role swap, façade, focus or volume access and that production never swaps roles.
 
 
-**Large-queue measurement (chunked graft)** (real ExoPlayer, Robolectric JVM; median of several runs; **not device latency**; a `WavdropQueuePerf`-style `next_graft` line is available through the engine's `nextSlotPerfLog`). Production-factory variant (every item except B is built by Media3's real `DefaultMediaSourceFactory`):
+**Large-queue measurement (chunked graft)** (real ExoPlayer, Robolectric JVM; median of several runs; **not device latency**; a `StereoSineQueuePerf`-style `next_graft` line is available through the engine's `nextSlotPerfLog`). Production-factory variant (every item except B is built by Media3's real `DefaultMediaSourceFactory`):
 
 | Queue size | chunks | total graft completion (ms, includes yields) | typical (median) chunk (ms) | max single chunk (ms) | verify total (ms) |
 |---|---|---|---|---|---|

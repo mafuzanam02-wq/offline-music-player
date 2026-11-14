@@ -1,11 +1,11 @@
-# Wavdrop QA Checklist
+# StereoSine QA Checklist
 
 Current comprehensive manual / physical QA checklist. Use it on a real Android phone with a realistic local
-music library. Record device model, Android version, Wavdrop version (Settings -> About), and any screen
+music library. Record device model, Android version, StereoSine version (Settings -> About), and any screen
 recordings or logs for failures. Automated JVM tests do not replace these checks; Bluetooth, OEM, and
 background behaviour can only be validated on hardware.
 
-> **Warning - back up Wavdrop first.** Uninstalling or clearing app data removes local stats, playlists, settings, and backup schedules unless restored from a backup. Wavdrop has no in-app reset. Before ANY test below that involves uninstalling, clearing app data, or a fresh install, run Settings -> Backup & Migration -> Back Up Now (or Save Backup File), open Backup Verification, and confirm the file is verified and located in a place that survives the test. WavDrop supports Merge Restore and, for eligible verified v2 Android backups, Recovery Restore. Recovery can replace current WavDrop state and requires a verified pre-Recovery safety snapshot. Restore never restores audio files.
+> **Warning - back up StereoSine first.** Uninstalling or clearing app data removes local stats, playlists, settings, and backup schedules unless restored from a backup. StereoSine has no in-app reset. Before ANY test below that involves uninstalling, clearing app data, or a fresh install, run Settings -> Backup & Migration -> Back Up Now (or Save Backup File), open Backup Verification, and confirm the file is verified and located in a place that survives the test. StereoSine supports Merge Restore and, for eligible verified v2 Android backups, Recovery Restore. Recovery can replace current StereoSine state and requires a verified pre-Recovery safety snapshot. Restore never restores audio files.
 
 ## High-Risk Areas
 
@@ -15,7 +15,7 @@ background behaviour can only be validated on hardware.
 | Queue mutation | Recent gesture and reorder work can affect current track stability. | |
 | Library scan permissions | First-launch success depends on Android media permission behavior. | |
 | Backup/import | Data restore/import issues can affect user trust. | |
-| Statistics/reports accuracy | Wavdrop separates event-backed history from imported aggregate stats. | |
+| Statistics/reports accuracy | StereoSine separates event-backed history from imported aggregate stats. | |
 | Background/Bluetooth behavior | Real-device audio routing often exposes issues not seen on emulator. | |
 | Large libraries | Performance and loading states must hold up with thousands of songs. | |
 
@@ -23,7 +23,7 @@ background behaviour can only be validated on hardware.
 
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
-| Record phone model, Android version, storage size, and Wavdrop version. | Test report includes enough device context to reproduce issues. | |
+| Record phone model, Android version, storage size, and StereoSine version. | Test report includes enough device context to reproduce issues. | |
 | Test with at least one small library and one larger library if available. | Empty, normal, and stress paths can be compared. | |
 | Include songs with and without album art. | Artwork fallback and real artwork both appear correctly. | |
 | Include MP3, AAC/M4A, FLAC, OGG/Opus, and WAV files if available. | Supported format coverage is represented. | |
@@ -31,12 +31,17 @@ background behaviour can only be validated on hardware.
 
 ## 1. Install / First Launch
 
-> **Back up Wavdrop first.** A fresh install test on a device with existing Wavdrop data destroys that data. Uninstalling or clearing app data removes local stats, playlists, settings, and backup schedules unless restored from a backup.
+> **Back up StereoSine first.** A fresh install test on a device with existing StereoSine data destroys that data. Uninstalling or clearing app data removes local stats, playlists, settings, and backup schedules unless restored from a backup.
+
+> **Rebrand note.** StereoSine (`com.launchpoint.stereosine`) is a different app to Android than legacy Wavdrop
+> (`com.launchpoint.wavdrop`): it installs side by side and starts with empty data. To carry data over, export a backup from
+> the old app and restore it in StereoSine. Legacy `wavdrop-backup*.wdbk` / `.json` files must remain restorable; new backups
+> are saved as `stereosine-backup*.wdbk`. These rebrand behaviours (side-by-side install, legacy backup restore, new file names) have JVM coverage only and are *not yet physically validated*.
 
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
-| Install Wavdrop fresh. | App installs without package/name errors. | |
-| Launch Wavdrop for the first time. | App opens without crash or blank screen. | |
+| Install StereoSine fresh. | App installs without package/name errors. | |
+| Launch StereoSine for the first time. | App opens without crash or blank screen. | |
 | Deny audio/library permission. | App explains why library access is needed and remains usable. | |
 | Grant audio/library permission. | App proceeds to scan or shows library content. | |
 | Close and reopen the app. | Startup destination loads predictably. | |
@@ -181,7 +186,7 @@ background behaviour can only be validated on hardware.
 | Open Smart Collections. | All 11 collection cards/rows appear (Favorites, Most Played, Recently Played, Forgotten Gems, Never Played, Recently Added, Most Skipped, Long Tracks, Short Tracks, Always Finish, Usually Abandon). | |
 | Open Favorites. | Favorite songs are listed or an intentional empty state appears. | |
 | Open Most Played. | Aggregate/event rules display expected results. | |
-| Open Recently Played. | Recent Wavdrop plays appear after listening activity. | |
+| Open Recently Played. | Recent StereoSine plays appear after listening activity. | |
 | Open Forgotten Gems, Always Finish, and Usually Abandon. | Each lists plausible songs or an intentional empty state; counts say how many songs qualify. | |
 | Open Never Played. | Songs with no play history appear. | |
 | Open Recently Added. | Recently added songs appear in plausible order. | |
@@ -199,16 +204,17 @@ background behaviour can only be validated on hardware.
 | Open Monthly Reports with event history. | Month shows event-backed counts/lists. | |
 | Open Monthly Reports without event history. | Empty state explains no event history for that month. | |
 | Open Wrapped with available year. | Event-backed yearly summary appears. | |
-| Open Wrapped without event history. | Empty state explains Wrapped needs Wavdrop listening history. | |
+| Open Wrapped without event history. | Empty state explains Wrapped needs StereoSine listening history. | |
 | Import BlackPlayer stats, then check monthly reports. | Imported aggregate stats do not fake monthly event history. | |
 
 ## 15. Backup Export / Restore
 
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
-| Export a Wavdrop backup (`.wdbk`). | File is created through Android file picker and the app reports it as verified. | |
+| Export a StereoSine backup (`.wdbk`). | File is created through Android file picker and the app reports it as verified. | |
 | Export after creating playlists/favorites/stats. | Backup completes without crash. | |
-| Import a valid Wavdrop backup on the same device. | Preview displays restorable data. | |
+| Import a valid StereoSine backup on the same device. | Preview displays restorable data. | |
+| Import a legacy Wavdrop backup (`wavdrop-backup.wdbk`, `wavdrop-backup-YYYY-MM-DD.wdbk` or a legacy `.json`) exported by the old app. | Preview and Merge Restore work exactly as for a StereoSine backup; the legacy file is not renamed or altered. | |
 | Apply a valid restore. | Stats/playlists/preferences restore as supported. | |
 | Import an invalid or non-backup file (including a fake `.wdbk`). | App shows a clear error and does not change data. | |
 | Import an unsupported backup version if available. | App rejects it safely. | |
@@ -227,7 +233,7 @@ background behaviour can only be validated on hardware.
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
 | Select a valid `.bpstat` export. | Preview opens and parses rows. | |
-| Import rows that match Wavdrop songs. | Matched tracks and play totals are shown; the file's period plays are shown as "not imported". | |
+| Import rows that match StereoSine songs. | Matched tracks and play totals are shown; the file's period plays are shown as "not imported". | |
 | Apply import once. | Play counts update (MAX-merged); skip counts are NOT changed (`.bpstat` field 2 is a period play count). The result lists plays updated, no skips. | |
 | Apply the same import again. | Delta-based import reports no new changes. | |
 | Import a file with unmatched rows. | Unmatched rows are counted/skipped without crash. | |
@@ -270,7 +276,7 @@ background behaviour can only be validated on hardware.
 | Swipe app away from recents during playback. | Behavior is predictable and no crash occurs. | |
 | Pause, then swipe the app away from recents; press Play from the notification / headset / lock screen. | The paused session survives and playback resumes at the saved position. | |
 | With the process cold, press PLAY from notification, Bluetooth, lock screen, and widget (one at a time). | Playback starts from the restored session without opening the app UI. | |
-| Open an Android system media surface / music-app integration that lists Wavdrop. | Wavdrop appears with a browsable Songs list and a Recent item; tapping resumes correctly. | |
+| Open an Android system media surface / music-app integration that lists StereoSine. | StereoSine appears with a browsable Songs list and a Recent item; tapping resumes correctly. | |
 | Start a queue in the app, then trigger an external PLAY. | The existing queue is not replaced by the saved session. | |
 
 ## 20. Theme / Accent / Launcher Icon
@@ -376,7 +382,7 @@ that contains the song and an album queue).
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
 | Open Settings -> Equalizer. | Screen shows device-supported bands and presets, or a clear unsupported state. | |
-| Enable the Equalizer and pick a platform preset, a Wavdrop preset, then custom bands. | Sound changes audibly; settings persist after leaving the screen. | |
+| Enable the Equalizer and pick a platform preset, a StereoSine preset, then custom bands. | Sound changes audibly; settings persist after leaving the screen. | |
 | Restart the app and the process. | Equalizer settings persist and apply to the next track. | |
 | Switch output (speaker / Bluetooth / wired) with the Equalizer on. | No crash; the effect stays applied or re-attaches. | |
 | Note: Equalizer settings are not part of backups today. | Restoring a backup does not change Equalizer settings. | |
@@ -385,7 +391,7 @@ that contains the song and an album queue).
 
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
-| Add the Wavdrop widget to the home screen. | Shows artwork, title, artist. | |
+| Add the StereoSine widget to the home screen. | Shows artwork, title, artist. | |
 | Tap Previous / Play-Pause / Next on the widget with the app open and closed. | Controls act on the current session; the widget updates immediately. | |
 | Press the widget Play with a cold process. | Playback resumes from the saved session. | |
 | Resize the widget. | Layout adapts without clipping. | |
@@ -422,9 +428,9 @@ Model used below: **CURRENT** (audible, authoritative), **NEXT** (the prepared i
 
 ### 32.1 Device evidence (record for every run)
 
-Record in the notes column or a short run log: device model, Android version, WavDrop build/commit, audio output used (speaker / wired / Bluetooth device), crossfade duration, EQ state, repeat mode, result and a note/log reference. A manual record is sufficient; no database or telemetry is involved.
+Record in the notes column or a short run log: device model, Android version, StereoSine build/commit, audio output used (speaker / wired / Bluetooth device), crossfade duration, EQ state, repeat mode, result and a note/log reference. A manual record is sufficient; no database or telemetry is involved.
 
-Minimum initial validation target: at least one real Android device covering speaker, wired output (if the device supports it; USB-C wired audio counts), Bluetooth output, foreground, and background/lock-screen. The Samsung S21 already used for Wavdrop validation is acceptable as the first device. One device does not validate Android universally; do not generalise beyond the devices tested. A requirement with no available hardware is **UNVALIDATED**, never Pass.
+Minimum initial validation target: at least one real Android device covering speaker, wired output (if the device supports it; USB-C wired audio counts), Bluetooth output, foreground, and background/lock-screen. The Samsung S21 already used for StereoSine validation is acceptable as the first device. One device does not validate Android universally; do not generalise beyond the devices tested. A requirement with no available hardware is **UNVALIDATED**, never Pass.
 
 ### 32.2 Basic overlap
 
@@ -477,14 +483,14 @@ Perform each while NEXT is being prepared and again during an audible overlap (o
 
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
-| During preparation or overlap, cause an incoming call or another transient audio-focus interruption (any practical source). | The retiring A is cut; B is the only current track and is suppressed by the interruption, then resumes per the normal WavDrop/Media3 focus behaviour when focus returns; A never returns. | |
+| During preparation or overlap, cause an incoming call or another transient audio-focus interruption (any practical source). | The retiring A is cut; B is the only current track and is suppressed by the interruption, then resumes per the normal StereoSine/Media3 focus behaviour when focus returns; A never returns. | |
 | During an overlap, cause a short "duck" (e.g. a navigation prompt). | The overlap continues; both tracks are quieter and recover; no restart. | |
 
 ### 32.7 Becoming noisy / route removal
 
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
-| Unplug wired headphones during preparation and during overlap. | One pause; the retiring A is cut; B remains the current track; no second player keeps sounding; the existing WavDrop pause/resume policy remains authoritative. | |
+| Unplug wired headphones during preparation and during overlap. | One pause; the retiring A is cut; B remains the current track; no second player keeps sounding; the existing StereoSine pause/resume policy remains authoritative. | |
 | Disconnect Bluetooth during preparation and during overlap. | Same. | |
 
 ### 32.8 Bluetooth
@@ -501,7 +507,7 @@ Perform each while NEXT is being prepared and again during an audible overlap (o
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
 | Play wired and let tracks crossfade. | Normal overlap. | |
-| Unplug during preparation and during overlap, then reconnect. | Behaviour follows the existing WavDrop resume policy only (no invented automatic resume); no ghost audio. | |
+| Unplug during preparation and during overlap, then reconnect. | Behaviour follows the existing StereoSine resume policy only (no invented automatic resume); no ghost audio. | |
 | Manual next/previous; background and lock screen. | Same expectations as Bluetooth. | |
 
 ### 32.10 Background and lock screen
@@ -552,13 +558,13 @@ Production enablement required every row below to be Pass on the intended releas
 
 ## Now Playing Artwork Reliability (WC-07) — physical validation PASSED (owner, real device)
 
-Run on a real device; use the debug build and filter logcat by tag `WavdropArtwork` (request / failure lines for the large artwork).
+Run on a real device; use the debug build and filter logcat by tag `StereoSineArtwork` (request / failure lines for the large artwork).
 
 | Check | Pass / Fail / Notes |
 |---|---|
 | Track with known artwork: Now Playing, Mini Player and Home row all show it. | |
 | Track with no artwork: placeholder everywhere, and no previous cover left behind on Now Playing. | |
-| Previously problematic track (Mini Player showed art but Now Playing did not): Now Playing now shows it; if not, capture the `WavdropArtwork` failure line. | |
+| Previously problematic track (Mini Player showed art but Now Playing did not): Now Playing now shows it; if not, capture the `StereoSineArtwork` failure line. | |
 | Two tracks from the same album: switching between them causes no placeholder flash. | |
 | Rapid next/previous: the final track's artwork (never an intermediate one) is shown. | |
 | Shuffle transitions: artwork always matches the current track. | |
@@ -584,7 +590,7 @@ Run on a real device; use the debug build and filter logcat by tag `WavdropArtwo
 
 - [ ] A. Fresh install: the permission screen says "Allow music access".
 - [ ] B. Grant: the library scans normally.
-- [ ] C. Android Settings > Apps > Wavdrop > Permissions > deny Music & audio, return to Wavdrop: the screen says "Music access was turned off" (not the first-run text); existing library, stats and history are not cleared.
+- [ ] C. Android Settings > Apps > StereoSine > Permissions > deny Music & audio, return to StereoSine: the screen says "Music access was turned off" (not the first-run text); existing library, stats and history are not cleared.
 - [ ] D. Tap Open Settings, re-enable the permission, return: normal content resumes and the library can be rescanned.
 - [ ] E. Populated Home: pull/drag down to refresh triggers a library rescan; no duplicate scan; the library stays visible and the pull-to-refresh indicator represents scanning.
 - [ ] F. Induced scan failure where practical: the existing library stays, "Library scan couldn't complete" shows, Try again works and a success clears the card.
@@ -592,7 +598,7 @@ Run on a real device; use the debug build and filter logcat by tag `WavdropArtwo
 
 ## Large-queue interactive latency (post-Beta 10; NOT yet validated on a device)
 
-Use a genuinely large library/queue if available (Debug builds log `WavdropQueuePerf` lines: `full_queue_sync reason=...`, `queue_repair ...`, materializationMs / media3MutationMs).
+Use a genuinely large library/queue if available (Debug builds log `StereoSineQueuePerf` lines: `full_queue_sync reason=...`, `queue_repair ...`, materializationMs / media3MutationMs).
 
 - [ ] A. 1k+ queue: Next, Previous, queue jump, Play Next, Add to Queue, remove, reorder and shuffle ON/OFF each respond immediately (no multi-second freeze).
 - [ ] B. Largest available queue: the same interactions.
@@ -604,14 +610,14 @@ Use a genuinely large library/queue if available (Debug builds log `WavdropQueue
 
 Initial physical validation passed on 2026-10-06. Recovery's destructive wording was clear. Checklist retained for future regression passes. Individual items below are intentionally not ticked, because per-item evidence was not recorded.
 
-Use a Wavdrop v2 backup you exported yourself. The pre-Recovery safety snapshot lives in app-private storage (`files/recovery-safety/pre-recovery-latest.json`); verify it via Backup Verification / a normal import parse (it is an ordinary v2 backup), e.g. with adb run-as on a debug build.
+Use a StereoSine v2 backup you exported yourself. The pre-Recovery safety snapshot lives in app-private storage (`files/recovery-safety/pre-recovery-latest.json`); verify it via Backup Verification / a normal import parse (it is an ordinary v2 backup), e.g. with adb run-as on a debug build.
 
-- [ ] A. Create local WavDrop history, favourites and playlists.
+- [ ] A. Create local StereoSine history, favourites and playlists.
 - [ ] B. Export a known verified backup (Back up now / export).
 - [ ] C. Change local state substantially (more plays, un-favourite/favourite, delete/add playlists, new lyrics).
 - [ ] D. Import the backup: Merge is selected by default; deliberately select Recovery (it shows the warning, the "what will be replaced" summary, and the stronger confirmation). Leave and re-import: the mode resets to Merge.
 - [ ] E. Confirm: the safety snapshot is created and verified before anything changes. A v1 backup offers Merge only; a Desktop backup shows no Recovery option.
-- [ ] F. Confirm local WavDrop state becomes backup-authoritative (counts, favourites incl. cleared ones, event history, playlists and their order, lyrics), where matched to music on this device.
+- [ ] F. Confirm local StereoSine state becomes backup-authoritative (counts, favourites incl. cleared ones, event history, playlists and their order, lyrics), where matched to music on this device.
 - [ ] G. Confirm current audio files are untouched and the active queue/playback is not disturbed.
 - [ ] H. Confirm tracks the backup has but this device does not are preserved (pending), not guessed.
 - [ ] I. Where automatic backup was enabled in the backup and no folder is set: the "Choose backup folder" prompt appears; the music-folder selection/scan mode on this device is unchanged.
@@ -624,7 +630,7 @@ Use a Wavdrop v2 backup you exported yourself. The pre-Recovery safety snapshot 
 
 Nothing below has been run on a device. Do not tick items until the user has verified them on hardware. Use a device with real listening history.
 
-- [ ] A. Manual backup (Settings -> Backup -> Save backup file) suggests and creates `wavdrop-backup-YYYY-MM-DD.wdbk` (or `wavdrop-backup.wdbk` in fixed-name mode); the provider does not append `.zip`/`.json`.
+- [ ] A. Manual backup (Settings -> Backup -> Save backup file) suggests and creates `stereosine-backup-YYYY-MM-DD.wdbk` (or `stereosine-backup.wdbk` in fixed-name mode); the provider does not append `.zip`/`.json`.
 - [ ] B. For a history-containing backup the `.wdbk` is materially smaller than the same state exported as legacy JSON (no fixed ratio is promised).
 - [ ] C. Backup Verification recognises the `.wdbk` in the backup folder and reports VERIFIED with the expected counts (tracks, playlists, favourites, stats, events, lyrics, preferences).
 - [ ] D. Restore -> pick the `.wdbk`: the preview shows the same counts; Merge is selected by default.
@@ -675,10 +681,10 @@ Nothing below has been run on a device. Do not tick items until the user has ver
 
 ## LS-1 Lock-screen / system media progress (investigated; PHYSICAL REPRODUCTION PENDING)
 
-The app-layer investigation found the session position healthy in every automated scenario, so the intermittent freeze reported on a second phone is NOT yet explained. Nothing below has been run on a device. Do not tick items until the user has verified them on hardware. Use a DEBUG build and capture `adb logcat -s WavdropSessionProgress` while reproducing: each line has `physical=` and `session=` positions. The log reads WavDrop's in-process session-facing Player, not the platform/SystemUI controller state, so it cannot identify OEM SystemUI by itself:
+The app-layer investigation found the session position healthy in every automated scenario, so the intermittent freeze reported on a second phone is NOT yet explained. Nothing below has been run on a device. Do not tick items until the user has verified them on hardware. Use a DEBUG build and capture `adb logcat -s StereoSineSessionProgress` while reproducing: each line has `physical=` and `session=` positions. The log reads StereoSine's in-process session-facing Player, not the platform/SystemUI controller state, so it cannot identify OEM SystemUI by itself:
 
-- `physical=` and `session=` both advancing while the lock screen freezes: the freeze is downstream of WavDrop's session-facing Player. Retain the logs and device details.
-- `physical=` advancing but `session=` stale: WavDrop/session-layer divergence. Reopen LS-1 immediately.
+- `physical=` and `session=` both advancing while the lock screen freezes: the freeze is downstream of StereoSine's session-facing Player. Retain the logs and device details.
+- `physical=` advancing but `session=` stale: StereoSine/session-layer divergence. Reopen LS-1 immediately.
 - both stale: investigate the actual playback/player state.
 
 - [ ] A. Start ordinary playback, lock the phone: the lock-screen progress bar moves continuously.
@@ -693,14 +699,14 @@ The app-layer investigation found the session position healthy in every automate
 - [ ] J. Sleep Timer countdown active: progress continues.
 - [ ] K. Finish-current boundary armed: progress moves until the natural stop.
 - [ ] L. Bluetooth playback (if available): lock-screen progress stays correct.
-- [ ] M. Reproduce on the phone that originally showed the defect. Record: device model; Android version; WavDrop commit; crossfade setting; the `WavdropSessionProgress` `physical=` value; the `session=` value; and whether the visible lock-screen bar moved.
+- [ ] M. Reproduce on the phone that originally showed the defect. Record: device model; Android version; StereoSine commit; crossfade setting; the `StereoSineSessionProgress` `physical=` value; the `session=` value; and whether the visible lock-screen bar moved.
 
 ## WPP-1 Public Privacy Policy (IMPLEMENTED, PUSHED, DEPLOYED, LIVE HTTPS VALIDATED; CLOSED)
 
 LaunchPoint Digital hosting was deployed and the public URL was opened successfully over HTTPS; the owner confirmed the live checklist below.
 
 - [x] A. `https://launchpointdigital.co.za/wavdrop/privacy` returns 200 over HTTPS in a fresh browser (direct load, no prior navigation).
-- [x] B. The correct WavDrop Privacy Policy renders (nine sections, one h1).
+- [x] B. The correct StereoSine Privacy Policy renders (nine sections, one h1).
 - [x] C. Mobile layout is readable.
 - [x] D. Desktop layout is readable.
 - [x] E. Canonical is `https://launchpointdigital.co.za/wavdrop/privacy`.
@@ -715,7 +721,7 @@ Nothing below has been run on a device. Do not tick items until the user has ver
 
 - [ ] A. Exclude a normal folder from Folder Details (More options -> Exclude this folder).
 - [ ] B. The confirmation clearly says audio files stay on the device and history/statistics are kept (no Delete wording).
-- [ ] C. After "Rescan library", that folder is gone from WavDrop.
+- [ ] C. After "Rescan library", that folder is gone from StereoSine.
 - [ ] D. Child subfolders of the excluded folder are gone too.
 - [ ] E. A similarly named sibling folder (for example "Podcasts Archive" next to "Podcasts") remains.
 - [ ] F. Listening stats and history for the excluded tracks are still present (Insights / Wrapped / history).
@@ -746,13 +752,13 @@ Nothing below has been run on a device. Do not tick items until the user has ver
 - [ ] L. The playlist is still there after restarting the app.
 - [ ] M. With an empty queue the Queue Sheet shows no save action.
 - [ ] N. Success shows "Queue saved as playlist" while the Queue Sheet stays open.
-- [ ] O. Open an audio file from another app (ACTION_VIEW) so it plays through WavDrop: the Queue Sheet shows no "Save queue as playlist" action, and no playlist is created.
+- [ ] O. Open an audio file from another app (ACTION_VIEW) so it plays through StereoSine: the Queue Sheet shows no "Save queue as playlist" action, and no playlist is created.
 
 ## Statistics delivery (P5-STATS-19; post-Beta 10; OWNER-CONFIRMED 9 of 9 controlled manual checks PASSED)
 
 The owner confirmed that all nine controlled manual device checks below passed. Device model, Android version, date, timings, logs and screenshots were not recorded here, and individual items are intentionally not ticked because per-item evidence was not recorded. Retained for regression passes.
 
-Testing sequence: Wavdrop evaluates the meaningful-play (`min(30 s, 50 % of duration)`) and five-second listen thresholds only when playback is **paused** or at a **song-selection / loop boundary** (next, previous, a different song, natural advance, or a repeat-one loop). Counts and Recently Played do not change while one song plays uninterrupted; pause or move on, then check. Note each song's counts before the test.
+Testing sequence: StereoSine evaluates the meaningful-play (`min(30 s, 50 % of duration)`) and five-second listen thresholds only when playback is **paused** or at a **song-selection / loop boundary** (next, previous, a different song, natural advance, or a repeat-one loop). Counts and Recently Played do not change while one song plays uninterrupted; pause or move on, then check. Note each song's counts before the test.
 
 - [ ] A. Play: play a song past the threshold, then pause. Its play count rises by exactly 1.
 - [ ] B. Skip: play a song for a few seconds below the threshold, then press Next. Its skip count rises by 1 and its play count does not change.

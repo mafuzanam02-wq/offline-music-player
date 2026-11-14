@@ -1,5 +1,11 @@
 # Wavdrop Import Rules
 
+> **Naming note (BRAND-04).** This is a legacy-format contract. The `wavdrop_*` format identifiers, the file name and the
+> terms "Wavdrop backup" / "Wavdrop Desktop" are kept verbatim because existing backups and Desktop exports depend on
+> them. The current app is **StereoSine** and continues to read and (for `wavdrop_backup` v2 inside `wavdrop_wdbk`)
+> write this format unchanged. New backup *files* are named `stereosine-backup*.wdbk`; the file name is never part of
+> the format.
+
 Status: **Active.** Describes import semantics as currently implemented. Format fields live in
 `WAVDROP_DATA_FORMAT_SPEC.md`; preservation semantics live in `BACKUP_PRESERVATION_CONTRACT.md`.
 

@@ -14,13 +14,13 @@
 - **[P] Proposed** — future behaviour. Nothing tagged [P] exists.
 - **[Q] Open** — needs evidence (measurement or an owner decision) before it can be decided.
 
-Source paths are relative to `app/src/main/kotlin/com/launchpoint/wavdrop/` unless they start with `app/src/test/`.
+Source paths are relative to `app/src/main/kotlin/com/launchpoint/stereosine/` unless they start with `app/src/test/`.
 
 ---
 
 ## 1. Executive summary
 
-**The problem.** [C] WavDrop keeps one invariant throughout `playback/`: *the physical Media3 playlist is the complete logical
+**The problem.** [C] StereoSine keeps one invariant throughout `playback/`: *the physical Media3 playlist is the complete logical
 playback queue in playback order*, so `MediaController.currentMediaItemIndex == logical playback index`. Everything that is
 O(queue) in the large-library path follows from that single invariant:
 
@@ -85,7 +85,7 @@ PlayerEngine                       two physical ExoPlayers: CURRENT + NEXT (Cros
 - [C] `CrossfadeRolloutPolicy.RUNTIME_ENABLED = true`, so `PlaybackAssembly` builds `PlaybackTopology.TWO_SLOT_ENGINE`
   (`PlaybackAssembly.kt`); the façade is always present in the shipping build.
 - [C] `PlaybackService.onCreate` builds `PreviousBehaviorPlayer(player = assembly.logicalPlayer, …)` and the
-  `MediaLibrarySession` wraps it. `PlaybackService.WavdropSessionCallback` adds only two custom commands
+  `MediaLibrarySession` wraps it. `PlaybackService.StereoSineSessionCallback` adds only two custom commands
   (`CMD_TOGGLE_SHUFFLE`, `CMD_CYCLE_REPEAT`), `onPlaybackResumption`, and the browse-tree callbacks. It does **not** override
   `onSetMediaItems` / `onAddMediaItems`.
 
@@ -129,7 +129,7 @@ the target window".
 ### 2.4 Media-item representation [C]
 
 - `PlaybackMediaItem.kt`: `Song.toPlaybackMediaItem()` sets `mediaId = song.id.toString()` and extras `wavdrop_album_id`. The
-  media id is the **song** id, never an occurrence id. Browse ids (`WavdropMediaLibrary`) and `onPlaybackResumption` rely on this.
+  media id is the **song** id, never an occurrence id. Browse ids (`StereoSineMediaLibrary`) and `onPlaybackResumption` rely on this.
 - `PlayerController.materializeMediaItems` caches `MediaItem` instances by `MediaItemCacheKey(id, uri, title, artist, album,
   duration, albumId)`, bound `MEDIA_ITEM_CACHE_MAX_SIZE = 12_288`. Because instances are shared between occurrences of the same
   song, **a per-occurrence stamp cannot ride the `MediaItem`**. Occurrence identity must stay positional.
@@ -223,7 +223,7 @@ Classification: **1** must change before virtualization · **2** can use a compa
 | `PlaybackService.kt` (`onPlaybackResumption`, physical listeners, session callback) | full `mediaItems` for resumption | 1 | return the window (A) / logical start (B) |
 | `PlaybackResumption.kt` (`PlaybackResumptionPlan.mediaItems`) | full map | 1 | window slice + start index |
 | `PlaybackStartupTrace.kt` (install fingerprinting) | debug-only O(N) over the installed list | 2 | now ≤ W |
-| `WavdropMediaLibrary.kt` | browse tree, ids = song ids | 3 | — |
+| `StereoSineMediaLibrary.kt` | browse tree, ids = song ids | 3 | — |
 | `WidgetPlaybackStateListener.kt`, `ui/widget/WidgetActionReceiver.kt` | current item / `mediaItemCount == 0` | 3 + 4 | cold-widget test in Bounded mode |
 | `data/playback/PlaybackSessionRepository.kt`, `PlaybackSessionRules.kt` | logical persistence | 3 | O(N) remains |
 | UI: `NowPlayingState`, `ui/screen/nowplaying/QueueSheet.kt`, `NowPlayingScreen.kt`, `HomeScreen.kt`, `MiniPlayer.kt` | logical list from `PlayerController` | 3 | — |
@@ -577,7 +577,7 @@ O(N) allocation on both polls. Scheduled as **P5-A0** (§13).
 6. Widgets read only `currentMediaItem` (`WidgetPlaybackStateListener`) and `controller.mediaItemCount == 0` for cold detection
    (`WidgetActionReceiver`) — unaffected by window size.
 7. The manifest declares `MediaLibraryService` and the platform `MediaBrowserService` action but **no Android Auto
-   (`automotive_app_desc`) declaration** — Android Auto is not a supported surface today. Browse nodes (`WavdropMediaLibrary`)
+   (`automotive_app_desc`) declaration** — Android Auto is not a supported surface today. Browse nodes (`StereoSineMediaLibrary`)
    page the library independently of the playback queue — unaffected.
 
 ### 9.2 Behaviour by surface, for a physical window (strategy A) vs a logical façade (strategy B)
@@ -669,13 +669,13 @@ state (`hydration never decides whether playback starts`, `docs/ARCHITECTURE.md`
 ### 11.1 Method
 
 - **JVM/Robolectric** (shape and operation counts only, never device latency): extend the existing opt-in harness
-  (`CrossfadeTimelineIdentityBenchmarkTest`, enabled with `WAVDROP_BENCH=1`) and `NextSlotPerformanceTest`'s structure. Primary
+  (`CrossfadeTimelineIdentityBenchmarkTest`, enabled with `STEREOSINE_BENCH=1`) and `NextSlotPerformanceTest`'s structure. Primary
   gates are **deterministic structural invariants** (item counts, call shapes, materialized-item counts, distinct hash codes),
   not wall-clock thresholds. [C] `NextSlotPerformanceTest` is known to be load-sensitive; no new test may copy its ratio
   assertions.
-- **Android device** (the only valid latency/heap evidence): debug build tracers already exist — `WavdropStartTrace`
-  (`PlaybackStartupTrace`, `docs/diagnostics/P0-PLAYBACK-STARTUP-TRACE.md`), `WavdropQueuePerf` (install timings), plus
-  `WavdropSessionPerf`; heap via `adb shell dumpsys meminfo` and Android Studio allocation tracking; trace with Perfetto.
+- **Android device** (the only valid latency/heap evidence): debug build tracers already exist — `StereoSineStartTrace`
+  (`PlaybackStartupTrace`, `docs/diagnostics/P0-PLAYBACK-STARTUP-TRACE.md`), `StereoSineQueuePerf` (install timings), plus
+  `StereoSineSessionPerf`; heap via `adb shell dumpsys meminfo` and Android Studio allocation tracking; trace with Perfetto.
   Distinguish cold/warm controller and release vs debug builds.
 - **A/B on equivalent workloads:** the debug mode override (§12.1) runs the same scripted workload (tap, Next ×k, jump, shuffle,
   restore) in Full and Bounded on the same device and library.
@@ -686,16 +686,16 @@ state (`hydration never decides whether playback starts`, `docs/ARCHITECTURE.md`
 
 | Metric | Source | Full (baseline) | Bounded target |
 |---|---|---|---|
-| Tap-to-PLAY latency | `WavdropStartTrace` `request_received → play_issued/first audio` | capture | ≤ Full, ~flat in N |
+| Tap-to-PLAY latency | `StereoSineStartTrace` `request_received → play_issued/first audio` | capture | ≤ Full, ~flat in N |
 | Time to first playlist installation | `playlist_install_started → done` | capture | flat in N |
 | Media3 item count (CURRENT, NEXT, controller) | `mediaItemCount`, structural test | = N | ≤ `W_MAX + REFILL_BATCH` |
 | Media-item materialization | `materialize_done` (`hits/misses`) | O(N) | ≤ W per install, ≤ REFILL_BATCH per refill |
 | Heap / allocation pressure | meminfo, allocation profiler, GC logs | capture | lower; no recurring O(N) allocation |
 | Next / Previous latency | trace + instrumentation | capture | flat |
 | Queue jump latency | trace | capture | one bounded install |
-| Window refill latency + main-thread burst | new `WavdropWindowPerf` debug tag | n/a | per-turn burst ≤ a few ms |
+| Window refill latency + main-thread burst | new `StereoSineWindowPerf` debug tag | n/a | per-turn burst ≤ a few ms |
 | Crossfade prepare + promote | `NextSlot` timing, `CrossfadePromotionRuntime` | O(N) graft | O(W) |
-| Session restore time | `WavdropSessionPerf` | capture | install O(W); id mapping still O(N+L) |
+| Session restore time | `StereoSineSessionPerf` | capture | install O(W); id mapping still O(N+L) |
 | Logical mutation cost | op timing | O(N) | O(N) (unchanged, §15) |
 | Poll cost | allocation per 250 ms | O(N) copy | O(1) (P5-A0) |
 
@@ -1095,7 +1095,7 @@ Auto/AVRCP Next-Previous with the logical façade; real audio at promotion with 
 
 ### Appendix A — Existing tests that already guard adjacent behaviour (to be reused, not rewritten)
 
-`app/src/test/kotlin/com/launchpoint/wavdrop/playback/`: `PhysicalQueueReconcilerTest`, `RealMedia3ReconcilerIntegrationTest`,
+`app/src/test/kotlin/com/launchpoint/stereosine/playback/`: `PhysicalQueueReconcilerTest`, `RealMedia3ReconcilerIntegrationTest`,
 `RealMedia3QueueRig`, `LargeQueueHardeningGuardTest`, `PlayerControllerDeferredStartRealMedia3Test`,
 `PlayerControllerOfflineQueueRealMedia3Test`, `PlayerControllerRealMedia3DirtyQueueTest`, `PlayerControllerBulkQueueTest`,
 `QueueMutationTest`, `QueueNavigatorTest`, `OccurrenceMapTest`, `HandleSongDeletedQueueLogicTest`, `DeferredPlaybackCommandsTest`,

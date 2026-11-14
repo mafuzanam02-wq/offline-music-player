@@ -1,6 +1,6 @@
-# Wavdrop Architecture
+# StereoSine Architecture
 
-Canonical description of the **current** technical implementation of Wavdrop Android.
+Canonical description of the **current** technical implementation of StereoSine Android.
 Code and current tests are the authority; this document is kept in step with them (see
 [DOCUMENTATION_POLICY.md](DOCUMENTATION_POLICY.md)). Historical reasoning and decisions live in
 [../ENGINEERING_BACKLOG_AND_DECISIONS.md](../ENGINEERING_BACKLOG_AND_DECISIONS.md); current project
@@ -10,7 +10,7 @@ state lives in [../PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md).
 
 ## 1. Application structure
 
-Single Gradle module (`:app`), package `com.launchpoint.wavdrop`, MVVM + Repository.
+Single Gradle module (`:app`), package `com.launchpoint.stereosine`, MVVM + Repository.
 
 | Concern | Technology |
 |---|---|
@@ -26,13 +26,13 @@ Single Gradle module (`:app`), package `com.launchpoint.wavdrop`, MVVM + Reposit
 `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`. Exact library versions are authoritative in
 `gradle/libs.versions.toml`; do not copy them into prose documents.
 
-Source layout (`app/src/main/kotlin/com/launchpoint/wavdrop/`):
+Source layout (`app/src/main/kotlin/com/launchpoint/stereosine/`):
 
 ```
-WavdropApp.kt, MainActivity.kt
+StereoSineApp.kt, MainActivity.kt
 data/
   model/        domain models (Song, TrackStats, summaries, SmartCollectionType, ...)
-  local/        WavdropDatabase, dao/, entity/
+  local/        StereoSineDatabase, dao/, entity/
   repository/   SongRepository, StatsRepository (PlayEventWriter), PlaylistRepository,
                 SmartCollectionRepository
   backup/       backup export/import/verification, auto-backup, quarantine, desktop interop
@@ -65,7 +65,7 @@ Boundaries:
 
 ## 2. Database
 
-Room database `WavdropDatabase`, `wavdrop.db`, **schema version 13**, `exportSchema = true`
+Room database `StereoSineDatabase`, `wavdrop.db`, **schema version 13**, `exportSchema = true`
 (JSON schemas for 1..13 are committed in `app/schemas/`).
 
 ### Migrations (1 -> 13)
@@ -85,7 +85,7 @@ Room database `WavdropDatabase`, `wavdrop.db`, **schema version 13**, `exportSch
 | 11->12 | `track_identities` + nullable `eventId` on `track_listen_events` (no backfill) |
 | 12->13 | `pending_backup_extensions` (preserved extension roots) |
 
-All migrations are additive. `WavdropDatabaseMigrationTest` (instrumentation) covers upgrades.
+All migrations are additive. `StereoSineDatabaseMigrationTest` (instrumentation) covers upgrades.
 Migration tests and exported schemas must be updated with every schema bump.
 
 ### Entity groups
@@ -97,7 +97,7 @@ Migration tests and exported schemas must be updated with every schema bump.
 | Playlists | `PlaylistEntity`, `PlaylistSongEntity` | position-ordered; cascade delete |
 | Lyrics | `LyricsOverrideEntity` | app-managed unsynced lyric overrides |
 | Import baselines | `ImportBaselineEntity` | per-song, per-source baselines that make external imports idempotent |
-| Identity | `TrackIdentityEntity` | device-local Wavdrop UUID; `currentSongId` is a soft reference (no FK/cascade) |
+| Identity | `TrackIdentityEntity` | device-local StereoSine UUID; `currentSongId` is a soft reference (no FK/cascade) |
 | Pending / quarantine | `PendingTrackEntity`, `PendingTrackStatsEntity`, `PendingListenEventEntity`, `PendingLyricsOverrideEntity`, `PendingImportBaselineEntity`, `PendingPlaylistEntryEntity` | snapshot-scoped archive rows for backup history that matched no local song |
 | Pending extensions | `PendingBackupExtensionEntity` | raw JSON of preserved extension roots (currently the `desktopOverlay` root) |
 
@@ -224,7 +224,7 @@ Rules:
 
 `LyricsRepository` precedence: user override (`lyrics_overrides`) -> embedded ID3 -> same-folder `.lrc`
 sidecar -> same-folder `.txt` sidecar. `LrcParser` produces timed lines; Now Playing shows synchronized
-lyrics for timed LRC content. Wavdrop never writes audio tags and never fetches lyrics over the network.
+lyrics for timed LRC content. StereoSine never writes audio tags and never fetches lyrics over the network.
 
 ---
 
@@ -247,7 +247,7 @@ UI -> PlayerController (app-side, @Singleton)
   not a supported/claimed target.
 - `PreviousBehaviorPlayer` implements the Previous-button setting and intercepts `play()`: if the
   physical player is empty it hydrates the saved session first, then plays.
-- The service exposes a browse tree (`WavdropMediaLibrary`: root -> recent / songs) so system
+- The service exposes a browse tree (`StereoSineMediaLibrary`: root -> recent / songs) so system
   surfaces can discover and resume playback. Resumption (`onPlaybackResumption`,
   `PlaybackResumptionMapper`) rebuilds the occurrence-safe queue from the saved session; browse item
   ids name only the song and never encode a queue occurrence.
@@ -317,7 +317,7 @@ Invariants:
 ### 4.4 Equalizer
 
 `AudioEnhancementController` owns the platform `Equalizer` effect attached to the primary player's
-audio session, driven entirely by `AudioEnhancementsRepository` (presets: flat, Wavdrop, platform,
+audio session, driven entirely by `AudioEnhancementsRepository` (presets: flat, StereoSine, platform,
 custom bands). Every effect call is guarded; failures log and continue. The secondary crossfade path
 has **no** EQ forwarding.
 
@@ -359,13 +359,13 @@ toPlaybackIndex)` - never `song.id`. Anything uncertain fails closed.
 | CF-2F3 | `isSecondaryTerminalPlaybackState`, `dispatchSecondaryPlaybackState` (`CrossfadeSecondaryPlayer.kt`), used by `ExoSecondaryPlayerBackend`'s attempt listener | secondary **READY** -> `onReady(attempt)` (readiness); **BUFFERING** -> allowed, nothing; **IDLE / ENDED** -> `onError(attempt)` (exact-attempt failure, same callback as `onPlayerError`) -> `CrossfadeSecondaryPlayer.handleError` -> `failTerminally` (invalidate, `backend.reset()`, then `onSecondaryFailed(key)`) -> `CrossfadePreparationRuntime` `SecondaryFailed` -> **existing `SecondaryError`** -> primary restore + abandon -> Idle. No new reason, callback, runtime API or service wiring. Owner-driven reset/release detach the listener first (no false failure); stale/duplicate/superseded/abandoned/released callbacks are ignored by the attempt token. Primary CF-2F1/CF-2F2 and the snapshot fallback are unchanged; driver keeps running |
 | CF-2F4 | `ControllerDisconnectedListenerRegistry`, `PlayerController.setControllerDisconnectedListener`, `recoverCrossfadeFromControllerDisconnected(runtime)` + `CONTROLLER_DISCONNECTED_CANCEL_REASON` (`CrossfadeProductionGraph.kt`) | **current controller disconnect** (`MediaController.Listener.onDisconnected`, `ControllerAttemptOwnership.shouldApplyDisconnect` passes) -> synchronous lifecycle callback -> existing `ControllerDisconnected` cancellation (primary restore + secondary abandon) -> **then** `PlayerController` clears the controller reference, progress player and connection state, so the callback runs while the primary is still reachable. **Stale controller disconnect** -> identity guard fails -> no callback, no cancellation. Reconnection stays demand-driven; connection-attempt failure and service teardown are unchanged; the snapshot `!controllerConnected` check remains the defensive fallback; driver keeps running |
 | CF-2F5 | `classifyPrimaryPlayWhenReadyInterruption`, `classifyPrimarySuppressionInterruption`, `PrimaryPlaybackInterruption`, `recoverCrossfadeFromPrimaryInterruption(runtime)` + `PRIMARY_INTERRUPTION_CANCEL_REASON` (`CrossfadeProductionGraph.kt`), wired in the primary listener in `PlaybackService` | media3 1.11.1 **`onPlayWhenReadyChanged(false, AUDIO_FOCUS_LOSS | AUDIO_BECOMING_NOISY)`** and **`onPlaybackSuppressionReasonChanged(TRANSIENT_AUDIO_FOCUS_LOSS | UNSUITABLE_AUDIO_ROUTE | UNSUITABLE_AUDIO_OUTPUT)`** -> synchronous existing `Pause` cancellation (primary restore + secondary abandon). `USER_REQUEST` (CF-2G1), `REMOTE`, `END_OF_MEDIA_ITEM`, `SUPPRESSED_TOO_LONG`, resumes, suppression `NONE`/`SCRUBBING` and buffering/ready never cancel; generic `onIsPlayingChanged` and `AudioDeviceCallback` are not triggers; nothing is resurrected on regain; snapshot `!isPlaying` fallback and running driver unchanged |
-| CF-2I1 | `SecondaryAudioSessionSnapshot`, `validSecondaryAudioSessionId`, `SecondaryPlayerBackend.audioSessionSnapshot()`, `CrossfadeSecondaryPlayer.audioSessionSnapshot(key)`, `CrossfadePreparationRuntime.secondaryAudioSessionSnapshot(key)`, `compareCrossfadeAudioSessions`, `CrossfadeAudioSessionObserver` (`CrossfadeAudioSession.kt`) | read-only observation of the secondary ExoPlayer `audioSessionId` (> 0 only) under exact transition-key + attempt ownership (Preparing / Prepared / Started; null when stale, abandoned, failed, released, closed or unavailable). One DEBUG observation per preparation at the Ready boundary (key, primary id, secondary id, Unavailable/Shared/Distinct). The session id is **not** occurrence identity. **Primary**: Android Equalizer bound to the primary ExoPlayer session via `AudioEnhancementController` (unchanged, sole EQ capability authority). **Secondary**: separate ExoPlayer, no WavDrop Equalizer, no MediaSession, no focus. Missing session never cancels. EQ mirroring / blocking policy is open (CF-2I2) |
-| CF-2I2 | `CrossfadeUnavailableReason.EqualizerEnabled`, `planCrossfadeTransition(equalizerEnabled)`, `CrossfadeRuntimeSnapshot.equalizerEnabled`, `shouldCancelCrossfadeForEqualizerChange`, `recoverCrossfadeFromEqualizerEnabled(runtime)`, one EQ-flag collector in `PlaybackService` | **EQ takes precedence.** Only the primary session carries WavDrop's Equalizer, so while EQ is enabled crossfade is unavailable (precedence: Disabled > ExternalPlayback > PlayerQueueNeedsSync > NotPlaying > EqualizerEnabled > RepeatOne > queue/duration) and native Media3 primary playback continues. `PlaybackService` caches the persisted `eqEnabled` (default false) and composes it into the snapshot; `PlayerController` owns no EQ settings. **OFF -> ON** -> synchronous existing `PlanInvalidated` cancellation (Armed/Ready abandon; Fading/HandoffPending restore primary then reset secondary; stale tick/handoff refused); a defensive `crossfadeOwnershipLossReason` snapshot check covers the next evaluation. **ON -> OFF** never cancels or resurrects; a later pulse may plan fresh. No setting is mutated, the driver keeps running, the secondary still has no Equalizer, CF-2I1 observability is retained, mirroring is not implemented (revisitable after physical validation) |
+| CF-2I1 | `SecondaryAudioSessionSnapshot`, `validSecondaryAudioSessionId`, `SecondaryPlayerBackend.audioSessionSnapshot()`, `CrossfadeSecondaryPlayer.audioSessionSnapshot(key)`, `CrossfadePreparationRuntime.secondaryAudioSessionSnapshot(key)`, `compareCrossfadeAudioSessions`, `CrossfadeAudioSessionObserver` (`CrossfadeAudioSession.kt`) | read-only observation of the secondary ExoPlayer `audioSessionId` (> 0 only) under exact transition-key + attempt ownership (Preparing / Prepared / Started; null when stale, abandoned, failed, released, closed or unavailable). One DEBUG observation per preparation at the Ready boundary (key, primary id, secondary id, Unavailable/Shared/Distinct). The session id is **not** occurrence identity. **Primary**: Android Equalizer bound to the primary ExoPlayer session via `AudioEnhancementController` (unchanged, sole EQ capability authority). **Secondary**: separate ExoPlayer, no StereoSine Equalizer, no MediaSession, no focus. Missing session never cancels. EQ mirroring / blocking policy is open (CF-2I2) |
+| CF-2I2 | `CrossfadeUnavailableReason.EqualizerEnabled`, `planCrossfadeTransition(equalizerEnabled)`, `CrossfadeRuntimeSnapshot.equalizerEnabled`, `shouldCancelCrossfadeForEqualizerChange`, `recoverCrossfadeFromEqualizerEnabled(runtime)`, one EQ-flag collector in `PlaybackService` | **EQ takes precedence.** Only the primary session carries StereoSine's Equalizer, so while EQ is enabled crossfade is unavailable (precedence: Disabled > ExternalPlayback > PlayerQueueNeedsSync > NotPlaying > EqualizerEnabled > RepeatOne > queue/duration) and native Media3 primary playback continues. `PlaybackService` caches the persisted `eqEnabled` (default false) and composes it into the snapshot; `PlayerController` owns no EQ settings. **OFF -> ON** -> synchronous existing `PlanInvalidated` cancellation (Armed/Ready abandon; Fading/HandoffPending restore primary then reset secondary; stale tick/handoff refused); a defensive `crossfadeOwnershipLossReason` snapshot check covers the next evaluation. **ON -> OFF** never cancels or resurrects; a later pulse may plan fresh. No setting is mutated, the driver keeps running, the secondary still has no Equalizer, CF-2I1 observability is retained, mirroring is not implemented (revisitable after physical validation) |
 | CF-2J1 | `CrossfadeRolloutPolicy.RUNTIME_ENABLED` (`playback/CrossfadeRolloutPolicy.kt`), `CrossfadeSettingsUiPolicy.kt` (`CROSSFADE_DURATION_OPTIONS`, `formatCrossfadeDurationMs`, `selectedCrossfadeOption`, `shouldShowCrossfadeSetting`, `buildCrossfadeSettingUiState`), `SettingsViewModel.crossfadeDurationMs` / `setCrossfadeDurationMs`, Transitions section in `SettingsPlaybackScreen` | **Single rollout authority**: `PlaybackService` constructs the runtime and the Settings UI shows the control only when `CrossfadeRolloutPolicy.RUNTIME_ENABLED` is true (currently `false`, so no Crossfade row is visible in production). The UI writes only the persisted `AppSettingsRepository.crossfadeDurationMs` (canonical ms; Off + 2/4/6/8/10/12 s choices) and never touches the runtime, driver, `PlaybackService` or `PlayerController`; `PlaybackService` already observes the persisted value. When rollout is available: EQ off -> enabled row with the saved duration; EQ on (`eqEnabled` only) -> disabled row "Unavailable while Equalizer is on" with the saved duration preserved. Non-product stored values display exactly and select no option. Not in backups |
 | CF-2K1 | `CrossfadeRolloutReadiness`, `canEnableCrossfadeProduction` (`CrossfadeProductionReadiness.kt`), `QA_CHECKLIST.md` section 32 | Pure release-readiness model: automated gate + physical core playback + background/lock-screen + Bluetooth + wired + Equalizer-compatibility policy; true only when all hold. Evidence only (not persisted, not a setting, no runtime effect). Release contract: `CrossfadeRolloutPolicy.RUNTIME_ENABLED` changes false -> true only after the automated gate has passed and every required physical condition is physically verified on the intended release build and device set; remains the single gate (no env/build/remote override). Gate false, Settings row hidden, runtime unchanged |
 | CF-2L1 | `CrossfadeNaturalHandoff.kt` (`CrossfadeNaturalTransitionObservation`, `isNaturalAutoTransition`, `PrimaryTakeoverFacts`, `CrossfadeHandoffWait`, `CrossfadeNaturalHandoffSeams`, `decideNaturalTakeover`, `planCrossfadePostAutoReconciliation`), `CrossfadePreparationRuntime.onPrimaryNaturalTransition` / `advancePendingHandoff` / natural `executeHandoff` (`CrossfadeHandoffExecutionResult.Awaiting`), `PlayerController.reconcileCrossfadePrimaryAfterNaturalTransition` | **Deferred primary takeover.** Physical validation showed a 1-2 s stutter when the old handoff seeked the primary across items and removed the secondary as soon as the seek returned. Now, after the terminal fade (primary gain 0, secondary gain 1), the secondary stays audible until the authoritative Media3 AUTO transition lands the primary on the exact target (`key.toPlaybackIndex`, positional, Repeat All wrap included), the real primary is READY there, a FRESH secondary snapshot is taken and the primary is repositioned with a same-item seek and has landed within the continuity tolerance of the fresh secondary position (retry exhaustion never permits a stale-position takeover; B never moves backward because of the owner change); only then primary gain is restored and the secondary abandoned. While waiting, a BUFFERING primary on the target keeps ownership. Driven by the AUTO fact, `STATE_READY` and the driver pulse reading real state; no fixed delay. Non-AUTO reasons, wrong index, stale generation and cancelled transitions are inert. The pre-transition cross-item planner is unchanged and the legacy immediate handoff remains for graphs built without the seams. Stats stay owned by the existing AUTO path (the reposition notifies none). A Pause-style cancellation after the AUTO transition first carries the fresh secondary position to a primary that is materially behind or ahead so a later resume does not rewind B. Gate false; physical retest pending |
-| CF-2L2 | `CrossfadeNaturalHandoff.kt` (`NATURAL_TRANSFER_ENTRY_TOLERANCE_MS`, `NATURAL_TRANSFER_ABORT_TOLERANCE_MS`, `NATURAL_TAKEOVER_TRANSFER_DURATION_MS`, `naturalTransferProgress`, `naturalTransferGains`, `CrossfadeHandoffWait.OwnershipTransfer`, seam additions `nowElapsedRealtimeMs` / `transferLog`), `CrossfadePreparationRuntime` (`beginTransfer` / `continueTransfer` / `completeTransfer` / `abortTransfer`, `isNaturalTransferInProgress`, `CrossfadeHandoffFailure.SecondaryGainWriteFailed` / `PrimaryGainWriteFailed`), `CrossfadeTimingDriver.TRANSFER_TICK_INTERVAL_MS` | **Soft ownership transfer.** The second physical run showed B no longer rewinds but the instant primary 0-to-1 plus secondary reset still produced a small audible stutter. For the natural-AUTO path the takeover is now an internal, non-user-visible gain envelope while the runtime stays `HandoffPending` and the secondary stays the audible authority. It may begin only after every CF-2L1 qualification AND with the primary within 80 ms of the fresh secondary position (stricter than the 350 ms reconciliation bound; no retry count or elapsed time bypasses it). For 150 ms the same `CrossfadeGainCurve.equalPower` is applied complementarily (primary rising, secondary falling), advanced only by driver evaluations on the monotonic clock (16 ms cadence while transferring); each tick revalidates ownership, real primary facts and a fresh secondary snapshot and writes the secondary first, then the primary via the key-owned primary gain controller. A divergence beyond 200 ms or a non-READY primary aborts (secondary back to 1, primary back to 0, reconciliation resumes). Completion: secondary exactly 0, primary restored to 1 (releasing primary-gain ownership), then secondary abandoned, then `HandoffSucceeded`. Write failures fail closed through `HandoffFailed`; cancellations keep the existing cleanup and the CF-2L1 Pause carry. The MediaSession and system playback authority remain the primary; the secondary gets no session, focus or EQ. DEBUG-only transfer logs under `WavdropCrossfade`. Gate false; physical retest pending |
-| CF-2L3 | `CrossfadeSettlement.kt` (`CrossfadeSettlementSnapshot`, `isCrossfadeFullySettled`, `formatCrossfadeSettlementSummary`), `CrossfadePreparationRuntime.settlementSnapshot` / `settleAfterSuccess` / `CrossfadeHandoffFailure.SettlementIncomplete`, `CrossfadeSecondaryPlayer.hasActiveOwnership` / `isStarted`, DEBUG logging in `PlaybackService` (`PreviousBehaviorPlayer` transport seams, primary listener) | **Lifecycle settlement.** A finished or cancelled transition must be fully dead: Idle AND no natural observed key, seek target, seek lead, transfer, primary-gain owner, secondary ownership or reconciliation accounting. After `HandoffSucceeded` the runtime clears bookkeeping explicitly and verifies this before returning `Succeeded` (otherwise best-effort cleanup and `Failed(SettlementIncomplete)`); late AUTO/READY/pending-advance/timing pulses are inert and distinct keys still arm. DEBUG-only evidence under `WavdropCrossfade`: `RECONCILE_REQUEST`/`RECONCILE_RESULT`, `HANDOFF_SETTLED`, `TRANSPORT_PLAY`/`TRANSPORT_PAUSE` at the real `PreviousBehaviorPlayer` seams, `PRIMARY_STATE`/`PRIMARY_IS_PLAYING` only while a crossfade is Active. No debounce or callback suppression; the crossfade code issues no primary play/pause (source-guard tests). Tolerances unchanged; the device log shows an abort-reseek loop (see PROJECT_CONTEXT) that is recorded, not fixed here. Gate false; physical retest pending |
+| CF-2L2 | `CrossfadeNaturalHandoff.kt` (`NATURAL_TRANSFER_ENTRY_TOLERANCE_MS`, `NATURAL_TRANSFER_ABORT_TOLERANCE_MS`, `NATURAL_TAKEOVER_TRANSFER_DURATION_MS`, `naturalTransferProgress`, `naturalTransferGains`, `CrossfadeHandoffWait.OwnershipTransfer`, seam additions `nowElapsedRealtimeMs` / `transferLog`), `CrossfadePreparationRuntime` (`beginTransfer` / `continueTransfer` / `completeTransfer` / `abortTransfer`, `isNaturalTransferInProgress`, `CrossfadeHandoffFailure.SecondaryGainWriteFailed` / `PrimaryGainWriteFailed`), `CrossfadeTimingDriver.TRANSFER_TICK_INTERVAL_MS` | **Soft ownership transfer.** The second physical run showed B no longer rewinds but the instant primary 0-to-1 plus secondary reset still produced a small audible stutter. For the natural-AUTO path the takeover is now an internal, non-user-visible gain envelope while the runtime stays `HandoffPending` and the secondary stays the audible authority. It may begin only after every CF-2L1 qualification AND with the primary within 80 ms of the fresh secondary position (stricter than the 350 ms reconciliation bound; no retry count or elapsed time bypasses it). For 150 ms the same `CrossfadeGainCurve.equalPower` is applied complementarily (primary rising, secondary falling), advanced only by driver evaluations on the monotonic clock (16 ms cadence while transferring); each tick revalidates ownership, real primary facts and a fresh secondary snapshot and writes the secondary first, then the primary via the key-owned primary gain controller. A divergence beyond 200 ms or a non-READY primary aborts (secondary back to 1, primary back to 0, reconciliation resumes). Completion: secondary exactly 0, primary restored to 1 (releasing primary-gain ownership), then secondary abandoned, then `HandoffSucceeded`. Write failures fail closed through `HandoffFailed`; cancellations keep the existing cleanup and the CF-2L1 Pause carry. The MediaSession and system playback authority remain the primary; the secondary gets no session, focus or EQ. DEBUG-only transfer logs under `StereoSineCrossfade`. Gate false; physical retest pending |
+| CF-2L3 | `CrossfadeSettlement.kt` (`CrossfadeSettlementSnapshot`, `isCrossfadeFullySettled`, `formatCrossfadeSettlementSummary`), `CrossfadePreparationRuntime.settlementSnapshot` / `settleAfterSuccess` / `CrossfadeHandoffFailure.SettlementIncomplete`, `CrossfadeSecondaryPlayer.hasActiveOwnership` / `isStarted`, DEBUG logging in `PlaybackService` (`PreviousBehaviorPlayer` transport seams, primary listener) | **Lifecycle settlement.** A finished or cancelled transition must be fully dead: Idle AND no natural observed key, seek target, seek lead, transfer, primary-gain owner, secondary ownership or reconciliation accounting. After `HandoffSucceeded` the runtime clears bookkeeping explicitly and verifies this before returning `Succeeded` (otherwise best-effort cleanup and `Failed(SettlementIncomplete)`); late AUTO/READY/pending-advance/timing pulses are inert and distinct keys still arm. DEBUG-only evidence under `StereoSineCrossfade`: `RECONCILE_REQUEST`/`RECONCILE_RESULT`, `HANDOFF_SETTLED`, `TRANSPORT_PLAY`/`TRANSPORT_PAUSE` at the real `PreviousBehaviorPlayer` seams, `PRIMARY_STATE`/`PRIMARY_IS_PLAYING` only while a crossfade is Active. No debounce or callback suppression; the crossfade code issues no primary play/pause (source-guard tests). Tolerances unchanged; the device log shows an abort-reseek loop (see PROJECT_CONTEXT) that is recorded, not fixed here. Gate false; physical retest pending |
 | CF-2L4 | `CrossfadePositionClock.kt` (`NaturalHandoffPositionClock`, `PositionSampleDecision`, `NATURAL_HANDOFF_MAX_PROJECTION_AGE_MS` = 500, `NATURAL_HANDOFF_RAW_AGREEMENT_MS` = 100), `CrossfadePreparationRuntime` (`observePositions`, projected entry / abort / completion checks, `RECONCILE_*` / `TRANSFER_*` / `POSITION_*` evidence), `CrossfadeHandoffWait.PositionConfidence`, `CrossfadeSettlementSnapshot.positionClocksActive` | **Projected position clock.** Raw `Player.currentPosition` is frozen between sparse updates (device log: 17 primary and 4 secondary changes in 1,019 evaluations; secondary jumps of about +250 ms), so raw comparisons manufactured false divergences and an abort-reseek storm. Each stream (primary B, secondary B) has a bounded monotonic projection (`anchorRaw + elapsed`) fed from ONE shared monotonic reading per evaluation: unchanged raw never resets the anchor, refreshes re-anchor forward-only, the first anchor is provisional and trusted only after a raw change, discontinuities are reported not smoothed, the projection expires after 500 ms without a credible refresh and is capped at the duration. Transfer entry (80 ms), abort (200 ms), the 150 ms envelope and the 350 ms reconciliation bound are UNCHANGED; entry/abort/completion use PROJECTED deltas and need both clocks confident; the primary clock is invalidated on its reconciliation seek; untrusted clocks only allow a GROSS (>350 ms) reposition, otherwise the handoff waits. Projection requires current advancement eligibility: `PrimaryTakeoverFacts.isAdvancing` (READY + playWhenReady + unsuppressed, Media3 `isPlaying` semantics) and `SecondaryHandoffSnapshot.isAdvancing` (READY + playing; a BUFFERING secondary is a valid owned snapshot but not projection-eligible); a non-advancing stream drops its clock, aborts a running transfer (`primary_not_advancing` / `secondary_not_advancing`) and must re-anchor from real movement. Clocks are transition-owned and part of the settlement invariant. No retry/elapsed-time takeover, no transport change. Gate false; physical retest pending |
 | CF-2G1 | `recoverCrossfadeFromExplicitPause(runtime)` (`CrossfadeProductionGraph.kt`), injected as `onExplicitPause` into `PlaybackService.PreviousBehaviorPlayer` | explicit pause at the session player seam: `noteExternalTransport()` (unchanged), then key-less synchronous `runtime.cancel(CrossfadeCancelReason.Pause)`, then `super.pause()`. Cleanup runs before the pause is forwarded so Fading/HandoffPending can still restore the primary to 1f before the secondary is abandoned; Armed/Ready abandon the secondary; Idle and a null runtime (gate false) are no-ops; repeats are idempotent. The player stays crossfade-agnostic (callback only). The timing driver is neither stopped nor restarted (paused snapshots are ineligible, a later resume re-arms freshly). Not wired to `onIsPlayingChanged` (non-user causes); no seek/next/previous/queue-mutation handling, no stats, queue-generation or song-id involvement |
 | CF-2G2 | `recoverCrossfadeFromExplicitSeek(runtime)` (`CrossfadeProductionGraph.kt`), `ExplicitSeekListenerRegistry`, `PlayerController.setExplicitSeekListener`, `onExplicitSeek` in `PlaybackService.PreviousBehaviorPlayer` | key-less synchronous `runtime.cancel(CrossfadeCancelReason.Seek)` BEFORE an explicit same-track seek. App user seek: `PlayerController.seekTo(positionMs)` notifies the listener first (before clamp, pending-seek capture or controller seek; a drained PendingSeek never cancels again); the service registers it in `onCreate` and clears it first thing in `onDestroy` (no process-global callback). External scrub: `PreviousBehaviorPlayer.seekTo(positionMs)` calls the callback only when `isExternalUserTransportRequest()` (refactored from `noteExternalTransport`; app-marked controller excluded). The app-marked controller is never cancelled at the session layer, so CF-2D2 handoff reconciliation (`seekTo(index, position)` via the app controller), bad-media recovery, hydration and queue sync remain valid. `seekToPrevious` restart now uses `super.seekTo(0L)` so previous stays outside this hook. Fading/HandoffPending restore the primary before abandoning the secondary; the driver keeps running; not wired to `onPositionDiscontinuity`/`onMediaItemTransition`; no ManualNavigation, next/previous, queue, stats, generation or song-id handling |
@@ -402,16 +402,16 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
 [WAVDROP_BACKUP_SCHEMA_V1.md](WAVDROP_BACKUP_SCHEMA_V1.md) (legacy v1).
 
 - **Logical format** is always **v2**. New user-facing exports package it as a **WDBK container** (below); the
-  legacy v2 JSON writer (`WavdropBackupExporterV2`) remains for the Recovery safety snapshot, tests and
-  compatibility tooling. The v2 model (`WavdropBackupExporterV2`): `formatMajor 2 / formatMinor 0`,
+  legacy v2 JSON writer (`StereoSineBackupExporterV2`) remains for the Recovery safety snapshot, tests and
+  compatibility tooling. The v2 model (`StereoSineBackupExporterV2`): `formatMajor 2 / formatMinor 0`,
   `backupId`, `sourceInstallationId`, `exportedAt`, `producer`, capability arrays, `manifest`, mandatory
   `integrity` (fingerprint of the parsed model), string-typed opaque ids, `lastListenedAt`, optional
   `eventId`, platform-scoped `preferences.android`, and any preserved `desktopOverlay` extension root.
-- **Parse** (`WavdropBackupParser`, legacy JSON): accepts v1 (legacy adapter, `UNVERIFIED_LEGACY` unless a payload
+- **Parse** (`StereoSineBackupParser`, legacy JSON): accepts v1 (legacy adapter, `UNVERIFIED_LEGACY` unless a payload
   checksum exists) and v2 (integrity required); rejects duplicate JSON keys, bounded nesting depth,
   newer versions, unknown required capabilities (none are known today), integrity/manifest mismatches,
   and implausible stat magnitudes. Unknown optional capabilities are tolerated.
-- **Import** (`WavdropBackupImportRepository`, transaction-bound): merge semantics only. Stats merge by
+- **Import** (`StereoSineBackupImportRepository`, transaction-bound): merge semantics only. Stats merge by
   `MAX` and are idempotent; events dedupe by `eventId` when present, else by the legacy fingerprint;
   unmatched history is routed through `QuarantinePlanner` into the pending tables; extension roots are
   stored in `pending_backup_extensions`. Matching uses `BackupSongLinkResolver` (URI -> path+title ->
@@ -431,22 +431,22 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
     preferences), `history/listen-events-000000.json` ... (bounded chunks of `WdbkLimits.EVENTS_PER_CHUNK` = 2 000
     events; none when there is no history), `extensions/desktop-overlay.json` (optional; the raw Desktop overlay,
     preserved unreinterpreted), `manifest.json`. Section JSON is produced by the same per-section codecs as the legacy
-    exporter and parsed by the same strict parser functions (`WavdropBackupSectionParser`), so field mapping exists once.
+    exporter and parsed by the same strict parser functions (`StereoSineBackupSectionParser`), so field mapping exists once.
   - **Integrity, two layers**: (1) physical - every entry's byte length and SHA-256 of its exact uncompressed bytes are
     recorded in the manifest and re-checked on read (ZIP CRC is never the contract); (2) semantic - the manifest stores the
-    existing `WavdropBackupIntegrityV2` fingerprint, recomputed over the reconstructed model. Success needs both, plus
-    matching section counts, per-chunk event counts and contiguous chunk indexes. `WavdropBackupIntegrityV2` now streams
+    existing `StereoSineBackupIntegrityV2` fingerprint, recomputed over the reconstructed model. Success needs both, plus
+    matching section counts, per-chunk event counts and contiguous chunk indexes. `StereoSineBackupIntegrityV2` now streams
     its canonical text into SHA-256 (identical hashes; pinned against a verbatim copy of the old implementation).
   - **Untrusted-input bounds** (`WdbkLimits`, counted on ACTUAL bytes, never `ZipEntry.size`): outer file 100 MiB,
     4 096 entries, 64 MiB per entry, 256 MiB total decompressed, 4 MiB manifest, 10 000 events per chunk. Entry names use a
     strict allow-list (no `..`, absolute, backslash or duplicate names); nothing is extracted to the filesystem and nested
-    archives are never opened. A higher `containerMajor` is rejected with the standard "newer version of Wavdrop" message; a
+    archives are never opened. A higher `containerMajor` is rejected with the standard "newer version of StereoSine" message; a
     higher `containerMinor` is tolerated only for entries the manifest declares OPTIONAL (still hash-verified, content
     ignored); an unknown REQUIRED entry or section is rejected.
-  - **Entry point**: `WavdropBackupDocumentReader` sniffs CONTENT (ZIP signature vs JSON), never the extension, MIME or
-    display name, and returns the same `WavdropBackup` either way. Legacy JSON still goes through `WavdropBackupParser`
+  - **Entry point**: `StereoSineBackupDocumentReader` sniffs CONTENT (ZIP signature vs JSON), never the extension, MIME or
+    display name, and returns the same `StereoSineBackup` either way. Legacy JSON still goes through `StereoSineBackupParser`
     (never converted through WDBK); Desktop JSON is routed to its own parser. UI code never inspects ZIP entries.
-  - **Export** (streamed; no complete event list exists on this path): `WavdropBackupRepository.buildWdbkExportSnapshot()`
+  - **Export** (streamed; no complete event list exists on this path): `StereoSineBackupRepository.buildWdbkExportSnapshot()`
     builds a `WdbkExportSnapshot` - the small logical sections, identity metadata and a FACTORY for a `WdbkEventSource` -
     and captures `MAX(track_listen_events.id)` once as the snapshot boundary. `WdbkWriter` (suspend) pulls the history one
     chunk at a time (`WdbkLimits.EVENTS_PER_CHUNK`): encode one bounded JSON array, write and SHA-256 it as a ZIP entry, feed
@@ -470,20 +470,20 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
     observed legacy ordering, descending id, which is observed and pinned in the Room/Robolectric SQLite test environment.
     It has NOT yet been executed on a real Android device: `LegacyExportTieOrderInstrumentedTest` (androidTest) is the
     on-device check and device confirmation remains part of WDBK physical validation.) Rows therefore arrive already in
-    `WavdropBackupIntegrityV2.EVENT_ORDER`: nothing is sorted or run-buffered in the app, and every delivered event is
+    `StereoSineBackupIntegrityV2.EVENT_ORDER`: nothing is sorted or run-buffered in the app, and every delivered event is
     checked against the comparator; if SQLite BINARY (code point) text order and the fingerprint UTF-16 order ever disagree for
     rows tied on every earlier key (eventIds differing at a supplementary character versus U+E000..U+FFFF) the export fails
     with a clear error rather than writing a wrong fingerprint (app-generated UUID eventIds are safe). The semantic
-    fingerprint is accumulated incrementally (`WavdropBackupIntegrityV2.StreamingFingerprint`: header and non-event sections,
+    fingerprint is accumulated incrementally (`StereoSineBackupIntegrityV2.StreamingFingerprint`: header and non-event sections,
     then events in order, then preferences) and is byte-for-byte the value the reconstructed model receives on read.
     `WdbkBackupSaver` re-opens and decodes the saved bytes before reporting success; a `wt`->`w` retry re-streams the same
     snapshot. Retained for history export: one page plus one chunk, the cursor and the previous event, plus the small sections and the
-    song map. SQLite sorts each page inside the query (it may use its own temp storage). Honest limits: the DECODE side (and therefore Merge/Recovery, which need a `WavdropBackup`) still materializes the complete
+    song map. SQLite sorts each page inside the query (it may use its own temp storage). Honest limits: the DECODE side (and therefore Merge/Recovery, which need a `StereoSineBackup`) still materializes the complete
     event list. Legacy v2 JSON export (`buildBackupJson`, used by the Recovery safety snapshot) keeps its full-history read.
     Folder/automatic backup: temp file -> verify -> stream-copy the SAME verified bytes to the final file -> verify final; the
     previous file is untouched until the verified copy starts (SAF still has no atomic replace; that risk is unchanged).
   - **Merge and Recovery are container-unaware**: decode happens before restore semantics, and everything downstream
-    receives the same `WavdropBackup`. For a WDBK, Recovery re-validates by re-reading the selected document and
+    receives the same `StereoSineBackup`. For a WDBK, Recovery re-validates by re-reading the selected document and
     requiring the same semantic fingerprint as the preview (legacy JSON still re-parses its original text).
   - **The Recovery safety snapshot intentionally stays verified legacy v2 JSON** (`files/recovery-safety/pre-recovery-latest.json`)
     in WDBK-1: it is an internal artifact on a physically validated destructive path, and packaging has no bearing on its
@@ -491,8 +491,8 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
   - Evidence and the chunk-size rationale: [architecture/WDBK_BENCHMARKS.md](architecture/WDBK_BENCHMARKS.md).
 - **Automatic backup**: `AutoBackupWorkScheduler` enqueues a unique 24-hour periodic WorkManager check
   (storage-not-low constraint); `AutoBackupWorker` calls `AutoBackupRepository.runIfDue()`, which owns the
-  interval due check and the folder write (a `.wdbk` file: `wavdrop-backup-YYYY-MM-DD.wdbk` or `wavdrop-backup.wdbk`). Scheduling is best-effort under Android's constraints.
-  `WavdropApp` reconciles the schedule at startup and when the interval setting changes.
+  interval due check and the folder write (a `.wdbk` file: `stereosine-backup-YYYY-MM-DD.wdbk` or `stereosine-backup.wdbk`); earlier `wavdrop-backup*` files in the folder are still recognised by Backup Verification and are never replaced, renamed or deleted. Scheduling is best-effort under Android's constraints.
+  `StereoSineApp` reconciles the schedule at startup and when the interval setting changes.
 - **TrackIdentity is not exported** and there is no rematching engine. Restore has explicit Merge and Recovery modes;
   Recovery requires the verified pre-Recovery safety snapshot. See `docs/BACKUP_PRESERVATION_CONTRACT.md` for the
   per-area status and the detailed semantics.
@@ -523,7 +523,7 @@ transaction; MAX-merges the main play count only (field 2 is a period play count
   `testImplementation` dependency and is used sparingly, only where real Android framework classes are
   needed (currently `PlaybackServiceConnectionResultTest`); `isReturnDefaultValues = true` is set for the
   JVM unit tests.
-- Instrumentation tests (`app/src/androidTest`): Room migration (`WavdropDatabaseMigrationTest` using
+- Instrumentation tests (`app/src/androidTest`): Room migration (`StereoSineDatabaseMigrationTest` using
   exported schemas), DAO retention, and clean-install preference restore. They need a device/emulator.
 - Release gate: `./gradlew.bat :app:testDebugUnitTest :app:assembleRelease` must pass before closing a slice.
 - Do not record test totals in architecture docs; run the complete JVM suite instead.

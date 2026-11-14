@@ -1,10 +1,16 @@
-# Wavdrop Music Player
+# StereoSine
 
 An offline-first, local-first Android music player built with Kotlin, Jetpack Compose, and Media3.
 No account, no ads, no cloud, no analytics. The app declares no `INTERNET` permission.
 
-Package `com.launchpoint.wavdrop` - version `0.1.0-beta10` (versionCode 10) - minSdk 26, compileSdk /
+StereoSine (formerly Wavdrop) - application ID `com.launchpoint.stereosine` (debug: `com.launchpoint.stereosine.debug`) - root Gradle project `StereoSine` - version `0.1.0-beta10` (versionCode 10) - minSdk 26, compileSdk /
 targetSdk 36 - Room schema 13.
+
+> **Status.** The app was previously published to testers as *Wavdrop*. The StereoSine identity (new application ID,
+> source packages and backup file names) is the current development state; no StereoSine-branded release has been
+> published, and a new release-signing identity is still pending (see [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md)).
+> Legacy Wavdrop backups (`.wdbk` / `.json`, `wavdrop_backup` format) remain importable. The GitHub repository and
+> public privacy URL still use the old *wavdrop* names until they are migrated.
 
 ## Current capabilities
 
@@ -21,7 +27,8 @@ targetSdk 36 - Room schema 13.
   (monthly / yearly / all-time), Insights hub.
 - **Backup and migration**: verified `.wdbk` backup/restore (logical format v2; legacy v1/v2 JSON import supported), automatic
   backup via a WorkManager check, preservation of unmatched history in a pending (quarantine) store,
-  Wavdrop Desktop backup import, and BlackPlayer EX `.bpstat` import.
+  Wavdrop Desktop backup import (legacy `wavdrop-desktop-lab` format), and BlackPlayer EX `.bpstat` import. New backups are named
+  `stereosine-backup[-date].wdbk`; earlier `wavdrop-backup*.wdbk` / `.json` files are still recognised and restorable.
 - **Personalisation**: theme, accent colour, six launcher icons (default Obsidian Black), home layout,
   startup screen.
 

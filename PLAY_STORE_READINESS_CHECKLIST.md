@@ -1,4 +1,8 @@
-# Wavdrop Play Store Readiness Checklist
+# StereoSine Play Store Readiness Checklist
+
+> **Outstanding external identity (rebrand, not yet done):** new StereoSine release-signing identity (the original Wavdrop
+> key was lost; none is configured), public privacy URL for StereoSine (currently `https://launchpointdigital.co.za/wavdrop/privacy`),
+> GitHub repository rename (currently `mafuzanam02-wq/wavdrop-music-player`), and the Play Console listing/app record.
 
 Tracks every item needed before submitting to Google Play. Update each row
 as items are completed. Tick `[x]` when done; leave `[ ]` open.
@@ -47,7 +51,7 @@ No data leaves the device except via user-initiated file export or share sheet.
 
 | Question | Answer | Evidence |
 |---|---|---|
-| Does the app collect user data and send it to your servers? | **No** | No `INTERNET` permission; no networking libraries. (Now Playing "search online" actions open a search URL in the user's own browser via `ACTION_VIEW`; Wavdrop sends nothing itself.) |
+| Does the app collect user data and send it to your servers? | **No** | No `INTERNET` permission; no networking libraries. (Now Playing "search online" actions open a search URL in the user's own browser via `ACTION_VIEW`; StereoSine sends nothing itself.) |
 | Does the app share data with third parties? | **No** | Share sheet is user-initiated OS feature; no data pipeline |
 | Is data encrypted in transit? | **N/A** | No data in transit |
 | Does the app use advertising ID? | **No** | No ad SDK; `INTERNET` absent |
@@ -68,7 +72,7 @@ types to explicitly confirm as not collected:
 - Messages — not collected
 - Photos and videos — not collected (audio file metadata is read locally, not collected)
 - Audio files — accessed locally via MediaStore; not collected/uploaded
-- Files and docs — backup files created by user via SAF; Wavdrop does not upload them
+- Files and docs — backup files created by user via SAF; StereoSine does not upload them
 - Contacts — not collected
 - App activity — not collected
 - App info and performance — not collected (no crash reporting)
@@ -81,10 +85,10 @@ types to explicitly confirm as not collected:
 | Item | Status | Location |
 |---|---|---|
 | Privacy Policy dialog present | ✅ Done | Settings → About → Legal → Privacy Policy |
-| Privacy Policy covers local storage, permissions, backup, share, delete, import | ✅ Done | `WavdropAbout.PRIVACY_POLICY` — 9 paragraphs |
+| Privacy Policy covers local storage, permissions, backup, share, delete, import | ✅ Done | `StereoSineAbout.PRIVACY_POLICY` — 9 paragraphs |
 | No cloud/future-sync promise in Privacy Policy | ✅ Done | Removed in legal polish pass |
 | Terms of Use dialog present | ✅ Done | Settings → About → Legal → Terms of Use |
-| Disclaimer covers delete permanence, share, music rights | ✅ Done | `WavdropAbout.DISCLAIMER` — 8 items |
+| Disclaimer covers delete permanence, share, music rights | ✅ Done | `StereoSineAbout.DISCLAIMER` — 8 items |
 | Open Source Licenses: no placeholder text | ✅ Done | Apache 2.0 attribution for all 8 major dependencies |
 | Backup export subtitle accurate | ✅ Done | `SettingsBackupScreen.kt` |
 | Backup import subtitle accurate (restore is live) | ✅ Done | `SettingsBackupScreen.kt` |
@@ -97,9 +101,9 @@ types to explicitly confirm as not collected:
 
 | Item | Status | Notes |
 |---|---|---|
-| `android:label` set | ✅ `@string/app_name` = "Wavdrop Music Player" | |
-| Launcher icon references valid mipmap-nodpi assets | ✅ | All 6 aliases point to `mipmap-nodpi/wavdrop_icon_*.png` |
-| Round icon references valid | ✅ | `wavdrop_icon_*_round.png` present for all 6 variants |
+| `android:label` set | ✅ `@string/app_name` = "StereoSine" | |
+| Launcher icon references valid mipmap-nodpi assets | ✅ | All 6 aliases point to `mipmap-nodpi/stereosine_icon_*.png` |
+| Round icon references valid | ✅ | `stereosine_icon_*_round.png` present for all 6 variants |
 | `ACTION_VIEW` audio MIME types declared | ✅ | `audio/*`, `audio/mpeg`, `audio/mp4`, `audio/aac`, `audio/flac`, `audio/ogg`, `audio/wav`, `audio/opus`, `audio/amr`, `audio/midi` |
 | `android:allowBackup="false"` | ✅ | Prevents ADB backup of app data |
 | `PlaybackService` exported with media session action | ✅ | Required for system media UI on API 33+ |
@@ -197,6 +201,6 @@ Items that must be resolved before any public release track.
 | Item | Notes |
 |---|---|
 | Migrate support email to domain address | Done — in-app contact and privacy policy now use `info@launchpointdigital.co.za`. Update Play Store developer contact field to match before submission. |
-| Add Privacy Policy URL reference to in-app Privacy Policy dialog | Once web page is live, add a "Full policy at [URL]" line to `WavdropAbout.PRIVACY_POLICY` |
+| Add Privacy Policy URL reference to in-app Privacy Policy dialog | Once web page is live, add a "Full policy at [URL]" line to `StereoSineAbout.PRIVACY_POLICY` |
 | Review OSS licenses via Gradle OSS Licenses Plugin | Current manual Apache 2.0 list is sufficient for launch; plugin automates future dependency additions |
 | Tablet layout review | Compose stretches gracefully but a tablet-specific layout pass would improve quality |

@@ -9,24 +9,24 @@ persistence behavior.
 * Active only when `BuildConfig.DEBUG` is true. In release builds every entry point returns immediately; call sites pass
   constants, ints and the player/error objects themselves, and all strings are built inside the tracer after that check.
   The only unconditional release cost is the tracer object's one-time static initialisation.
-* Log tag: **`WavdropStartTrace`**. The pre-existing queue-install line is **`WavdropQueuePerf`** (kept as is).
+* Log tag: **`StereoSineStartTrace`**. The pre-existing queue-install line is **`StereoSineQueuePerf`** (kept as is).
 * Privacy: lines contain only the request id, a fixed entry/stage vocabulary, queue/item counts, player serial numbers, the
   Media3 error **code name** and milliseconds. No titles, artists, paths, URIs or song ids. The request's start-item id is
   held in memory to compare against callbacks and is never logged.
 
 ## Capturing
 
-Install a **debug** build (`.\gradlew.bat installDebug`; the app id is `com.launchpoint.wavdrop.debug`), then:
+Install a **debug** build (`.\gradlew.bat installDebug`; the app id is `com.launchpoint.stereosine.debug`), then:
 
 ```bash
 adb logcat -c
-adb logcat -s WavdropStartTrace:D WavdropQueuePerf:D
+adb logcat -s StereoSineStartTrace:D StereoSineQueuePerf:D
 ```
 
 To keep a file for review:
 
 ```bash
-adb logcat -v time -s WavdropStartTrace:D WavdropQueuePerf:D > wavdrop-start-trace.txt
+adb logcat -v time -s StereoSineStartTrace:D StereoSineQueuePerf:D > stereosine-start-trace.txt
 ```
 
 ## Line format
@@ -122,12 +122,12 @@ Consequences and limits:
 
 Use a library of several thousand songs (the report concerns very large libraries). Capture with the commands above.
 
-* **Cold**: force-stop the app (`adb shell am force-stop com.launchpoint.wavdrop.debug`), launch it, and tap a song as
+* **Cold**: force-stop the app (`adb shell am force-stop com.launchpoint.stereosine.debug`), launch it, and tap a song as
   early as possible. A request is cold only if it reaches `PlayerController` **before** the `MediaController` has
   connected, so this is a race: launch-time session restore normally connects the controller within a moment. Whether
   you hit it is visible in the log: `cold=true` plus `controller_unavailable_parked` / `controller_connected_pending_drain`.
   If every tap logs `cold=false`, the cold path is not what a user normally experiences on that device (a finding in
-  itself). A killed service (`adb shell am kill com.launchpoint.wavdrop.debug` while the app is backgrounded, then
+  itself). A killed service (`adb shell am kill com.launchpoint.stereosine.debug` while the app is backgrounded, then
   relaunch) is the other way to get a disconnected controller. The `startup_restore` trace shows the launch-time
   install cost of the restored queue.
 * **Warm**: after one song is playing (controller connected), tap another. `cold=false`.

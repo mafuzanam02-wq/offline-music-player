@@ -119,3 +119,34 @@ writer metadata (`app:"Wavdrop"`, `packageName:"com.launchpoint.wavdrop"`, `data
 ## Remaining
 - Writer metadata (`app`/`packageName`/`database`) still legacy: DECISION REQUIRED, depends on Desktop consumers.
 - Backup preview/restore copy says "StereoSine backup" without a legacy-format note; wording of any legacy hint is a product choice.
+
+---
+
+# BRAND-04 — Current documentation and release identity (completed)
+
+Baseline HEAD `37e93ef5f5a0144abd518dd2fa3ce123c3bd3ee6`. Documentation and the directly dependent `VersionConfigTest` only; no
+production code, format, schema, version (`0.1.0-beta10` / `versionCode 10`) or external system was changed.
+
+## Classification applied
+- **Current branding -> StereoSine:** `README.md`, `PROJECT_CONTEXT.md`, `ENGINEERING_BACKLOG_AND_DECISIONS.md`, `TECHNICAL_DEBT_REGISTER.md`,
+  `PLANNED.md`, `QA_CHECKLIST.md`, `PLAY_STORE_*`, `docs/ARCHITECTURE.md`, `docs/BRANDING.md` (rewritten), `docs/RELEASE_SIGNING.md`,
+  `docs/BACKUP_PRESERVATION_CONTRACT.md`, `docs/development/P5-*`, `docs/diagnostics/P0-*`, `docs/architecture/CROSSFADE-*`, `docs/architecture/WDBK_BENCHMARKS.md`.
+  Stale code references corrected (package paths, `StereoSine*` class/tag names, `stereosine_icon_*` resources, backup file names, debug app id).
+- **Historical (preserved):** `RELEASE_NOTES.md` entries, the Beta 10 `WHATS_NEW.md` summary (title kept, "now StereoSine" and a
+  not-yet-released note added), `docs/qa/*`, `docs/architecture/adr/*`. Only a link target in `docs/qa/P5-F3-…` was repaired.
+- **Legacy contract (preserved, note added):** `docs/WAVDROP_DATA_FORMAT_SPEC.md`, `WAVDROP_BACKUP_SCHEMA_V1.md`, `WAVDROP_IMPORT_RULES.md`
+  (file names kept) and the identifiers `wavdrop_backup`, `wavdrop_wdbk`, `wavdrop-desktop-lab`, `wavdrop.db`, DataStore names, event sources.
+- **External (kept, documented as outstanding):** GitHub `mafuzanam02-wq/wavdrop-music-player`; privacy URL `…/wavdrop/privacy`
+  (and the external site's `wavdropPrivacyPolicy.js` / `WavdropPrivacyPage.jsx` file names).
+- **Signing:** `WAVDROP_UPLOAD_*`, `keyAlias=wavdrop-upload`; docs now state the original key was lost and no StereoSine signing identity exists yet.
+- **Stale/misleading corrected:** docs claimed package/ID `com.launchpoint.wavdrop`, `WavdropAbout`, `wavdrop_icon_*`, `wavdrop-backup*` as current.
+
+## Remaining work (not done in this slice)
+1. New StereoSine signing identity and rename of `WAVDROP_UPLOAD_*` / `keystore.properties.example`.
+2. Host and verify a StereoSine privacy page, then change `PRIVACY_POLICY_URL` (+ `PrivacyPolicyGuardTest`) and the Play listing.
+3. Rename the GitHub repository and update remotes/links.
+4. Backup writer metadata decision (`app`, `packageName`, `database`) and Desktop `wavdrop-desktop-lab` plan.
+5. Pre-existing doc drift unrelated to the rebrand: `docs/ARCHITECTURE.md` and `docs/architecture/CROSSFADE-PROMOTION-FEASIBILITY.md` still cite retired
+   crossfade files (e.g. `CrossfadeNaturalHandoff.kt`) that no longer exist.
+6. Production comments still say "Wavdrop" (`TrackIdentityEntity.kt`, `AudioEnhancementController.kt`, capture-script comment); code is out of this slice.
+The rebrand is therefore **not** fully complete.

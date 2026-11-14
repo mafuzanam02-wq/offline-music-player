@@ -1,4 +1,4 @@
-# Wavdrop Release Signing (WD-06)
+# StereoSine Release Signing (WD-06)
 
 Status: **signing wiring complete; credentials are supplied out-of-band and are never in the
 repository.** The repository contains no keystore, passwords, or `keystore.properties` (only the
@@ -6,6 +6,12 @@ template `keystore.properties.example`). A build is signed only on a machine/CI 
 four credentials; otherwise `assembleRelease` intentionally produces an **unsigned** APK. Play Console
 enrollment and the first upload are not recorded in the repository. Generating a keystore is a separate,
 explicitly-authorized step.
+
+> **Signing identity status (rebrand).** The original Wavdrop release key was lost and is **not** recovered or
+> configured anywhere. A new StereoSine signing identity (upload key / Play App Signing enrollment) has **not yet
+> been created**; until it is, no StereoSine release can be signed for distribution. The `WAVDROP_UPLOAD_*`
+> environment variable names and the `keyAlias=wavdrop-upload` example below are legacy names kept so the build
+> wiring is unchanged; renaming them is part of the pending signing migration.
 
 ## Intended architecture
 
@@ -91,5 +97,7 @@ apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
 - Current values in `app/build.gradle.kts`: `versionCode = 10`, `versionName = "0.1.0-beta10"`,
   `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`. Each Play upload needs a unique,
   monotonically increasing `versionCode` — bump before every new upload.
-- `applicationId = com.launchpoint.wavdrop` — this is **permanent** once first
-  uploaded to Play and can never change for this app listing.
+- `applicationId = com.launchpoint.stereosine` (debug builds add `.debug`) — this is **permanent** once first
+  uploaded to Play and can never change for this app listing. The pre-rebrand `com.launchpoint.wavdrop` is not
+  carried forward: Android treats StereoSine as a different app, so it installs beside legacy Wavdrop builds and
+  starts with empty data (use backup/restore to move data).

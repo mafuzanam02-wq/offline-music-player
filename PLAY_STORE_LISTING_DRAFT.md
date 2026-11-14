@@ -1,4 +1,8 @@
-# Wavdrop Music Player — Play Store Listing Draft
+# StereoSine — Play Store Listing Draft
+
+> **Status (rebrand).** Draft for a future **StereoSine** listing; no StereoSine listing exists and the earlier Wavdrop beta
+> distribution is not described here. The public privacy URL still uses the old `wavdrop` path until a StereoSine page is
+> hosted and verified, and the signing identity is pending (see `docs/RELEASE_SIGNING.md`).
 
 Working draft for the Google Play store listing. All claims must remain
 accurate to the current shipped feature set. Do not add features that are
@@ -36,14 +40,14 @@ Local music player with stats, playlists, and Wrapped. No cloud.
 
 ---
 
-Wavdrop is a local music player for Android. It plays audio files stored
+StereoSine is a local music player for Android. It plays audio files stored
 on your device — no account required, no subscription, no cloud upload,
 no ads.
 
 **Your library stays on your device.**
-Wavdrop reads audio from your device storage using Android's standard media
+StereoSine reads audio from your device storage using Android's standard media
 access. Your listening statistics, playlists, lyrics, and preferences are
-stored locally and never transmitted anywhere. Wavdrop has no internet
+stored locally and never transmitted anywhere. StereoSine has no internet
 access.
 
 **Browse your music your way.**
@@ -78,14 +82,14 @@ edit your own plain-text lyrics for any track inside the app.
 **Migration and backup.**
 · Import listening stats from BlackPlayer EX .bpstat files
 · Export a full local backup covering stats, playlists, lyrics, preferences,
-  and listening history as a local WavDrop backup file, verified after it is written
+  and listening history as a local StereoSine backup file, verified after it is written
 · Optional automatic backup checks to a folder you choose (best-effort,
   subject to Android scheduling)
-· Restore a Wavdrop backup on the same or a new device
+· Restore a StereoSine backup on the same or a new device
 · Share audio tracks with any app via Android's native share sheet
 
 **Privacy by design.**
-Wavdrop does not collect data, does not use analytics or advertising SDKs,
+StereoSine does not collect data, does not use analytics or advertising SDKs,
 and makes no network requests. Your audio, statistics, and playlists stay on
 your device unless you choose to export or share them. No tracking. No ads.
 
@@ -139,11 +143,11 @@ For display in promotional copy or feature bullets on the listing:
 
 For use in promotional descriptions, landing pages, or social copy:
 
-> Wavdrop is offline-first by design. It does not require an account, does
+> StereoSine is offline-first by design. It does not require an account, does
 > not upload your music or data to any server, and does not sell your
 > information. Your library, playlists, listening history, and preferences
 > stay on your device. The only time data leaves your device is when you
-> choose to export a backup or share a track — and even then, Wavdrop is
+> choose to export a backup or share a track — and even then, StereoSine is
 > not the destination.
 
 ---
@@ -207,7 +211,7 @@ Suggested order for Play Store listing:
 Do not include any of the following in the listing unless the feature is
 fully shipped:
 
-- Cloud sync or backup to Wavdrop servers
+- Cloud sync or backup to StereoSine servers
 - Online accounts or user profiles
 - Streaming music
 - AI recommendations or playlist generation
@@ -231,7 +235,7 @@ fully shipped:
 - Re-verify privacy claims after any networking or analytics library is added. Current basis: the manifest
   declares no `INTERNET` permission and no networking library is a dependency. Now Playing offers
   "search lyrics/artist online" actions that only hand a Google search URL to the user's own browser
-  (`ACTION_VIEW`); Wavdrop itself makes no network requests and does not fetch lyrics.
+  (`ACTION_VIEW`); StereoSine itself makes no network requests and does not fetch lyrics.
 - Launcher icon facts (six choices, default Obsidian Black) live in `docs/BRANDING.md`
 - Re-verify the Data Safety form after any permission or data-flow change
 - Update the Privacy Policy URL reference once the web page is live

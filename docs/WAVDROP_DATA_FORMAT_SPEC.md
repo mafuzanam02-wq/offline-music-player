@@ -1,5 +1,11 @@
 # Wavdrop Data Format Specification
 
+> **Naming note (BRAND-04).** This is a legacy-format contract. The `wavdrop_*` format identifiers, the file name and the
+> terms "Wavdrop backup" / "Wavdrop Desktop" are kept verbatim because existing backups and Desktop exports depend on
+> them. The current app is **StereoSine** and continues to read and (for `wavdrop_backup` v2 inside `wavdrop_wdbk`)
+> write this format unchanged. New backup *files* are named `stereosine-backup*.wdbk`; the file name is never part of
+> the format.
+
 Canonical shared data interchange contract for Android, Desktop, and future platforms. This is the single
 authoritative format document; there is no other copy.
 

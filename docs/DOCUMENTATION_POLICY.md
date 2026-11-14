@@ -72,6 +72,14 @@ Examples:
 
 When a summary and its authority disagree, fix the summary.
 
+## Naming: StereoSine vs Wavdrop
+
+The product is **StereoSine** (formerly Wavdrop). Current-state documents use StereoSine. Keep the old name only where
+it is accurate: historical release records (`RELEASE_NOTES.md`, the Beta 10 `WHATS_NEW.md` summary, `docs/qa/`,
+ADRs), legacy-format contracts and identifiers (`docs/WAVDROP_*.md`, `wavdrop_backup`, `wavdrop_wdbk`,
+`wavdrop-desktop-lab`, `wavdrop.db`), signing variables, and external identifiers not yet migrated (GitHub repo,
+privacy URL). Never erase a compatibility or safety statement merely because it mentions Wavdrop.
+
 ## Keeping things from going stale
 
 - If information becomes obsolete: **update it, merge it, or delete it.** Do not leave abandoned documents

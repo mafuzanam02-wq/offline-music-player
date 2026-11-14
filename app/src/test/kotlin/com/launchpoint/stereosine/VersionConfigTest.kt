@@ -30,12 +30,22 @@ class VersionConfigTest {
 
     @Test
     fun `beta 10 release documents agree with the build version`() {
-        assertTrue(doc("WHATS_NEW.md").startsWith("# What's New — Wavdrop Beta 10.0"))
+        // The Beta 10 summary keeps its historical Wavdrop title; the StereoSine rebrand must be stated without
+        // presenting it as a published release (no new version, no date).
+        val whatsNew = doc("WHATS_NEW.md")
+        assertTrue(whatsNew.startsWith("# What's New — Wavdrop Beta 10.0 (now StereoSine)"))
+        assertTrue("renamed **StereoSine**" in whatsNew)
+        assertTrue("no new version has been published" in whatsNew)
         val notes = doc("RELEASE_NOTES.md")
+        assertTrue("No StereoSine-branded release has been published yet" in notes)
         assertTrue("## 0.1.0-beta10" in notes)
         assertTrue("Unreleased / Engineering since beta9" !in notes)
         assertTrue("## 0.1.0-beta9" in notes) // historical entry kept
         assertTrue("`0.1.0-beta10`, versionCode 10" in doc("PROJECT_CONTEXT.md"))
+        assertTrue("`com.launchpoint.stereosine`" in doc("PROJECT_CONTEXT.md"))
+        assertTrue("`com.launchpoint.stereosine`" in doc("README.md"))
+        // The lost original signing key must never be described as recovered/configured.
+        assertTrue("original Wavdrop release key was lost" in doc("docs/RELEASE_SIGNING.md"))
         assertTrue("0.1.0-beta10 (versionCode 10)" in doc("ENGINEERING_BACKLOG_AND_DECISIONS.md"))
     }
 

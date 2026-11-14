@@ -1,4 +1,9 @@
-# Wavdrop Release Notes
+# Wavdrop Release Notes (historical; the app is now StereoSine)
+
+> **Naming.** Entries below are the historical record of the *Wavdrop* beta releases and keep the product name that
+> applied when they shipped. The app was later renamed **StereoSine** (application ID `com.launchpoint.stereosine`).
+> No StereoSine-branded release has been published yet, so there is no StereoSine release entry; the rebrand work is
+> tracked in `docs/development/BRAND-01-INVENTORY.md`.
 
 Historical record of completed and shipped work. Newest changes first. Each version entry reflects what was
 true when it shipped; do not rewrite old entries to match later behaviour. The current user-facing summary

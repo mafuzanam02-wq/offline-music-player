@@ -1,5 +1,11 @@
 # Wavdrop Backup Schema V1 (Legacy / Compatibility Contract)
 
+> **Naming note (BRAND-04).** This is a legacy-format contract. The `wavdrop_*` format identifiers, the file name and the
+> terms "Wavdrop backup" / "Wavdrop Desktop" are kept verbatim because existing backups and Desktop exports depend on
+> them. The current app is **StereoSine** and continues to read and (for `wavdrop_backup` v2 inside `wavdrop_wdbk`)
+> write this format unchanged. New backup *files* are named `stereosine-backup*.wdbk`; the file name is never part of
+> the format.
+
 Status: **Legacy.** Android no longer exports V1; it exports format **v2**. V1 is retained because
 Android must keep importing V1 backups indefinitely (through a legacy adapter) and because Desktop
 backups still use V1-shaped identity fields. **For current behaviour, read

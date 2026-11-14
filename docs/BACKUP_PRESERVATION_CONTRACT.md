@@ -1,6 +1,12 @@
-# Wavdrop Backup Preservation Contract
+# StereoSine Backup Preservation Contract
 
-Scope: Wavdrop Android backup, restore, migration, and preservation semantics (and the semantics Desktop
+> **Naming note (BRAND-04).** This is a legacy-format contract. The `wavdrop_*` format identifiers, the file name and the
+> terms "Wavdrop backup" / "Wavdrop Desktop" are kept verbatim because existing backups and Desktop exports depend on
+> them. The current app is **StereoSine** and continues to read and (for `wavdrop_backup` v2 inside `wavdrop_wdbk`)
+> write this format unchanged. New backup *files* are named `stereosine-backup*.wdbk`; the file name is never part of
+> the format.
+
+Scope: StereoSine Android backup, restore, migration, and preservation semantics (and the semantics Desktop
 interoperability must respect).
 
 This document defines **preservation semantics**: what must never be lost, what a wrong match costs, and
@@ -27,12 +33,12 @@ snapshot retention/receipts are **not** implemented.
 
 ---
 
-Wavdrop's backup system preserves a user's music life, not merely the songs currently visible in the
+StereoSine's backup system preserves a user's music life, not merely the songs currently visible in the
 MediaStore scan. Restore must never silently discard history because a song is temporarily absent.
 
 ## 1. Product Contract
 
-### 1.1 What a Wavdrop backup protects - *Partially implemented*
+### 1.1 What a StereoSine backup protects - *Partially implemented*
 
 | Item | Status |
 |---|---|
@@ -42,21 +48,21 @@ MediaStore scan. Restore must never silently discard history because a song is t
 | Playlists and playlist order | Implemented for matched songs; unmatched entries are preserved in `pending_playlist_entries` with position |
 | Lyrics overrides | Implemented (matched); unmatched preserved as pending |
 | Import baselines | Implemented (matched); unmatched preserved as pending |
-| Wavdrop preferences | Implemented for the supported `preferences.android` keys |
+| StereoSine preferences | Implemented for the supported `preferences.android` keys |
 | Equalizer intent / custom EQ settings | **Deferred** (not in backups today) |
 | Historical identities for music not currently available | Partially implemented (pending/quarantine rows; no exported TrackIdentity) |
 | Future music-memory systems (Timeline, Eras, Rediscovery) | Deferred |
 
 ### 1.2 What it does not protect - *Implemented (principle)*
 
-A Wavdrop backup does **not** contain the underlying audio files.
+A StereoSine backup does **not** contain the underlying audio files.
 
 ```text
-Wavdrop Backup  = music library state and listening life
+StereoSine Backup  = music library state and listening life
 Music File Backup = user-owned audio files stored separately
 ```
 
-User-facing wording must never imply that Wavdrop restores deleted MP3, FLAC, M4A, or other audio files.
+User-facing wording must never imply that StereoSine restores deleted MP3, FLAC, M4A, or other audio files.
 Backup, import, and export never modify audio files.
 
 ## 2. Core Guarantees
@@ -82,7 +88,7 @@ A song currently discovered through MediaStore and available for playback. Devic
 receive a new MediaStore id; not a durable identity.
 
 ### 3.2 Track Identity - *Partially implemented*
-A Wavdrop-owned historical identity for a piece of music, durable across rescans and temporary absence.
+A StereoSine-owned historical identity for a piece of music, durable across rescans and temporary absence.
 Today: a **device-local** `track_identities` row (`identityUuid`, soft `currentSongId`, `createdAt`,
 `lastResolvedAt`) minted by the media scan, cleared (not deleted) when its song disappears. It is not
 exported and is not used for rematching.
@@ -122,7 +128,7 @@ Deliberately **not** implemented: `portableTrackKey` (evidence, never identity -
 availability-state field, exported identity.
 
 Identity rule: MediaStore id is not identity; content URI is not identity; Room song id is not identity;
-Wavdrop UUID is identity. A portable key, when it exists, is a matching aid, not proof of equality; a
+StereoSine UUID is identity. A portable key, when it exists, is a matching aid, not proof of equality; a
 collision or ambiguity stays unresolved.
 
 ## 6. Unmatched Data Retention Policy
@@ -239,8 +245,8 @@ Physical validation (2026-10-06): the destructive/authoritative behavior and the
 passed on a real device, and the destructive wording and confirmation were clear in use. The limitations
 listed below are unchanged by that validation.
 
-An explicit, user-selected mode for Wavdrop (Android) backups. The selected backup becomes authoritative for
-WavDrop-owned recoverable state, mapped conservatively onto the songs currently in the device library. It is
+An explicit, user-selected mode for StereoSine (Android) backups. The selected backup becomes authoritative for
+StereoSine-owned recoverable state, mapped conservatively onto the songs currently in the device library. It is
 never inferred (not from a clean install, an empty database, wording, backup age or source installation); every
 import starts at Merge and Recovery is never remembered. Desktop backups stay Merge-only.
 
@@ -277,7 +283,7 @@ event recorded between the snapshot and the transaction is not in the snapshot.
 | Stats | Replaced with the backup row (lower values included, exact v2 `lastListenedAt`); local rows for songs the backup does not represent are removed |
 | Favourites | Backup is authoritative; a local favourite the backup does not mark is cleared (Recovery only) |
 | Events | Exported-source events (`wavdrop_playback`, `manual_restore`, `wavdrop_desktop_playback`) are replaced by the backup's set (matched ones restored, deduped inside the backup; none fabricated from counters). Events from non-exported sources are never deleted |
-| Playlists | WavDrop playlists replaced by the backup's (names, backup order, created/updated times, duplicate entries of the same backup song kept); local-only playlists removed; device/MediaStore playlists untouched |
+| Playlists | StereoSine playlists replaced by the backup's (names, backup order, created/updated times, duplicate entries of the same backup song kept); local-only playlists removed; device/MediaStore playlists untouched |
 | Lyrics / baselines | Replaced by the backup's matched rows |
 | Unmatched data | Preserved in the pending/quarantine tables with the same origin-key idempotence as Merge. Existing pending rows are NOT deleted. Since P5-STATS-17B the pending set is also exported (see below), so the safety snapshot carries it, and a backup's own pending-history section is added with the same equivalence-or-fail rule as Merge |
 | desktopOverlay | Stored verbatim from the backup; removed if the backup carries none. Overlay stats/events are not re-applied (the root is already authoritative) |
@@ -373,7 +379,7 @@ check") and must not promise exact daily/scheduled backups.
 
 ## 15. Rematching Contract - *Deferred*
 
-Rematching is not implemented. When it is, it must follow the hierarchy: exact Wavdrop identity
+Rematching is not implemented. When it is, it must follow the hierarchy: exact StereoSine identity
 reference; exact known source reference; strong normalized metadata + duration; conservative metadata
 with tolerance; otherwise leave unresolved. **Ambiguous match: do not attach history automatically;
 remain PENDING/ARCHIVED; surface for optional user review.** A wrong match is worse than an unresolved
@@ -439,5 +445,5 @@ User-facing exports are `.wdbk` containers (see `WAVDROP_DATA_FORMAT_SPEC.md` se
 this contract - Merge MAX / set-true-only favourites, Recovery authority and eligibility, the verified safety snapshot,
 conservative matching, event dedupe, playlist and lyrics semantics, quarantine, Desktop overlay round-tripping, no
 fabricated events, no audio files - applies identically to a backup decoded from a `.wdbk` and one decoded from legacy
-v1/v2 JSON. The container boundary sits BEFORE restore: restore code receives the same `WavdropBackup` either way and does
+v1/v2 JSON. The container boundary sits BEFORE restore: restore code receives the same `StereoSineBackup` either way and does
 not know which packaging produced it. Legacy v1 and v2 JSON backups remain importable indefinitely.

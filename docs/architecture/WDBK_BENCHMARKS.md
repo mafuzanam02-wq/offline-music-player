@@ -81,6 +81,6 @@ is indicative only (see caveats).
 - One theoretical failure mode: if SQLite's code-point text order and the fingerprint's UTF-16 string order disagree for
   two rows tied on every earlier key (eventIds differing at a supplementary character versus U+E000..U+FFFF), the export
   stops with a clear error instead of writing a wrong fingerprint. App-generated eventIds are UUIDs; it has a test.
-- **Import / restore is unchanged**: the decoder reconstructs the complete `WavdropBackup` because Merge and Recovery use
+- **Import / restore is unchanged**: the decoder reconstructs the complete `StereoSineBackup` because Merge and Recovery use
   that model, so the decoded event list is fully materialized (and verification after export briefly holds that decoded
   model). Going further there needs a streaming restore model (WDBK-2-era work), not part of WDBK-1.

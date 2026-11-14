@@ -19,7 +19,7 @@ Evidence labels used throughout:
 | HEAD | `7ad11a3003abba12b50cacb48fe44edf2ef9f70d` (matches the expected baseline) |
 | HEAD vs `origin/master` | `0 0` (after `git fetch`) |
 | Working tree | clean at start |
-| `PhysicalQueuePolicy.BOUNDED_WINDOW_ENABLED` | `const val … = false` ([PhysicalQueuePolicy.kt:22](../../app/src/main/kotlin/com/launchpoint/wavdrop/playback/PhysicalQueuePolicy.kt)) |
+| `PhysicalQueuePolicy.BOUNDED_WINDOW_ENABLED` | `const val … = false` ([PhysicalQueuePolicy.kt:22](../../app/src/main/kotlin/com/launchpoint/stereosine/playback/PhysicalQueuePolicy.kt)) |
 | Validation override | `VALIDATION_BOUNDED = BuildConfig.WAVDROP_VALIDATION_BOUNDED`; debug field from `-PwavdropValidationBounded`, release field hard-coded `"false"` ([build.gradle.kts](../../app/build.gradle.kts)) |
 | Crossfade runtime | `CrossfadeRolloutPolicy.RUNTIME_ENABLED = true`; `CrossfadeRolloutPolicy.kt`, `CrossfadeTiming.kt`, `CrossfadeProductionReadiness.kt` have **no diff** between `49098e6` (P5 design commit) and HEAD |
 | Release version | `versionCode = 10`, `versionName = "0.1.0-beta10"` (already the shipped beta10 in [RELEASE_NOTES.md](../../RELEASE_NOTES.md)) |
