@@ -1,0 +1,104 @@
+package com.launchpoint.stereosine.playback
+
+import com.launchpoint.stereosine.data.model.Song
+
+internal data class SearchPlaybackPlan(
+    val queue: List<Song>,
+    val currentIndex: Int,
+) {
+    val currentSongId: Long?
+        get() = queue.getOrNull(currentIndex)?.id
+}
+
+internal enum class PreserveSearchSyncAction {
+    UsePlan,
+    ClearPlan,
+}
+
+internal data class PreserveSearchSyncDecision(
+    val action: PreserveSearchSyncAction,
+    val plan: SearchPlaybackPlan?,
+)
+
+internal object SearchPlaybackPlanner {
+    fun preserveQueue(
+        playbackQueue: List<Song>,
+        currentPlaybackIndex: Int?,
+        song: Song,
+    ): SearchPlaybackPlan? {
+        if (playbackQueue.isEmpty()) {
+            return SearchPlaybackPlan(queue = listOf(song), currentIndex = 0)
+        }
+        val resolvedCurrentIndex = currentPlaybackIndex
+            ?.takeIf { it in playbackQueue.indices }
+            ?: return null
+        val queue = QueueMutation.searchPreserveQueue(
+            playbackQueue = playbackQueue,
+            currentPlaybackIndex = resolvedCurrentIndex,
+            song = song,
+        )
+        // The selected occurrence is POSITIONAL, not identity-derived. searchPreserveQueue always
+        // builds `history(take(resolvedCurrentIndex + 1)) + song + filteredContinuation`, so the
+        // newly inserted searched occurrence is unambiguously at `resolvedCurrentIndex + 1`. Using
+        // `indexOfFirst { it.id == song.id }` would return an EARLIER historical occurrence when the
+        // same song already exists in retained history, jumping playback backwards (WD release gate).
+        return SearchPlaybackPlan(
+            queue = queue,
+            currentIndex = resolvedCurrentIndex + 1,
+        )
+    }
+
+    /**
+     * Deterministic fallback for [preserveQueue] when the current playback index cannot be
+     * resolved but an active [playbackQueue] exists. The tapped [song] becomes the current item
+     * and the entire existing queue is preserved as up-next (with any duplicate of [song] removed),
+     * so nothing is destroyed. Falls back to a single-song queue only when the active queue is empty.
+     */
+    fun preserveQueueFallback(
+        playbackQueue: List<Song>,
+        song: Song,
+    ): SearchPlaybackPlan {
+        if (playbackQueue.isEmpty()) {
+            return SearchPlaybackPlan(queue = listOf(song), currentIndex = 0)
+        }
+        val continuation = playbackQueue.filterNot { it.id == song.id }
+        return SearchPlaybackPlan(queue = listOf(song) + continuation, currentIndex = 0)
+    }
+
+    fun replaceQueue(
+        searchContext: List<Song>,
+        song: Song,
+    ): SearchPlaybackPlan {
+        val queue = searchContext.ifEmpty { listOf(song) }
+        return SearchPlaybackPlan(
+            queue = queue,
+            currentIndex = queue.indexOfFirst { it.id == song.id }.takeIf { it >= 0 } ?: 0,
+        )
+    }
+
+    fun preserveSyncDecision(
+        plan: SearchPlaybackPlan?,
+        activeQueue: List<Song>,
+        mediaSongId: Long?,
+        mediaIndex: Int?,
+        fromTransition: Boolean,
+    ): PreserveSearchSyncDecision {
+        if (plan == null) {
+            return PreserveSearchSyncDecision(PreserveSearchSyncAction.ClearPlan, null)
+        }
+        val plannedSongId = plan.currentSongId
+            ?: return PreserveSearchSyncDecision(PreserveSearchSyncAction.ClearPlan, null)
+        val activeMatchesPlan = activeQueue.map { it.id } == plan.queue.map { it.id }
+        if (!activeMatchesPlan || plan.currentIndex !in activeQueue.indices) {
+            return PreserveSearchSyncDecision(PreserveSearchSyncAction.ClearPlan, null)
+        }
+        val confirmed = mediaSongId == plannedSongId && mediaIndex == plan.currentIndex
+        if (confirmed) {
+            return PreserveSearchSyncDecision(PreserveSearchSyncAction.ClearPlan, null)
+        }
+        if (fromTransition && mediaSongId != null && mediaSongId != plannedSongId) {
+            return PreserveSearchSyncDecision(PreserveSearchSyncAction.ClearPlan, null)
+        }
+        return PreserveSearchSyncDecision(PreserveSearchSyncAction.UsePlan, plan)
+    }
+}

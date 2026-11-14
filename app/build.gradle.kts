@@ -101,11 +101,11 @@ if (validationBounded) {
 }
 
 android {
-    namespace = "com.launchpoint.wavdrop"
+    namespace = "com.launchpoint.stereosine"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.launchpoint.wavdrop"
+        applicationId = "com.launchpoint.stereosine"
         minSdk = 26
         targetSdk = 36
         versionCode = 10

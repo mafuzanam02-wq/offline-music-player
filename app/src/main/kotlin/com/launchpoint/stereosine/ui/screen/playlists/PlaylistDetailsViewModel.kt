@@ -1,0 +1,337 @@
+package com.launchpoint.stereosine.ui.screen.playlists
+
+import android.content.Context
+import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
+import com.launchpoint.stereosine.data.export.PlaylistExporter
+import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.launchpoint.stereosine.data.model.PlaylistSummary
+import com.launchpoint.stereosine.data.model.Song
+import com.launchpoint.stereosine.data.playlists.PlaylistArtworkBuilder
+import com.launchpoint.stereosine.data.playlists.PlaylistPositionEntry
+import com.launchpoint.stereosine.data.repository.PlaylistOperationResult
+import com.launchpoint.stereosine.data.repository.PlaylistRepository
+import com.launchpoint.stereosine.data.repository.SongRepository
+import com.launchpoint.stereosine.data.repository.StatsRepository
+import com.launchpoint.stereosine.data.search.LibrarySearch
+import com.launchpoint.stereosine.playback.PlaybackQueueSource
+import com.launchpoint.stereosine.playback.PlayerController
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class PlaylistSongItem(
+    val playlistId: Long,
+    val songId: Long,
+    val position: Int,
+    val song: Song,
+    val playCount: Int = 0,
+)
+
+data class PlaylistDetailsUiState(
+    val isLoading: Boolean,
+    val playlist: PlaylistSummary?,
+    val entries: List<PlaylistSongItem>,
+    val visibleEntries: List<PlaylistSongItem>,
+    val searchQuery: String,
+    val artworkUris: List<String>,
+    val favoriteSongIds: Set<Long>,
+    /** Exact playlist row (entry position) that is playing, or null when not provable. */
+    val currentPlaylistPosition: Int?,
+    val totalDurationMs: Long,
+    val totalPlayCount: Int,
+    val mostPlayedSongTitle: String?,
+    /** P5-AUDIT-05: the COMPLETE ordered playlist rows (orphan rows included) this state was derived from; the guard for edit commands. */
+    val rowSnapshot: List<PlaylistPositionEntry> = emptyList(),
+) {
+    val songs: List<Song> get() = entries.map { it.song }
+    val isSearchActive: Boolean get() = searchQuery.isNotBlank()
+}
+
+internal fun playlistQueueSongs(entries: List<PlaylistSongItem>): List<Song> =
+    entries.map { it.song }
+
+internal fun playlistPlaybackStartIndex(
+    visibleEntries: List<PlaylistSongItem>,
+    selectedEntry: PlaylistSongItem,
+): Int? = visibleEntries.indexOfFirst { entry ->
+    entry.playlistId == selectedEntry.playlistId &&
+        entry.position == selectedEntry.position &&
+        entry.songId == selectedEntry.songId
+}.takeIf { it >= 0 }
+
+/**
+ * Exact playlist row that is playing, or null when it cannot be proven.
+ *
+ * A playlist row is an occurrence (playlistId + position + songId), never just a songId, and an
+ * equal song-ID sequence does not prove the queue came from this playlist. So the playback queue
+ * must be explicitly sourced from THIS playlist, [currentIndex] must be valid, and the whole
+ * visible sequence must correspond positionally (by song id) to the playback queue; then
+ * `visibleEntries[currentIndex]` is the playing occurrence. Any failure (other or unknown
+ * source, another playlist, reordered/shuffled queue, changed filter) yields null, never a guess.
+ */
+internal fun resolveCurrentPlaylistPosition(
+    playlistId: Long,
+    playbackSource: PlaybackQueueSource,
+    visibleEntries: List<PlaylistSongItem>,
+    playbackQueue: List<Song>,
+    currentIndex: Int,
+): Int? {
+    if (playbackSource != PlaybackQueueSource.Playlist(playlistId)) return null
+    if (visibleEntries.isEmpty() || playbackQueue.isEmpty()) return null
+    if (currentIndex !in playbackQueue.indices) return null
+    if (visibleEntries.size != playbackQueue.size) return null
+    for (i in visibleEntries.indices) {
+        if (visibleEntries[i].songId != playbackQueue[i].id) return null
+    }
+    return visibleEntries[currentIndex].position
+}
+
+@HiltViewModel
+class PlaylistDetailsViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val playlistRepository: PlaylistRepository,
+    private val songRepository: SongRepository,
+    private val statsRepository: StatsRepository,
+    private val playerController: PlayerController,
+    private val playlistExporter: PlaylistExporter,
+    @ApplicationContext private val appContext: Context,
+) : ViewModel() {
+
+    private val playlistId: Long = checkNotNull(savedStateHandle["playlistId"])
+
+    private val exportCoordinator = PlaylistExportCoordinator(playlistId, playlistExporter)
+    val exportState: StateFlow<PlaylistExportState> = exportCoordinator.state
+
+    fun startExport() { viewModelScope.launch { exportCoordinator.begin() } }
+    fun confirmIncompleteExport() = exportCoordinator.confirmIncomplete()
+    fun dismissExportConfirmation() = exportCoordinator.dismissConfirmation()
+    fun exportDestinationCancelled() = exportCoordinator.destinationCancelled()
+    fun exportPickerLaunched(): Boolean = exportCoordinator.pickerLaunched()
+    fun consumeExportResult() = exportCoordinator.consumeFinished()
+
+    fun exportTo(uri: Uri) {
+        viewModelScope.launch {
+            exportCoordinator.destinationChosen { mode ->
+                runCatching { appContext.contentResolver.openOutputStream(uri, mode) }.getOrNull()
+            }
+        }
+    }
+    private val searchQuery = MutableStateFlow("")
+
+    private val playlistSummary = playlistRepository.observePlaylists()
+        .map { list -> list.firstOrNull { it.id == playlistId } }
+
+    private val orderedEntries = combine(
+        playlistRepository.observePlaylistSongs(playlistId),
+        songRepository.songs,
+        statsRepository.allTrackStatsEntities(),
+    ) { playlistSongs, allSongs, allStats ->
+        val songMap = allSongs.associateBy { it.id }
+        val playCountBySongId = allStats.associate { it.songId to it.playCount }
+        val items = playlistSongs.mapNotNull { ps ->
+            songMap[ps.songId]?.let { song ->
+                PlaylistSongItem(
+                    playlistId = ps.playlistId,
+                    songId     = ps.songId,
+                    position   = ps.position,
+                    song       = song,
+                    playCount  = playCountBySongId[ps.songId] ?: 0,
+                )
+            }
+        }
+        items to playlistSongs.map { PlaylistPositionEntry(songId = it.songId, position = it.position) }
+    }
+
+    val uiState: StateFlow<PlaylistDetailsUiState> = combine(
+        playlistSummary,
+        orderedEntries,
+        searchQuery,
+        statsRepository.favoriteSongIds(),
+        playerController.nowPlayingState,
+    ) { summary, ordered, query, favorites, nowPlaying ->
+        val (entries, rowSnapshot) = ordered
+        val visibleSongs = LibrarySearch.filterSongs(entries.map { it.song }, query)
+        val visibleSongIds = visibleSongs.mapTo(mutableSetOf()) { it.id }
+        val visibleEntries = if (query.isBlank()) {
+            entries
+        } else {
+            entries.filter { it.songId in visibleSongIds }
+        }
+        val totalPlayCount = entries.sumOf { it.playCount }
+        val mostPlayedSongTitle = entries
+            .filter { it.playCount > 0 }
+            .maxByOrNull { it.playCount }
+            ?.song
+            ?.displayTitle
+        PlaylistDetailsUiState(
+            isLoading     = false,
+            playlist       = summary,
+            entries        = entries,
+            visibleEntries = visibleEntries,
+            searchQuery    = query,
+            artworkUris    = PlaylistArtworkBuilder.buildArtworkUris(entries.map { it.song }),
+            favoriteSongIds = favorites,
+            currentPlaylistPosition = resolveCurrentPlaylistPosition(
+                playlistId     = playlistId,
+                playbackSource = nowPlaying.queueSource,
+                visibleEntries = visibleEntries,
+                playbackQueue  = nowPlaying.queue,
+                currentIndex   = nowPlaying.currentIndex,
+            ),
+            totalDurationMs = entries.sumOf { it.song.duration },
+            totalPlayCount = totalPlayCount,
+            mostPlayedSongTitle = mostPlayedSongTitle,
+            rowSnapshot = rowSnapshot,
+        )
+    }.stateIn(
+        scope        = viewModelScope,
+        started      = SharingStarted.WhileSubscribed(5_000),
+        initialValue = PlaylistDetailsUiState(
+            isLoading     = true,
+            playlist       = null,
+            entries        = emptyList(),
+            visibleEntries = emptyList(),
+            searchQuery    = "",
+            artworkUris    = emptyList(),
+            favoriteSongIds = emptySet(),
+            currentPlaylistPosition = null,
+            totalDurationMs = 0L,
+            totalPlayCount = 0,
+            mostPlayedSongTitle = null,
+        ),
+    )
+
+    fun updateSearchQuery(query: String) {
+        searchQuery.value = query
+    }
+
+    fun clearSearch() {
+        searchQuery.value = ""
+    }
+
+    fun playNext(song: Song)   = playerController.playNext(song)
+    fun addToQueue(song: Song) = playerController.addToQueue(song)
+
+    fun playAllNext() {
+        val songs = playlistQueueSongs(uiState.value.visibleEntries)
+        if (songs.isEmpty()) return
+        playerController.playAllNext(songs)
+    }
+
+    fun addAllToQueue() {
+        val songs = playlistQueueSongs(uiState.value.visibleEntries)
+        if (songs.isEmpty()) return
+        playerController.addAllToQueue(songs)
+    }
+
+    fun playEntry(entry: PlaylistSongItem, shuffle: Boolean = false) {
+        val visibleEntries = uiState.value.visibleEntries
+        val songs = playlistQueueSongs(visibleEntries)
+        if (songs.isEmpty()) return
+        if (shuffle) {
+            playerController.playFromQueueShuffled(queue = songs, source = PlaybackQueueSource.Playlist(playlistId))
+        } else {
+            val startIndex = playlistPlaybackStartIndex(visibleEntries, entry) ?: return
+            playerController.playFromQueue(
+                queue = songs,
+                startIndex = startIndex,
+                source = PlaybackQueueSource.Playlist(playlistId),
+            )
+        }
+    }
+
+    fun playAll() {
+        val songs = uiState.value.visibleEntries.map { it.song }
+        val first = songs.firstOrNull() ?: return
+        playerController.playFromQueue(
+            queue = songs,
+            startSong = first,
+            source = PlaybackQueueSource.Playlist(playlistId),
+        )
+    }
+
+    fun shufflePlay() {
+        val songs = uiState.value.visibleEntries.map { it.song }
+        if (songs.isEmpty()) return
+        playerController.playFromQueueShuffled(queue = songs, source = PlaybackQueueSource.Playlist(playlistId))
+    }
+
+    fun toggleFavorite(songId: Long) {
+        val song = uiState.value.songs.firstOrNull { it.id == songId } ?: return
+        viewModelScope.launch { statsRepository.toggleFavorite(songId, song.uri) }
+    }
+
+    // P5-AUDIT-05: every edit carries the row snapshot of the state the user acted on, captured synchronously with the tap. A command
+    // derived from an older state is rejected by the repository (Stale) and changes nothing; the next emitted state is the truth.
+    fun removeEntry(position: Int) {
+        val snapshot = uiState.value.rowSnapshot
+        viewModelScope.launch {
+            playlistRepository.removePlaylistEntry(playlistId = playlistId, position = position, expected = snapshot)
+        }
+    }
+
+    fun moveEntryUp(position: Int) {
+        val entries = uiState.value.entries.sortedBy { it.position }
+        val index = entries.indexOfFirst { it.position == position }
+        if (index <= 0) return
+        val targetPosition = entries[index - 1].position
+        val snapshot = uiState.value.rowSnapshot
+        viewModelScope.launch {
+            playlistRepository.movePlaylistSong(
+                playlistId   = playlistId,
+                fromPosition = position,
+                toPosition   = targetPosition,
+                expected     = snapshot,
+            )
+        }
+    }
+
+    fun moveEntryDown(position: Int) {
+        val entries = uiState.value.entries.sortedBy { it.position }
+        val index = entries.indexOfFirst { it.position == position }
+        if (index < 0 || index >= entries.lastIndex) return
+        val targetPosition = entries[index + 1].position
+        val snapshot = uiState.value.rowSnapshot
+        viewModelScope.launch {
+            playlistRepository.movePlaylistSong(
+                playlistId   = playlistId,
+                fromPosition = position,
+                toPosition   = targetPosition,
+                expected     = snapshot,
+            )
+        }
+    }
+
+    fun moveToPosition(fromPosition: Int, toPosition: Int) {
+        if (fromPosition == toPosition) return
+        val snapshot = uiState.value.rowSnapshot
+        viewModelScope.launch {
+            playlistRepository.movePlaylistSong(
+                playlistId   = playlistId,
+                fromPosition = fromPosition,
+                toPosition   = toPosition,
+                expected     = snapshot,
+            )
+        }
+    }
+
+    fun renamePlaylist(name: String, onResult: (PlaylistOperationResult) -> Unit = {}) {
+        viewModelScope.launch { onResult(playlistRepository.renamePlaylist(playlistId, name)) }
+    }
+
+    fun deletePlaylist(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            playlistRepository.deletePlaylist(playlistId)
+            onDeleted()
+        }
+    }
+}

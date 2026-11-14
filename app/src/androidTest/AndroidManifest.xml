@@ -6,7 +6,7 @@
             and reads the shared content:// URI, proving the FileProvider grant works for a real external uid.
         -->
         <activity
-            android:name="com.launchpoint.wavdrop.ui.screen.wrapped.WrappedVideoReceiverActivity"
+            android:name="com.launchpoint.stereosine.ui.screen.wrapped.WrappedVideoReceiverActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

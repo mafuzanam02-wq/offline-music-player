@@ -1,0 +1,527 @@
+package com.launchpoint.stereosine.ui.screen.settings
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.launchpoint.stereosine.data.settings.NotificationControlsSetting
+import com.launchpoint.stereosine.data.settings.NowPlayingTimeDisplayMode
+import com.launchpoint.stereosine.data.settings.PreviousButtonBehavior
+import com.launchpoint.stereosine.data.settings.SearchTapBehavior
+import com.launchpoint.stereosine.data.settings.StartupDestination
+import com.launchpoint.stereosine.playback.CrossfadeRolloutPolicy
+import com.launchpoint.stereosine.playback.TransportFadeRules
+import com.launchpoint.stereosine.playback.SleepTimerOption
+import com.launchpoint.stereosine.playback.SleepTimerState
+import com.launchpoint.stereosine.ui.components.SleepTimerDialog
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsPlaybackScreen(
+    onNavigateBack: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
+    val startupDestination          by viewModel.startupDestination.collectAsStateWithLifecycle()
+    val resumeBehavior              by viewModel.resumeBehaviorSettings.collectAsStateWithLifecycle()
+    val sleepTimerState             by viewModel.sleepTimerState.collectAsStateWithLifecycle()
+    val notificationControlsSetting by viewModel.notificationControlsSetting.collectAsStateWithLifecycle()
+    val previousButtonBehavior      by viewModel.previousButtonBehavior.collectAsStateWithLifecycle()
+    val searchTapBehavior           by viewModel.searchTapBehavior.collectAsStateWithLifecycle()
+    val timeDisplayMode             by viewModel.nowPlayingTimeDisplayMode.collectAsStateWithLifecycle()
+    val crossfadeDurationMs         by viewModel.crossfadeDurationMs.collectAsStateWithLifecycle()
+    val equalizerEnabled            by viewModel.eqEnabled.collectAsStateWithLifecycle()
+    val transportFadeEnabled        by viewModel.transportFadeEnabled.collectAsStateWithLifecycle()
+    val transportFadeDurationMs     by viewModel.transportFadeDurationMs.collectAsStateWithLifecycle()
+    // CF-2J1: one rollout authority; hidden while the runtime is not available, disabled (saved value kept) while EQ is on.
+    val crossfadeUi = buildCrossfadeSettingUiState(CrossfadeRolloutPolicy.RUNTIME_ENABLED, equalizerEnabled, crossfadeDurationMs)
+    var showStartupDialog       by remember { mutableStateOf(false) }
+    var showPreviousDialog      by remember { mutableStateOf(false) }
+    var showSleepTimerDialog    by remember { mutableStateOf(false) }
+    var showSearchTapDialog     by remember { mutableStateOf(false) }
+    var showTimeDisplayDialog   by remember { mutableStateOf(false) }
+    var showCrossfadeDialog     by remember { mutableStateOf(false) }
+    var showTransportFadeDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Playback") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
+        },
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+        ) {
+            item { SectionHeader("Startup") }
+            item {
+                ClickableSettingsRow(
+                    title    = "Open app to",
+                    subtitle = startupDestination.displayName,
+                    onClick  = { showStartupDialog = true },
+                )
+            }
+            item { SectionDivider() }
+
+            item { SectionHeader("Session") }
+            item {
+                ClickableSettingsRow(
+                    title    = "Previous button",
+                    subtitle = previousButtonBehavior.displayName,
+                    onClick  = { showPreviousDialog = true },
+                )
+            }
+            item {
+                ToggleSettingsRow(
+                    title           = "Remember last played track",
+                    subtitle        = "Restore the last playing song when you reopen StereoSine.",
+                    checked         = resumeBehavior.rememberLastTrack,
+                    onCheckedChange = viewModel::setRememberLastTrack,
+                )
+            }
+            item {
+                ToggleSettingsRow(
+                    title           = "Remember playback position",
+                    subtitle        = "Resume from where you left off.",
+                    checked         = resumeBehavior.rememberPosition,
+                    onCheckedChange = viewModel::setRememberPosition,
+                )
+            }
+            item {
+                ToggleSettingsRow(
+                    title           = "Restore last queue",
+                    subtitle        = "Reload the full queue from your previous session.",
+                    checked         = resumeBehavior.restoreQueue,
+                    onCheckedChange = viewModel::setRestoreQueue,
+                )
+            }
+            item { SectionDivider() }
+
+            item { SectionHeader("Transitions") }
+            item {
+                ToggleSettingsRow(
+                    title           = "Transport fade",
+                    subtitle        = "Briefly fade when you press Play, Pause, Next or Previous. Separate from Crossfade.",
+                    checked         = transportFadeEnabled,
+                    onCheckedChange = viewModel::setTransportFadeEnabled,
+                )
+            }
+            item {
+                ClickableSettingsRow(
+                    title    = "Transport fade duration",
+                    subtitle = if (transportFadeEnabled) "$transportFadeDurationMs ms" else "Turn on Transport fade to change the duration",
+                    enabled  = transportFadeEnabled,
+                    onClick  = { showTransportFadeDialog = true },
+                )
+            }
+            if (crossfadeUi.visible) {
+                item {
+                    ClickableSettingsRow(
+                        title    = "Crossfade",
+                        subtitle = crossfadeUi.summary,
+                        enabled  = crossfadeUi.enabled,
+                        onClick  = { showCrossfadeDialog = true },
+                    )
+                }
+            }
+            item { SectionDivider() }
+
+            item { SectionHeader("Search") }
+            item {
+                ClickableSettingsRow(
+                    title    = "Search result tap",
+                    subtitle = searchTapBehavior.displayName,
+                    onClick  = { showSearchTapDialog = true },
+                )
+            }
+            item { SectionDivider() }
+
+            item { SectionHeader("Display") }
+            item {
+                ClickableSettingsRow(
+                    title    = "Time display",
+                    subtitle = timeDisplayMode.displayName,
+                    onClick  = { showTimeDisplayDialog = true },
+                )
+            }
+            item { SectionDivider() }
+
+            item { SectionHeader("Sleep Timer") }
+            item {
+                ClickableSettingsRow(
+                    title = "Sleep Timer",
+                    subtitle = sleepTimerState.summary(),
+                    onClick = { showSleepTimerDialog = true },
+                )
+            }
+            item { SectionDivider() }
+
+            item { SectionHeader("Notification Controls") }
+            item {
+                SettingsMessageRow(
+                    message = "Additional controls appear when supported by your device.",
+                )
+            }
+            NotificationControlsSetting.entries.forEach { setting ->
+                item {
+                    IconChoiceRow(
+                        name     = setting.displayName,
+                        selected = notificationControlsSetting == setting,
+                        onClick  = { viewModel.setNotificationControlsSetting(setting) },
+                    )
+                }
+            }
+        }
+    }
+
+    if (showTransportFadeDialog && transportFadeEnabled) {
+        TransportFadeDurationDialog(
+            selectedMs = transportFadeDurationMs,
+            onSelect   = { ms ->
+                viewModel.setTransportFadeDurationMs(ms)
+                showTransportFadeDialog = false
+            },
+            onDismiss  = { showTransportFadeDialog = false },
+        )
+    }
+    if (showCrossfadeDialog && crossfadeUi.visible && crossfadeUi.enabled) {
+        CrossfadeDurationDialog(
+            selected  = selectedCrossfadeOption(crossfadeDurationMs),
+            onSelect  = { option ->
+                viewModel.setCrossfadeDurationMs(option.durationMs)
+                showCrossfadeDialog = false
+            },
+            onDismiss = { showCrossfadeDialog = false },
+        )
+    }
+    if (showTimeDisplayDialog) {
+        TimeDisplayDialog(
+            selected  = timeDisplayMode,
+            onSelect  = { mode ->
+                viewModel.setNowPlayingTimeDisplayMode(mode)
+                showTimeDisplayDialog = false
+            },
+            onDismiss = { showTimeDisplayDialog = false },
+        )
+    }
+    if (showStartupDialog) {
+        StartupDestinationDialog(
+            selected  = startupDestination,
+            onSelect  = { destination ->
+                viewModel.setStartupDestination(destination)
+                showStartupDialog = false
+            },
+            onDismiss = { showStartupDialog = false },
+        )
+    }
+    if (showPreviousDialog) {
+        PreviousButtonBehaviorDialog(
+            selected  = previousButtonBehavior,
+            onSelect  = { behavior ->
+                viewModel.setPreviousButtonBehavior(behavior)
+                showPreviousDialog = false
+            },
+            onDismiss = { showPreviousDialog = false },
+        )
+    }
+    if (showSearchTapDialog) {
+        SearchTapBehaviorDialog(
+            selected  = searchTapBehavior,
+            onSelect  = { behavior ->
+                viewModel.setSearchTapBehavior(behavior)
+                showSearchTapDialog = false
+            },
+            onDismiss = { showSearchTapDialog = false },
+        )
+    }
+    if (showSleepTimerDialog) {
+        SleepTimerDialog(
+            state = sleepTimerState,
+            onOptionSelected = { option, finishCurrentTrack ->
+                viewModel.setSleepTimer(option, finishCurrentTrack)
+                showSleepTimerDialog = false
+            },
+            onCustomDurationSelected = { durationMs, finishCurrentTrack ->
+                viewModel.setCustomSleepTimer(durationMs, finishCurrentTrack)
+                showSleepTimerDialog = false
+            },
+            onDismiss = { showSleepTimerDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun TransportFadeDurationDialog(
+    selectedMs: Long,
+    onSelect: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val options = (TransportFadeRules.MIN_DURATION_MS..TransportFadeRules.MAX_DURATION_MS step TransportFadeRules.STEP_MS).toList()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Transport fade duration") },
+        text             = {
+            androidx.compose.foundation.lazy.LazyColumn {
+                items(options.size) { i ->
+                    val ms = options[i]
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onSelect(ms) }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = ms == selectedMs, onClick = { onSelect(ms) })
+                        Text(
+                            text     = "$ms ms",
+                            style    = MaterialTheme.typography.bodyLarge,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun CrossfadeDurationDialog(
+    selected: CrossfadeDurationOption?,
+    onSelect: (CrossfadeDurationOption) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Crossfade") },
+        text             = {
+            Column {
+                CROSSFADE_DURATION_OPTIONS.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(option) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = option == selected,
+                            onClick  = { onSelect(option) },
+                        )
+                        Text(
+                            text     = option.label,
+                            style    = MaterialTheme.typography.bodyLarge,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun PreviousButtonBehaviorDialog(
+    selected: PreviousButtonBehavior,
+    onSelect: (PreviousButtonBehavior) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Previous button") },
+        text             = {
+            Column {
+                PreviousButtonBehavior.entries.forEach { behavior ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(behavior) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = behavior == selected,
+                            onClick  = { onSelect(behavior) },
+                        )
+                        Text(
+                            text     = behavior.displayName,
+                            style    = MaterialTheme.typography.bodyLarge,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun SearchTapBehaviorDialog(
+    selected: SearchTapBehavior,
+    onSelect: (SearchTapBehavior) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Search result tap") },
+        text             = {
+            Column {
+                SearchTapBehavior.entries.forEach { behavior ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(behavior) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = behavior == selected,
+                            onClick  = { onSelect(behavior) },
+                        )
+                        Text(
+                            text     = behavior.displayName,
+                            style    = MaterialTheme.typography.bodyLarge,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun StartupDestinationDialog(
+    selected: StartupDestination,
+    onSelect: (StartupDestination) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Open app to") },
+        text             = {
+            Column {
+                StartupDestination.entries.forEach { destination ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(destination) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = destination == selected,
+                            onClick  = { onSelect(destination) },
+                        )
+                        Text(
+                            text     = destination.displayName,
+                            style    = MaterialTheme.typography.bodyLarge,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun TimeDisplayDialog(
+    selected: NowPlayingTimeDisplayMode,
+    onSelect: (NowPlayingTimeDisplayMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Time display") },
+        text             = {
+            Column {
+                NowPlayingTimeDisplayMode.entries.forEach { mode ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(mode) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = mode == selected,
+                            onClick  = { onSelect(mode) },
+                        )
+                        Text(
+                            text     = mode.displayName,
+                            style    = MaterialTheme.typography.bodyLarge,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun SleepTimerState.summary(): String = when {
+    isFinishingCurrentTrack -> "Finishing current track"
+    isCountingDown && customDurationMs != null ->
+        "Custom (${customDurationMs / 60_000L} min)" + if (finishCurrentTrack) ", then finish song" else ""
+    isCountingDown -> option.displayName + if (finishCurrentTrack) ", then finish song" else ""
+    else -> SleepTimerOption.OFF.displayName
+}

@@ -1,0 +1,585 @@
+package com.launchpoint.stereosine.playback
+
+import com.launchpoint.stereosine.data.model.Song
+import com.launchpoint.stereosine.data.repository.PlayEventWriter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Unit tests for [StatsTracker] play-counting and threshold logic.
+ *
+ * Uses a [FakePlayEventWriter] for assertions and overrides [StatsTracker.scope] with
+ * [Dispatchers.Unconfined] so coroutine launches execute synchronously — no extra
+ * test-coroutines dependency required.
+ */
+class StatsTrackerTest {
+
+    private lateinit var fakeWriter: FakePlayEventWriter
+    private lateinit var tracker: StatsTracker
+    private var fakeClockMs: Long = 0L
+
+    @Before
+    fun setUp() {
+        fakeWriter = FakePlayEventWriter()
+        tracker = StatsTracker(fakeWriter).also {
+            // Unconfined makes scope.launch { } execute on the calling thread immediately.
+            it.scope = CoroutineScope(Dispatchers.Unconfined)
+            it.clock = { fakeClockMs }
+        }
+        fakeClockMs = 0L
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    private fun song(id: Long, durationMs: Long = 120_000L) = Song(
+        id = id, title = "Song $id", artist = "Artist", album = "Album",
+        albumId = 0L, duration = durationMs, uri = "content://media/$id",
+        dateAdded = 0L, trackNumber = 0, year = 2020,
+    )
+
+    /** Simulate [ms] milliseconds of uninterrupted playback for the currently selected song. */
+    private fun playFor(ms: Long) {
+        tracker.onPlaybackStarted()
+        fakeClockMs += ms
+        tracker.onPlaybackPaused()
+    }
+
+    // ── threshold / first play ────────────────────────────────────────────────
+
+    @Test
+    fun `first play crossing threshold records exactly one play`() {
+        tracker.onSongSelected(song(1))
+        playFor(30_000L)
+
+        assertEquals(1, fakeWriter.plays.size)
+        assertEquals(1L, fakeWriter.plays[0].songId)
+    }
+
+    @Test
+    fun `play below threshold records no play`() {
+        tracker.onSongSelected(song(1))
+        playFor(5_000L)
+
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    @Test
+    fun `play and listening time are always recorded together`() {
+        tracker.onSongSelected(song(1))
+        playFor(45_000L)
+
+        val play = fakeWriter.plays.single()
+        assertEquals(1L, play.songId)
+        assertTrue("listenedMs must be positive", play.listenedMs > 0L)
+        assertEquals(45_000L, play.listenedMs)
+    }
+
+    // ── Bug 2: same-song replay ───────────────────────────────────────────────
+
+    @Test
+    fun `same song replayed after first play increments play count beyond 1`() {
+        tracker.onSongSelected(song(1))
+        playFor(30_000L)                     // first play — count: 1
+
+        // Re-select the same song (user taps it again or it loops back in a 1-song queue).
+        tracker.onSongSelected(song(1))
+        playFor(30_000L)                     // second play — count must be 2
+
+        assertEquals(2, fakeWriter.plays.size)
+        assertTrue(fakeWriter.plays.all { it.songId == 1L })
+    }
+
+    @Test
+    fun `third replay of same song records third play`() {
+        repeat(3) {
+            tracker.onSongSelected(song(1))
+            playFor(30_000L)
+        }
+
+        assertEquals(3, fakeWriter.plays.size)
+    }
+
+    // ── Bug 2: auto-advance ───────────────────────────────────────────────────
+
+    @Test
+    fun `auto-advance to new song records play for the new song`() {
+        // Song A qualifies.
+        tracker.onSongSelected(song(1))
+        playFor(30_000L)
+
+        // Auto-advance: PlayerController calls onSongSelected + onPlaybackStarted while playing.
+        tracker.onSongSelected(song(2))
+        playFor(30_000L)               // song 2 crosses threshold
+
+        assertEquals(2, fakeWriter.plays.size)
+        assertEquals(1L, fakeWriter.plays[0].songId)
+        assertEquals(2L, fakeWriter.plays[1].songId)
+    }
+
+    @Test
+    fun `a play event is inserted for each distinct qualified play`() {
+        for (id in 1L..3L) {
+            tracker.onSongSelected(song(id))
+            playFor(30_000L)
+        }
+        // Finalise last song by selecting a 4th (or just pause — playFor already pauses).
+        // The last song's play was already recorded on pause inside playFor.
+
+        assertEquals(3, fakeWriter.plays.size)
+        assertEquals(listOf(1L, 2L, 3L), fakeWriter.plays.map { it.songId })
+    }
+
+    // ── pause / resume accumulation ───────────────────────────────────────────
+
+    @Test
+    fun `accumulated time across pause and resume crosses threshold`() {
+        tracker.onSongSelected(song(1))
+        playFor(15_000L)     // 15 s — below 30 s threshold
+        assertTrue(fakeWriter.plays.isEmpty())
+
+        playFor(20_000L)     // +20 s = 35 s total — threshold crossed
+        assertEquals(1, fakeWriter.plays.size)
+    }
+
+    @Test
+    fun `pausing and resuming does not double-count a single play`() {
+        tracker.onSongSelected(song(1))
+        playFor(30_000L)     // threshold crossed on first pause
+        playFor(30_000L)     // resume and pause again — should not re-record
+
+        assertEquals(1, fakeWriter.plays.size)
+    }
+
+    // ── REPEAT_ONE / same-song loop ──────────────────────────────────────────
+    //
+    // Primary signal: PlayerController.tickAndCheckLoopBoundary() (500 ms position ticker)
+    // detects the wrap via LoopBoundaryDetector.isLoopBoundary and calls:
+    //   statsTracker.onSongSelected(song)   ← flush + check + reset
+    //   statsTracker.onPlaybackStarted()    ← start new session
+    //
+    // Belt-and-suspenders: onPositionDiscontinuity(AUTO_TRANSITION) and
+    // onMediaItemTransition(fromTransition=true) fire the same call sequence when the
+    // IPC delivers them.  Both paths reduce to the StatsTracker sequence tested below.
+
+    @Test
+    fun `REPEAT_ONE loop after pause increments play count`() {
+        // First loop plays through, user pauses partway (common case).
+        tracker.onSongSelected(song(1))
+        tracker.onPlaybackStarted()
+        fakeClockMs += 30_000L
+        tracker.onPlaybackPaused()            // threshold crossed → count = 1
+        assertEquals(1, fakeWriter.plays.size)
+
+        // Ticker (or callback) detects loop → onSongSelected(same) + onPlaybackStarted()
+        tracker.onSongSelected(song(1))       // flush (no-op, already paused) → check (already counted) → reset
+        tracker.onPlaybackStarted()           // new session
+        fakeClockMs += 30_000L
+        tracker.onPlaybackPaused()            // threshold crossed → count = 2
+
+        assertEquals(2, fakeWriter.plays.size)
+        assertTrue(fakeWriter.plays.all { it.songId == 1L })
+    }
+
+    @Test
+    fun `REPEAT_ONE continuous play without pause credits each full loop`() {
+        // Mirrors the ticker-based path: song plays to the end with no pause,
+        // tickAndCheckLoopBoundary detects the wrap and calls onSongSelected + onPlaybackStarted.
+        tracker.onSongSelected(song(1))
+        tracker.onPlaybackStarted()                      // session 1 starts
+
+        // Ticker fires at loop boundary: onSongSelected flushes in-progress session.
+        fakeClockMs += 30_000L
+        tracker.onSongSelected(song(1))                  // flush 30 s → threshold crossed → count = 1; reset
+        tracker.onPlaybackStarted()                      // session 2 starts
+
+        // Second loop plays through and pauses.
+        fakeClockMs += 30_000L
+        tracker.onPlaybackPaused()                       // threshold crossed → count = 2
+
+        assertEquals(2, fakeWriter.plays.size)
+        assertTrue(fakeWriter.plays.all { it.songId == 1L })
+    }
+
+    @Test
+    fun `REPEAT_ONE loop increments 1 to 2 to 3 continuously`() {
+        // Three complete loops, each detected by the ticker.
+        tracker.onSongSelected(song(1))
+        repeat(3) {
+            tracker.onPlaybackStarted()
+            fakeClockMs += 30_000L
+            // Ticker: flush + check + reset, then immediately start new session.
+            tracker.onSongSelected(song(1))
+        }
+        // Final pass: close the last open session.
+        tracker.onPlaybackPaused()
+
+        // 3 loop boundaries were processed; only loops whose session crossed threshold count.
+        // The 3 onSongSelected calls each flushed 30 s → count should be 3.
+        assertEquals(3, fakeWriter.plays.size)
+    }
+
+    @Test
+    fun `REPEAT_ONE three continuous loops each count`() {
+        tracker.onSongSelected(song(1))
+        repeat(3) {
+            tracker.onPlaybackStarted()
+            fakeClockMs += 30_000L
+            // Each loop boundary: flush + check (crosses threshold) + reset
+            tracker.onSongSelected(song(1))
+        }
+        // Final pause to flush the last open session (below threshold since reset just happened)
+        tracker.onPlaybackPaused()
+
+        assertEquals(3, fakeWriter.plays.size)
+    }
+
+    @Test
+    fun `REPEAT_ONE loop does not double-count when threshold not crossed on next pass`() {
+        tracker.onSongSelected(song(1))
+        tracker.onPlaybackStarted()
+        fakeClockMs += 30_000L
+        tracker.onPlaybackPaused()            // first play counted
+
+        tracker.onSongSelected(song(1))       // loop boundary: flush (0 accumulated) → reset
+        tracker.onPlaybackStarted()
+        fakeClockMs += 5_000L                 // only 5 s — below threshold
+        tracker.onPlaybackPaused()
+
+        assertEquals(1, fakeWriter.plays.size)
+    }
+
+    @Test
+    fun `re-tap while playing above threshold credits the in-progress session`() {
+        // User plays 35 s (above 30 s threshold) then taps the same song again.
+        // onSongSelected flushes the active session before resetting.
+        tracker.onSongSelected(song(1))
+        tracker.onPlaybackStarted()
+        fakeClockMs += 35_000L
+
+        // User taps same song — PlayerController calls onSongSelected before setMediaItems.
+        tracker.onSongSelected(song(1))       // flush 35 s → threshold crossed → count = 1; reset
+
+        assertEquals(1, fakeWriter.plays.size)
+        assertEquals(35_000L, fakeWriter.plays[0].listenedMs)
+    }
+
+    @Test
+    fun `re-tap while playing below threshold discards partial listen`() {
+        tracker.onSongSelected(song(1))
+        tracker.onPlaybackStarted()
+        fakeClockMs += 10_000L
+
+        tracker.onSongSelected(song(1))       // flush 10 s → below threshold → reset
+
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    @Test
+    fun `seeking within same song does not reset the stats session`() {
+        // Seeks do NOT call onSongSelected — only onPositionDiscontinuity with
+        // DISCONTINUITY_REASON_AUTO_TRANSITION triggers onSongSelected. Seeking within
+        // the same song continues accumulating time in the same session.
+        tracker.onSongSelected(song(1))
+        playFor(15_000L)                      // 15 s — below threshold
+        // (user seeks forward — no StatsTracker call, time keeps accumulating)
+        playFor(20_000L)                      // +20 s = 35 s total → threshold crossed
+
+        assertEquals(1, fakeWriter.plays.size)
+        assertEquals(35_000L, fakeWriter.plays[0].listenedMs)
+    }
+
+    // ── writer failure resilience ─────────────────────────────────────────────
+
+    @Test
+    fun `play writer failure does not throw and does not affect subsequent plays`() {
+        val throwingWriter = ThrowingPlayEventWriter(throwOnPlay = true)
+        val resilientTracker = StatsTracker(throwingWriter).also {
+            it.retryDelayer = {}   // P5-STATS-19C: retries run immediately in this synchronous test
+            it.scope = CoroutineScope(Dispatchers.Unconfined)
+            it.clock = { fakeClockMs }
+        }
+
+        // First play — writer throws internally; must not propagate.
+        resilientTracker.onSongSelected(song(1))
+        resilientTracker.onPlaybackStarted()
+        fakeClockMs += 30_000L
+        resilientTracker.onPlaybackPaused()   // threshold crossed, writer throws — no exception
+
+        // Second play on a different song — still works even after prior failure.
+        resilientTracker.onSongSelected(song(2))
+        resilientTracker.onPlaybackStarted()
+        fakeClockMs += 30_000L
+        resilientTracker.onPlaybackPaused()
+
+        // Writer recorded both attempts (even though they threw).
+        assertEquals("19C: each failing play is attempted twice (unknown failure: one retry)", 4, throwingWriter.playAttempts)
+    }
+
+    @Test
+    fun `skip writer failure does not throw and does not affect subsequent skips`() {
+        val throwingWriter = ThrowingPlayEventWriter(throwOnSkip = true)
+        val resilientTracker = StatsTracker(throwingWriter).also {
+            it.retryDelayer = {}   // P5-STATS-19C: retries run immediately in this synchronous test
+            it.scope = CoroutineScope(Dispatchers.Unconfined)
+            it.clock = { fakeClockMs }
+        }
+
+        // Skip song 1 (some engagement but below threshold).
+        resilientTracker.onSongSelected(song(1))
+        resilientTracker.onPlaybackStarted()
+        fakeClockMs += 5_000L
+        resilientTracker.onPlaybackPaused()
+        resilientTracker.onSongSelected(song(2))  // finalises song 1 as skip — writer throws
+
+        // Skip song 2 — writer throws again; no exception expected.
+        resilientTracker.onPlaybackStarted()
+        fakeClockMs += 5_000L
+        resilientTracker.onPlaybackPaused()
+        resilientTracker.onSongSelected(song(3))  // finalises song 2 as skip
+
+        assertEquals("19C: each failing skip is attempted twice (unknown failure: one retry)", 4, throwingWriter.skipAttempts)
+    }
+
+    @Test
+    fun `play writer failure does not prevent a normal play from being counted on next song`() {
+        val throwOnFirstWriter = object : HookedPlayEventWriter() {
+            var attempt = 0
+            val recorded = mutableListOf<Long>()
+            override suspend fun recordPlay(songId: Long, contentUri: String, listenedMs: Long, durationMs: Long) {
+                attempt++
+                if (attempt == 1) throw RuntimeException("simulated DB failure")
+                recorded += songId
+            }
+            override suspend fun recordSkip(songId: Long, contentUri: String, durationMs: Long) {}
+            override suspend fun recordListenStart(songId: Long, contentUri: String) {}
+        }
+        val resilientTracker = StatsTracker(throwOnFirstWriter).also {
+            it.retryDelayer = {}   // P5-STATS-19C: retries run immediately in this synchronous test
+            it.scope = CoroutineScope(Dispatchers.Unconfined)
+            it.clock = { fakeClockMs }
+        }
+
+        resilientTracker.onSongSelected(song(1))
+        resilientTracker.onPlaybackStarted()
+        fakeClockMs += 30_000L
+        resilientTracker.onPlaybackPaused()   // attempt 1 — throws internally, caught
+
+        resilientTracker.onSongSelected(song(2))
+        resilientTracker.onPlaybackStarted()
+        fakeClockMs += 30_000L
+        resilientTracker.onPlaybackPaused()   // attempt 2 — succeeds
+
+        assertEquals("19C: the failed first play is retried and then recorded, in order", listOf(1L, 2L), throwOnFirstWriter.recorded)
+    }
+
+    // ── skip logic ────────────────────────────────────────────────────────────
+
+    @Test
+    fun `skipping away before threshold records a skip not a play`() {
+        tracker.onSongSelected(song(1))
+        playFor(5_000L)
+
+        tracker.onSongSelected(song(2))   // finalises song 1 as a skip
+
+        assertTrue(fakeWriter.plays.isEmpty())
+        assertEquals(1, fakeWriter.skips.size)
+        assertEquals(1L, fakeWriter.skips[0].songId)
+    }
+
+    // ── Phase 8: bad-media bypass must not fabricate stats ────────────────────
+
+    @Test
+    fun `bad track bypassed without ever playing records no skip play or listen`() {
+        // Bad-media recovery path: an unplayable track becomes current (onSongSelected) but never
+        // reaches STATE_READY / isPlaying=true, so onPlaybackStarted is NEVER called for it. When
+        // recovery advances to the next track (onSongSelected), the bypassed track finalises with
+        // zero accumulated time — it must NOT count as a user skip, play, or listen.
+        tracker.onSongSelected(song(1))          // good song plays through
+        playFor(30_000L)
+        assertEquals(1, fakeWriter.plays.size)
+
+        tracker.onSongSelected(song(2))          // auto-transition to a BAD track — no playback starts
+        // (no onPlaybackStarted for song 2: it fails to load)
+        tracker.onSongSelected(song(3))          // recovery advances; finalises the bad song 2
+
+        assertEquals("no fabricated play for the bad track", 1, fakeWriter.plays.size)
+        assertTrue("no fabricated skip for the bad track", fakeWriter.skips.none { it.songId == 2L })
+        assertTrue("no fabricated listen for the bad track", fakeWriter.listenStarts.none { it.songId == 2L })
+    }
+
+    @Test
+    fun `consecutive bad tracks bypassed fabricate no skips`() {
+        // Three unplayable tracks in a row, none ever starts playback; recovery walks past each.
+        tracker.onSongSelected(song(10))
+        tracker.onSongSelected(song(11))
+        tracker.onSongSelected(song(12))
+        tracker.onSongSelected(song(13))         // finalises the last bad one
+
+        assertTrue(fakeWriter.skips.isEmpty())
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    // ── lastListenedAt / 5-second listen threshold ────────────────────────────
+
+    @Test
+    fun `1 second play does not write listen start and does not record play`() {
+        tracker.onSongSelected(song(1))
+        playFor(1_000L)
+
+        assertTrue(fakeWriter.listenStarts.isEmpty())
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    @Test
+    fun `3 seconds play does not write listen start and does not record play`() {
+        tracker.onSongSelected(song(1))
+        playFor(3_000L)
+
+        assertTrue(fakeWriter.listenStarts.isEmpty())
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    @Test
+    fun `exactly 5 seconds play writes listen start but does not record play`() {
+        tracker.onSongSelected(song(1))
+        playFor(5_000L)
+
+        assertEquals(1, fakeWriter.listenStarts.size)
+        assertEquals(1L, fakeWriter.listenStarts[0].songId)
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    @Test
+    fun `10 seconds play then next writes listen start but does not record play`() {
+        tracker.onSongSelected(song(1))
+        playFor(10_000L)
+        tracker.onSongSelected(song(2))  // finalises song 1
+
+        assertEquals(1, fakeWriter.listenStarts.size)
+        assertEquals(1L, fakeWriter.listenStarts[0].songId)
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    @Test
+    fun `accumulated listen across pause and resume crosses 5s threshold`() {
+        tracker.onSongSelected(song(1))
+        playFor(2_000L)   // 2 s — below 5 s
+        assertTrue(fakeWriter.listenStarts.isEmpty())
+
+        playFor(2_000L)   // 4 s — still below
+        assertTrue(fakeWriter.listenStarts.isEmpty())
+
+        playFor(2_000L)   // 6 s total — threshold crossed
+        assertEquals(1, fakeWriter.listenStarts.size)
+        assertEquals(1L, fakeWriter.listenStarts[0].songId)
+    }
+
+    @Test
+    fun `listen start written at most once per song selection even when threshold crossed multiple times`() {
+        tracker.onSongSelected(song(1))
+        playFor(5_000L)   // threshold crossed on first pause
+        playFor(5_000L)   // second pause — guard must suppress repeated write
+
+        assertEquals(1, fakeWriter.listenStarts.size)
+    }
+
+    @Test
+    fun `song that crosses meaningful-play threshold also writes listen start`() {
+        tracker.onSongSelected(song(1))
+        playFor(30_000L)
+
+        assertEquals(1, fakeWriter.plays.size)
+        assertEquals(1, fakeWriter.listenStarts.size)
+        assertEquals(1L, fakeWriter.listenStarts[0].songId)
+    }
+
+    @Test
+    fun `listen start guard resets on same-song loop so second loop can qualify`() {
+        tracker.onSongSelected(song(1))
+        playFor(5_000L)   // first loop: listen start written
+        assertEquals(1, fakeWriter.listenStarts.size)
+
+        tracker.onSongSelected(song(1))  // loop boundary reset
+        playFor(5_000L)   // second loop: should write again
+        assertEquals(2, fakeWriter.listenStarts.size)
+    }
+
+    @Test
+    fun `rapid next through three songs each played 5s writes three listen starts no plays`() {
+        for (id in 1L..3L) {
+            tracker.onSongSelected(song(id))
+            playFor(5_000L)
+        }
+        tracker.onSongSelected(song(4))  // finalises song 3
+
+        assertEquals(3, fakeWriter.listenStarts.size)
+        assertEquals(listOf(1L, 2L, 3L), fakeWriter.listenStarts.map { it.songId })
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    @Test
+    fun `rapid next through three songs each played 2s writes no listen starts no plays`() {
+        for (id in 1L..3L) {
+            tracker.onSongSelected(song(id))
+            playFor(2_000L)
+        }
+        tracker.onSongSelected(song(4))  // finalises song 3
+
+        assertTrue(fakeWriter.listenStarts.isEmpty())
+        assertTrue(fakeWriter.plays.isEmpty())
+    }
+
+    // ── fake helpers ──────────────────────────────────────────────────────────
+
+    private data class PlayCall(val songId: Long, val listenedMs: Long)
+    private data class SkipCall(val songId: Long)
+    private data class ListenStartCall(val songId: Long)
+
+    private class FakePlayEventWriter : HookedPlayEventWriter() {
+        val plays = mutableListOf<PlayCall>()
+        val skips = mutableListOf<SkipCall>()
+        val listenStarts = mutableListOf<ListenStartCall>()
+
+        override suspend fun recordPlay(
+            songId: Long,
+            contentUri: String,
+            listenedMs: Long,
+            durationMs: Long,
+        ) {
+            plays += PlayCall(songId, listenedMs)
+        }
+
+        override suspend fun recordSkip(songId: Long, contentUri: String, durationMs: Long) {
+            skips += SkipCall(songId)
+        }
+
+        override suspend fun recordListenStart(songId: Long, contentUri: String) {
+            listenStarts += ListenStartCall(songId)
+        }
+    }
+
+    /** Always throws — used to verify [StatsTracker] catches and does not propagate failures. */
+    private class ThrowingPlayEventWriter(
+        private val throwOnPlay: Boolean = false,
+        private val throwOnSkip: Boolean = false,
+    ) : HookedPlayEventWriter() {
+        var playAttempts = 0
+        var skipAttempts = 0
+
+        override suspend fun recordPlay(songId: Long, contentUri: String, listenedMs: Long, durationMs: Long) {
+            playAttempts++
+            if (throwOnPlay) throw RuntimeException("simulated play write failure")
+        }
+
+        override suspend fun recordSkip(songId: Long, contentUri: String, durationMs: Long) {
+            skipAttempts++
+            if (throwOnSkip) throw RuntimeException("simulated skip write failure")
+        }
+
+        override suspend fun recordListenStart(songId: Long, contentUri: String) {}
+    }
+}

@@ -1,0 +1,183 @@
+package com.launchpoint.stereosine.ui.components
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.launchpoint.stereosine.data.artwork.ArtworkResolver
+import com.launchpoint.stereosine.data.model.Song
+import com.launchpoint.stereosine.data.settings.ArtworkCornerStyle
+import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun SongRow(
+    song: Song,
+    isCurrent: Boolean,
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onOpenDetails: () -> Unit,
+    modifier: Modifier = Modifier,
+    showFavoriteButton: Boolean = true,
+    onMoreClick: (() -> Unit)? = null,
+    highlightedTitle: AnnotatedString? = null,
+    highlightedArtist: AnnotatedString? = null,
+) {
+    val rowColor    = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent
+    val accentColor = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent
+    val compact          = LocalCompactMode.current
+    val showThumbnail    = LocalShowSongThumbnails.current
+    val showAlbum        = LocalShowAlbumInSongRows.current
+    val cornerStyle      = LocalArtworkCornerStyle.current
+    val verticalPadding  = if (compact) 8.dp else 12.dp
+    val artworkSize      = if (compact) 44.dp else 48.dp
+    val titleText        = song.displayTitle
+    val artistText       = song.displayArtist
+    // Shared between press feedback and the click handler so the restrained scale tracks the same
+    // press the ripple does — no double trigger, ripple stays as the primary affordance.
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        modifier = modifier
+            .wavdropPressFeedback(interactionSource)
+            .background(rowColor)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication        = LocalIndication.current,
+                onClick           = onClick,
+                onDoubleClick     = onToggleFavorite,
+                onLongClick       = onOpenDetails,
+            )
+            .padding(start = 16.dp, end = 4.dp, top = verticalPadding, bottom = verticalPadding),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(40.dp)
+                .background(accentColor),
+        )
+        Spacer(Modifier.width(12.dp))
+        if (showThumbnail) {
+            ArtworkImage(
+                artworkUri = ArtworkResolver.albumArtworkUri(song.albumId),
+                contentDescription = "Album artwork for ${song.album}",
+                placeholderIcon = Icons.Default.MusicNote,
+                shape = cornerStyle.toShape(),
+                artworkSize = artworkSize,
+                modifier = Modifier.size(artworkSize),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (highlightedTitle != null) {
+                    Text(
+                        text     = highlightedTitle,
+                        style    = MaterialTheme.typography.titleMedium,
+                        color    = if (isCurrent) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                } else {
+                    Text(
+                        text     = titleText,
+                        style    = MaterialTheme.typography.titleMedium,
+                        color    = if (isCurrent) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+                if (isCurrent) {
+                    Icon(
+                        imageVector        = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.primary,
+                        modifier           = Modifier.padding(start = 8.dp).size(16.dp),
+                    )
+                }
+            }
+            if (highlightedArtist != null) {
+                Text(
+                    text     = highlightedArtist,
+                    style    = MaterialTheme.typography.bodyMedium,
+                    color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            } else {
+                Text(
+                    text     = artistText,
+                    style    = MaterialTheme.typography.bodyMedium,
+                    color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            if (showAlbum && song.album.isNotBlank()) {
+                Text(
+                    text     = song.album,
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (onMoreClick != null) {
+            IconButton(onClick = onMoreClick) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More actions",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                )
+            }
+        } else if (showFavoriteButton) {
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector        = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Unfavorite" else "Favorite",
+                    tint               = if (isFavorite) MaterialTheme.colorScheme.primary
+                                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    modifier           = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}

@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-  Read-only diagnostic capture for the WavDrop P5-F Full-vs-Bounded device validation.
+  Read-only diagnostic capture for the StereoSine P5-F Full-vs-Bounded device validation.
 
 .DESCRIPTION
   * Needs no root. Runs only read-only adb commands (devices, getprop, pm path, dumpsys meminfo, logcat -d / logcat).
   * Never clears logcat, installs, uninstalls, force-stops or clears app data.
   * Reports a missing adb, no device, an unauthorized device or several devices clearly and exits non-zero without acting.
   * Writes to a timestamped folder OUTSIDE the repository (default: %USERPROFILE%\wavdrop-validation-logs).
-  * Keeps only WavDrop tags (silences everything else), so unrelated app logs and other apps' crash reports are not collected.
+  * Keeps only StereoSine tags (silences everything else), so unrelated app logs and other apps' crash reports are not collected.
 
 .EXAMPLE
   # One-shot: dump what the device buffer holds right now, plus device info and memory
@@ -27,7 +27,7 @@ param(
     [ValidateSet('Snapshot', 'Live', 'Meminfo')][string]$Mode = 'Snapshot',
     [string]$Serial,
     [string]$OutRoot = (Join-Path $env:USERPROFILE 'wavdrop-validation-logs'),
-    [string]$Package = 'com.launchpoint.wavdrop.debug'
+    [string]$Package = 'com.launchpoint.stereosine.debug'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -88,7 +88,7 @@ $info.lastUpdateTime = (($pkgDump | Select-String 'lastUpdateTime=' | Select-Obj
 $info | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $dir 'device-info.json')
 if (-not $info.installed) { Write-Warning "$Package is not installed on this device." }
 
-# WavDrop tags only; '*:S' silences everything else.
+# StereoSine tags only; '*:S' silences everything else.
 $tags = @('WavdropValidation:D', 'WavdropStartTrace:D', 'WavdropQueuePerf:D', 'WavdropSessionPerf:D', 'WavdropSessionProgress:D',
           'WavdropCrossfade:D', 'WavdropNextSlot:D', 'WavdropResume:D', 'Wavdrop-Startup:D', 'WavStats-PC:W', '*:S')
 # Deliberately no AndroidRuntime tag: it is shared by every app on the device and would collect unrelated apps' crash reports.

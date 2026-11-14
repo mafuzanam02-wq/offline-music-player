@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Wavdrop Music Player</string>
-    <string name="launcher_label">Wavdrop</string>
-    <string name="widget_description">Now Playing controls for Wavdrop.</string>
+    <string name="app_name">StereoSine</string>
+    <string name="launcher_label">StereoSine</string>
+    <string name="widget_description">Now Playing controls for StereoSine.</string>
     <string name="widget_idle_hint">Tap to open your music</string>
     <string name="widget_artwork_desc">Album artwork</string>
     <string name="widget_prev_desc">Previous</string>

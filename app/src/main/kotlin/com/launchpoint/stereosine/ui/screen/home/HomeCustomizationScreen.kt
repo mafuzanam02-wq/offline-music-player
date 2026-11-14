@@ -1,0 +1,197 @@
+package com.launchpoint.stereosine.ui.screen.home
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.launchpoint.stereosine.data.settings.HomeLayoutSettingsRules
+import com.launchpoint.stereosine.data.settings.HomeSectionId
+import com.launchpoint.stereosine.data.smart.SmartCollectionBuilder
+import com.launchpoint.stereosine.ui.components.motion.WavdropFadeThrough
+import com.launchpoint.stereosine.ui.components.motion.wavdropPressFeedback
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeCustomizationScreen(
+    onNavigateBack: () -> Unit,
+    onSmartCollectionsConfigClick: () -> Unit = {},
+    viewModel: HomeCustomizationViewModel = hiltViewModel(),
+) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Home Sections") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
+        },
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+        ) {
+            item {
+                Text(
+                    text     = "Choose which sections appear on your Home screen.",
+                    style    = MaterialTheme.typography.bodyMedium,
+                    color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+                )
+            }
+            item {
+                HorizontalDivider(
+                    color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                    thickness = 0.5.dp,
+                )
+            }
+            HomeLayoutSettingsRules.EXPOSED_SECTION_IDS.forEach { id ->
+                item(key = id.name) {
+                    HomeSectionToggleRow(
+                        id          = id,
+                        isVisible   = HomeLayoutSettingsRules.isSectionVisible(settings, id),
+                        isToggleable = HomeLayoutSettingsRules.isToggleable(id),
+                        onToggle    = { viewModel.setSectionVisible(id, it) },
+                    )
+                    // The Home Collections picker lives directly under the Smart Collections
+                    // toggle. It stays accessible even when the section is hidden so the saved
+                    // selection is never lost — it just won't render on Home while hidden.
+                    if (id == HomeSectionId.SMART_COLLECTIONS) {
+                        HomeCollectionsConfigRow(
+                            selectionSummary = settings.homeSmartCollections
+                                .joinToString(", ") { SmartCollectionBuilder.titleFor(it) },
+                            onClick = onSmartCollectionsConfigClick,
+                        )
+                    }
+                    HorizontalDivider(
+                        color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                        thickness = 0.5.dp,
+                    )
+                }
+            }
+            item { Spacer(Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun HomeCollectionsConfigRow(
+    selectionSummary: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // WU-02 proof surface: press feedback complements (does not replace) the default ripple.
+    val interactionSource = remember { MutableInteractionSource() }
+    Row(
+        modifier          = modifier
+            .fillMaxWidth()
+            .wavdropPressFeedback(interactionSource)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick,
+            )
+            .padding(start = 32.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = "Home collections",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(2.dp))
+            // WU-02 proof surface: fade-through the summary as the selection changes.
+            WavdropFadeThrough(targetState = selectionSummary.ifBlank { "Choose which 3 appear on Home" }) { summary ->
+                Text(
+                    text  = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+            }
+        }
+        Icon(
+            imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+            modifier           = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun HomeSectionToggleRow(
+    id: HomeSectionId,
+    isVisible: Boolean,
+    isToggleable: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier          = modifier
+            .fillMaxWidth()
+            .alpha(if (isToggleable) 1f else 0.55f)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = HomeLayoutSettingsRules.displayNameFor(id),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text  = HomeLayoutSettingsRules.descriptionFor(id),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+        }
+        Switch(
+            checked         = isVisible,
+            onCheckedChange = if (isToggleable) onToggle else null,
+        )
+    }
+}

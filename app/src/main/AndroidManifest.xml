@@ -22,13 +22,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <application
-        android:name=".WavdropApp"
+        android:name=".StereoSineApp"
         android:allowBackup="false"
-        android:icon="@mipmap/wavdrop_icon_obsidian_black"
+        android:icon="@mipmap/stereosine_icon_obsidian_black"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/wavdrop_icon_obsidian_black_round"
+        android:roundIcon="@mipmap/stereosine_icon_obsidian_black_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Wavdrop">
+        android:theme="@style/Theme.StereoSine">
 
         <!--
             MainActivity: no LAUNCHER intent filter here.
@@ -36,7 +36,7 @@
             so that the launcher icon and label can be switched without killing the app.
             Each alias also declares a separate MUSIC_PLAYER filter. That action is deprecated, but
             Samsung Quick Settings "Play music" still resolves it (verified with query-activities), and
-            ACTION_MAIN + CATEGORY_APP_MUSIC alone does not make Wavdrop appear there.
+            ACTION_MAIN + CATEGORY_APP_MUSIC alone does not make StereoSine appear there.
         -->
         <activity
             android:name=".MainActivity"
@@ -71,8 +71,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="@string/launcher_label"
-            android:icon="@mipmap/wavdrop_icon_midnight_violet"
-            android:roundIcon="@mipmap/wavdrop_icon_midnight_violet_round">
+            android:icon="@mipmap/stereosine_icon_midnight_violet"
+            android:roundIcon="@mipmap/stereosine_icon_midnight_violet_round">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -93,8 +93,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="@string/launcher_label"
-            android:icon="@mipmap/wavdrop_icon_clean_purple"
-            android:roundIcon="@mipmap/wavdrop_icon_clean_purple_round">
+            android:icon="@mipmap/stereosine_icon_clean_purple"
+            android:roundIcon="@mipmap/stereosine_icon_clean_purple_round">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -115,8 +115,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="@string/launcher_label"
-            android:icon="@mipmap/wavdrop_icon_deep_teal"
-            android:roundIcon="@mipmap/wavdrop_icon_deep_teal_round">
+            android:icon="@mipmap/stereosine_icon_deep_teal"
+            android:roundIcon="@mipmap/stereosine_icon_deep_teal_round">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -137,8 +137,8 @@
             android:enabled="true"
             android:exported="true"
             android:label="@string/launcher_label"
-            android:icon="@mipmap/wavdrop_icon_obsidian_black"
-            android:roundIcon="@mipmap/wavdrop_icon_obsidian_black_round">
+            android:icon="@mipmap/stereosine_icon_obsidian_black"
+            android:roundIcon="@mipmap/stereosine_icon_obsidian_black_round">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -159,8 +159,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="@string/launcher_label"
-            android:icon="@mipmap/wavdrop_icon_ocean_blue"
-            android:roundIcon="@mipmap/wavdrop_icon_ocean_blue_round">
+            android:icon="@mipmap/stereosine_icon_ocean_blue"
+            android:roundIcon="@mipmap/stereosine_icon_ocean_blue_round">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -181,8 +181,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="@string/launcher_label"
-            android:icon="@mipmap/wavdrop_icon_sunset_orange"
-            android:roundIcon="@mipmap/wavdrop_icon_sunset_orange_round">
+            android:icon="@mipmap/stereosine_icon_sunset_orange"
+            android:roundIcon="@mipmap/stereosine_icon_sunset_orange_round">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -247,7 +247,7 @@
         <!--
             WidgetActionReceiver: receives the widget's play/pause/next/previous taps
             and drives them through a MediaController on our session.
-            exported="false": only Wavdrop's own widget PendingIntents reach it, so a
+            exported="false": only StereoSine's own widget PendingIntents reach it, so a
             co-installed app can no longer control playback via a raw service action (WD-03).
         -->
         <receiver
@@ -262,19 +262,19 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/wavdrop_widget_info" />
+                android:resource="@xml/stereosine_widget_info" />
         </receiver>
 
         <!--
             Widget configuration screen (per-widget appearance). The launcher starts it with APPWIDGET_CONFIGURE when a
             widget is added and, where supported, when the user reconfigures it. It only accepts an appWidgetId that
-            belongs to Wavdrop's own widget provider; anything else finishes with RESULT_CANCELED.
+            belongs to StereoSine's own widget provider; anything else finishes with RESULT_CANCELED.
         -->
         <activity
             android:name=".ui.widget.WidgetConfigActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density|fontScale|locale|layoutDirection"
-            android:theme="@style/Theme.Wavdrop">
+            android:theme="@style/Theme.StereoSine">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>

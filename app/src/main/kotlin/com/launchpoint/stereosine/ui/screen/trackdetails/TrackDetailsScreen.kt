@@ -1,0 +1,698 @@
+package com.launchpoint.stereosine.ui.screen.trackdetails
+
+import android.app.Activity
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.launchpoint.stereosine.data.lyrics.LyricsResult
+import com.launchpoint.stereosine.data.lyrics.staticText
+import com.launchpoint.stereosine.data.model.PlaylistSummary
+import com.launchpoint.stereosine.data.model.Song
+import com.launchpoint.stereosine.data.model.TrackStats
+import com.launchpoint.stereosine.data.stats.ListeningTimeRules
+import com.launchpoint.stereosine.data.repository.PlaylistOperationResult
+import com.launchpoint.stereosine.ui.components.AddToPlaylistDialog
+import com.launchpoint.stereosine.ui.components.DestructiveConfirmDialog
+import com.launchpoint.stereosine.ui.components.DestructiveDialogCopy
+import com.launchpoint.stereosine.ui.components.LoadingStateContent
+import com.launchpoint.stereosine.ui.components.metadataNavigationKey
+import com.launchpoint.stereosine.ui.components.shareSong
+import com.launchpoint.stereosine.ui.screen.lyrics.LyricsViewModel
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrackDetailsScreen(
+    onNavigateBack: () -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {},
+    viewModel: TrackDetailsViewModel = hiltViewModel(),
+    lyricsViewModel: LyricsViewModel = hiltViewModel(),
+) {
+    val uiState              by viewModel.uiState.collectAsStateWithLifecycle()
+    val lyricsState          by lyricsViewModel.lyricsState.collectAsStateWithLifecycle()
+    val hasCustomLyrics      by lyricsViewModel.hasCustomLyrics.collectAsStateWithLifecycle()
+    val playlists            by viewModel.playlists.collectAsStateWithLifecycle()
+    val allPlaylistSongs     by viewModel.allPlaylistSongs.collectAsStateWithLifecycle()
+    var showAddToPlaylist    by remember { mutableStateOf(false) }
+    var showLyricsEditor     by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showClearLyricsConfirmation by remember { mutableStateOf(false) }
+    val snackbarHostState    = remember { SnackbarHostState() }
+    val coroutineScope       = rememberCoroutineScope()
+    val context              = LocalContext.current
+
+    val deleteLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val song = (uiState as? TrackDetailsUiState.Ready)?.song ?: return@rememberLauncherForActivityResult
+            viewModel.onDeleteApproved(song) { onNavigateBack() }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Track Details") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    val ready = uiState as? TrackDetailsUiState.Ready
+                    if (ready != null) {
+                        IconButton(onClick = viewModel::toggleFavorite) {
+                            Icon(
+                                imageVector        = if (ready.isFavorite) Icons.Default.Favorite
+                                                     else Icons.Default.FavoriteBorder,
+                                contentDescription = if (ready.isFavorite) "Unfavorite" else "Favorite",
+                                tint               = if (ready.isFavorite) MaterialTheme.colorScheme.primary
+                                                     else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
+        },
+    ) { innerPadding ->
+        when (val state = uiState) {
+            TrackDetailsUiState.Loading  -> LoadingContent(Modifier.padding(innerPadding))
+            TrackDetailsUiState.NotFound -> NotFoundContent(Modifier.padding(innerPadding))
+            is TrackDetailsUiState.Ready -> ReadyContent(
+                song              = state.song,
+                stats             = state.stats,
+                lyrics            = lyricsState,
+                hasCustomLyrics   = hasCustomLyrics,
+                onPlayNow         = { viewModel.playNow() },
+                onPlayNext        = {
+                    viewModel.playNext()
+                    coroutineScope.launch { snackbarHostState.showSnackbar("Added to play next") }
+                },
+                onAddToQueue      = {
+                    viewModel.addToQueue()
+                    coroutineScope.launch { snackbarHostState.showSnackbar("Added to queue") }
+                },
+                onAddToPlaylist   = { showAddToPlaylist = true },
+                onArtistClick     = onArtistClick,
+                onAlbumClick      = onAlbumClick,
+                onShare           = {
+                    shareSong(context, state.song) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Could not share this track")
+                        }
+                    }
+                },
+                onDeleteFromDevice = if (
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                    state.song.id != Long.MIN_VALUE
+                ) {
+                    { showDeleteConfirmation = true }
+                } else null,
+                onEditLyrics      = { showLyricsEditor = true },
+                onClearLyrics     = { showClearLyricsConfirmation = true },
+                modifier          = Modifier.padding(innerPadding),
+            )
+        }
+    }
+
+    if (showAddToPlaylist) {
+        val readyState = uiState as? TrackDetailsUiState.Ready
+        AddToPlaylistDialog(
+            playlists           = playlists,
+            existingPlaylistIds = if (readyState != null) {
+                allPlaylistSongs
+                    .filter { it.songId == readyState.song.id }
+                    .map { it.playlistId }
+                    .toSet()
+            } else emptySet(),
+            onSelectPlaylist    = { id ->
+                viewModel.addToPlaylist(id) { result ->
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(result.singleSongMessage())
+                    }
+                }
+                showAddToPlaylist = false
+            },
+            onCreateAndAdd      = { name ->
+                viewModel.createPlaylistAndAdd(name)
+                showAddToPlaylist = false
+            },
+            onDismiss           = { showAddToPlaylist = false },
+        )
+    }
+
+    if (showLyricsEditor) {
+        LyricsEditorDialog(
+            lyrics = lyricsState,
+            hasCustomLyrics = hasCustomLyrics,
+            onSave = { text ->
+                lyricsViewModel.saveCustomLyrics(text) {
+                    showLyricsEditor = false
+                }
+            },
+            onClear = { showClearLyricsConfirmation = true },
+            onDismiss = { showLyricsEditor = false },
+        )
+    }
+
+    // Both Clear entry points (header and editor) ask first; Cancel/Back leave the saved lyrics and any editor draft untouched.
+    if (showClearLyricsConfirmation) {
+        DestructiveConfirmDialog(
+            title        = DestructiveDialogCopy.REMOVE_LYRICS_TITLE,
+            message      = DestructiveDialogCopy.REMOVE_LYRICS_BODY,
+            confirmLabel = DestructiveDialogCopy.REMOVE_LYRICS_CONFIRM,
+            onConfirm    = {
+                showClearLyricsConfirmation = false
+                lyricsViewModel.clearCustomLyrics { showLyricsEditor = false }
+            },
+            onDismiss    = { showClearLyricsConfirmation = false },
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        val song = (uiState as? TrackDetailsUiState.Ready)?.song
+        if (song != null) {
+            DeleteConfirmationDialog(
+                songTitle = song.displayTitle,
+                onConfirm = {
+                    showDeleteConfirmation = false
+                    viewModel.deleteFromDevice(
+                        song              = song,
+                        onDeleteRequested = { intentSender ->
+                            deleteLauncher.launch(
+                                IntentSenderRequest.Builder(intentSender).build()
+                            )
+                        },
+                        onFailed          = {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Could not delete this track")
+                            }
+                        },
+                    )
+                },
+                onDismiss = { showDeleteConfirmation = false },
+            )
+        }
+    }
+}
+
+// ── Loading ───────────────────────────────────────────────────────────────────
+
+@Composable
+private fun LoadingContent(modifier: Modifier = Modifier) {
+    LoadingStateContent(message = "Loading track details...", modifier = modifier)
+}
+
+// ── Not found ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun NotFoundContent(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Text(
+            text      = "Track not found. It may have been removed from your device; rescan the library to update StereoSine.",
+            style     = MaterialTheme.typography.bodyLarge,
+            color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+// ── Ready ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ReadyContent(
+    song: Song,
+    stats: TrackStats?,
+    lyrics: LyricsResult,
+    hasCustomLyrics: Boolean,
+    onPlayNow: () -> Unit,
+    onPlayNext: () -> Unit,
+    onAddToQueue: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onArtistClick: (String) -> Unit,
+    onAlbumClick: (String) -> Unit,
+    onShare: () -> Unit,
+    onDeleteFromDevice: (() -> Unit)? = null,
+    onEditLyrics: () -> Unit,
+    onClearLyrics: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 24.dp),
+    ) {
+        // ── Track section ────────────────────────────────────────────────────
+        SectionHeader("Track")
+
+        val artistKey = metadataNavigationKey(song.artist, "Unknown Artist")
+        val albumKey = metadataNavigationKey(song.album, "Unknown Album")
+        DetailRow("Title", song.title)
+        DetailRow(
+            label = "Artist",
+            value = song.artist.ifBlank { "Unknown" },
+            onClick = artistKey?.let { key -> { onArtistClick(key) } },
+            navigationDescription = artistKey?.let { "Artist: $it, opens artist" },
+        )
+        DetailRow(
+            label = "Album",
+            value = song.album.ifBlank { "Unknown" },
+            onClick = albumKey?.let { key -> { onAlbumClick(key) } },
+            navigationDescription = albumKey?.let { "Album: $it, opens album" },
+        )
+        DetailRow("Duration", TrackDetailsFormatters.formatDuration(song.duration))
+        if (song.year > 0) DetailRow("Year", song.year.toString())
+
+        SectionDivider()
+
+        // ── Playback actions ─────────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AssistChip(
+                onClick = onPlayNow,
+                label   = { Text("Play now") },
+                leadingIcon = {
+                    Icon(
+                        imageVector        = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier           = Modifier.size(18.dp),
+                    )
+                },
+            )
+            AssistChip(
+                onClick = onPlayNext,
+                label   = { Text("Play next") },
+                leadingIcon = {
+                    Icon(
+                        imageVector        = Icons.Default.SkipNext,
+                        contentDescription = null,
+                        modifier           = Modifier.size(18.dp),
+                    )
+                },
+            )
+            AssistChip(
+                onClick = onAddToQueue,
+                label   = { Text("Add to queue") },
+                leadingIcon = {
+                    Icon(
+                        imageVector        = Icons.AutoMirrored.Filled.PlaylistAdd,
+                        contentDescription = null,
+                        modifier           = Modifier.size(18.dp),
+                    )
+                },
+            )
+        }
+
+        SectionDivider()
+
+        // ── Statistics section ───────────────────────────────────────────────
+        SectionHeader("Statistics")
+
+        DetailRow("Play count",     (stats?.playCount ?: 0).toString())
+        DetailRow("Skip count",     (stats?.skipCount ?: 0).toString())
+        DetailRow("Last played",    TrackDetailsFormatters.formatLastPlayed(stats?.lastPlayedAt ?: 0L))
+        DetailRow(
+            "Total listened",
+            TrackDetailsFormatters.formatListeningTime(
+                ListeningTimeRules.effectiveListeningTimeMs(
+                    playCount = stats?.playCount ?: 0,
+                    durationMs = song.duration,
+                    totalListeningTimeMs = stats?.totalListeningTimeMs ?: 0L,
+                ),
+            ),
+        )
+
+        SectionDivider()
+
+        // ── Lyrics section ───────────────────────────────────────────────────
+        LyricsHeader(
+            hasCustomLyrics = hasCustomLyrics,
+            onEditLyrics = onEditLyrics,
+            onClearLyrics = onClearLyrics,
+        )
+        LyricsSection(lyrics)
+
+        SectionDivider()
+
+        // ── Playlists section ────────────────────────────────────────────────
+        SectionHeader("Playlists")
+        TextButton(
+            onClick  = onAddToPlaylist,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        ) { Text("Add to playlist") }
+        TextButton(
+            onClick  = onShare,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        ) { Text("Share") }
+
+        if (onDeleteFromDevice != null) {
+            SectionDivider()
+
+            // ── Remove section ───────────────────────────────────────────────
+            SectionHeader("Remove")
+            TextButton(
+                onClick  = onDeleteFromDevice,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            ) { Text("Delete from device", color = MaterialTheme.colorScheme.error) }
+        }
+
+    }
+}
+
+@Composable
+private fun LyricsEditorDialog(
+    lyrics: LyricsResult,
+    hasCustomLyrics: Boolean,
+    onSave: (String) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember(lyrics) {
+        mutableStateOf(lyrics.staticText.orEmpty())
+    }
+    var clipboardEmpty by remember { mutableStateOf(false) }
+    val clipboardManager = LocalClipboardManager.current
+    val canSave = text.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit lyrics") },
+        text = {
+            Column {
+                Text(
+                    text  = "Plain text only. Paste or type lyrics, then tap Save.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                )
+                if (text.isBlank()) {
+                    Row(
+                        modifier          = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                val clip = clipboardManager.getText()
+                                if (clip != null && clip.text.isNotBlank()) {
+                                    text = clip.text
+                                    clipboardEmpty = false
+                                } else {
+                                    clipboardEmpty = true
+                                }
+                            },
+                        ) {
+                            Text("Paste")
+                        }
+                        if (clipboardEmpty) {
+                            Text(
+                                text  = "Clipboard is empty",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                TextField(
+                    value         = text,
+                    onValueChange = { text = it; clipboardEmpty = false },
+                    modifier      = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp),
+                    textStyle   = MaterialTheme.typography.bodyMedium,
+                    placeholder = { Text("Lyrics") },
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(text) },
+                enabled = canSave,
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (hasCustomLyrics) {
+                    OutlinedButton(onClick = onClear) {
+                        Text("Clear")
+                    }
+                    Spacer(Modifier.size(8.dp))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        },
+    )
+}
+
+// ── Delete confirmation dialog ────────────────────────────────────────────────
+
+@Composable
+private fun DeleteConfirmationDialog(
+    songTitle: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    DestructiveConfirmDialog(
+        title        = DestructiveDialogCopy.DELETE_TRACK_TITLE,
+        message      = DestructiveDialogCopy.deleteTrackBody(songTitle),
+        confirmLabel = DestructiveDialogCopy.DELETE_TRACK_CONFIRM,
+        onConfirm    = onConfirm,
+        onDismiss    = onDismiss,
+    )
+}
+
+// ── Shared components ─────────────────────────────────────────────────────────
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text     = title,
+        style    = MaterialTheme.typography.labelLarge,
+        color    = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+    )
+}
+
+@Composable
+private fun LyricsHeader(
+    hasCustomLyrics: Boolean,
+    onEditLyrics: () -> Unit,
+    onClearLyrics: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Lyrics",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onEditLyrics) {
+            Text("Edit")
+        }
+        if (hasCustomLyrics) {
+            TextButton(onClick = onClearLyrics) {
+                Text("Clear")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionDivider() {
+    HorizontalDivider(
+        modifier  = Modifier.padding(vertical = 4.dp),
+        color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+        thickness = 0.5.dp,
+    )
+}
+
+@Composable
+private fun DetailRow(
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null,
+    navigationDescription: String? = null,
+) {
+    val interactionModifier = if (onClick != null && navigationDescription != null) {
+        Modifier
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                contentDescription = navigationDescription
+            }
+    } else {
+        Modifier
+    }
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+            .then(interactionModifier)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text     = label,
+            style    = MaterialTheme.typography.bodyMedium,
+            color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.weight(0.38f),
+        )
+        Text(
+            text       = value,
+            style      = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color      = MaterialTheme.colorScheme.onSurface,
+            modifier   = Modifier.weight(0.62f),
+        )
+        if (onClick != null) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LyricsSection(result: LyricsResult) {
+    when (result) {
+        LyricsResult.Loading -> {
+            Box(
+                modifier         = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        }
+        LyricsResult.NotFound -> {
+            Text(
+                text     = "No lyrics found for this track. Add custom lyrics, or place an embedded/sidecar lyrics file with the song.",
+                style    = MaterialTheme.typography.bodyMedium,
+                color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+        is LyricsResult.Available,
+        is LyricsResult.Synced -> {
+            val lyricsText = result.staticText.orEmpty()
+            var expanded by remember(lyricsText) { mutableStateOf(false) }
+            var hasOverflow by remember(lyricsText) { mutableStateOf(false) }
+            Text(
+                text     = lyricsText,
+                style    = MaterialTheme.typography.bodyMedium,
+                color    = MaterialTheme.colorScheme.onSurface,
+                maxLines = if (expanded) Int.MAX_VALUE else LYRICS_PREVIEW_MAX_LINES,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { textLayoutResult ->
+                    if (!expanded) hasOverflow = textLayoutResult.hasVisualOverflow
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            if (hasOverflow || expanded) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                ) {
+                    Text(if (expanded) "Show less" else "Show more")
+                }
+            }
+        }
+        is LyricsResult.Error -> {
+            Text(
+                text     = "Lyrics could not be loaded. Add custom lyrics or check the local lyrics file.",
+                style    = MaterialTheme.typography.bodyMedium,
+                color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
+}
+
+private const val LYRICS_PREVIEW_MAX_LINES = 6

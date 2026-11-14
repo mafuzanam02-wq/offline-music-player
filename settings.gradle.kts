@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Wavdrop"
+rootProject.name = "StereoSine"
 include(":app")

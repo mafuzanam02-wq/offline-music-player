@@ -1,0 +1,306 @@
+package com.launchpoint.stereosine.data.smart
+
+import com.launchpoint.stereosine.data.local.entity.TrackStatsEntity
+import com.launchpoint.stereosine.data.model.SmartCollection
+import com.launchpoint.stereosine.data.model.SmartCollectionType
+import com.launchpoint.stereosine.data.model.Song
+import com.launchpoint.stereosine.data.model.SongCompletionSummary
+
+object SmartCollectionBuilder {
+
+    private const val LONG_TRACK_THRESHOLD_MS  = 7 * 60 * 1_000L   // 7 minutes
+    private const val SHORT_TRACK_THRESHOLD_MS = 90 * 1_000L        // 90 seconds
+
+    private const val FORGOTTEN_GEMS_PLAY_COUNT_MIN = 5
+    private const val FORGOTTEN_GEMS_QUIET_DAYS     = 60
+    internal const val FORGOTTEN_GEMS_LIMIT         = 50
+    internal const val NEVER_PLAYED_LIMIT           = 100
+
+    private const val ALWAYS_FINISH_MIN_PLAYS         = 3
+    private const val ALWAYS_FINISH_THRESHOLD         = 0.85f
+    internal const val ALWAYS_FINISH_LIMIT            = 50
+
+    private const val USUALLY_ABANDON_MIN_ATTEMPTS    = 3
+    private const val USUALLY_ABANDON_SKIP_RATE       = 0.60f
+    private const val USUALLY_ABANDON_COMPLETION      = 0.40f
+    private const val USUALLY_ABANDON_MIN_VALID_PLAYS = 3
+    internal const val USUALLY_ABANDON_LIMIT          = 30
+
+    /**
+     * What a collection's membership/ranking actually reads (WC-06). The classification is verified against the rules below by a
+     * test that perturbs every input a family must NOT depend on. Every type also depends on the live songs list (orphan stats and
+     * completion rows never create visible songs).
+     */
+    enum class Dependency {
+        /** Song metadata only. */
+        SONGS_ONLY,
+        /** Songs + TrackStats. */
+        STATS,
+        /** Songs + TrackStats + the current time (Forgotten Gems ages into eligibility). */
+        STATS_AND_TIME,
+        /** Songs + trusted-event completion summaries. */
+        COMPLETION,
+    }
+
+    fun dependencyOf(type: SmartCollectionType): Dependency = when (type) {
+        SmartCollectionType.RECENTLY_ADDED,
+        SmartCollectionType.LONG_TRACKS,
+        SmartCollectionType.SHORT_TRACKS -> Dependency.SONGS_ONLY
+
+        SmartCollectionType.FAVORITES,
+        SmartCollectionType.MOST_PLAYED,
+        SmartCollectionType.RECENTLY_PLAYED,
+        SmartCollectionType.NEVER_PLAYED,
+        SmartCollectionType.MOST_SKIPPED -> Dependency.STATS
+
+        SmartCollectionType.FORGOTTEN_GEMS -> Dependency.STATS_AND_TIME
+
+        SmartCollectionType.ALWAYS_FINISH,
+        SmartCollectionType.USUALLY_ABANDON -> Dependency.COMPLETION
+    }
+
+    /** The types of one dependency family, in canonical enum order. */
+    fun typesWith(dependency: Dependency): List<SmartCollectionType> =
+        SmartCollectionType.values().filter { dependencyOf(it) == dependency }
+
+    /** Stats rows restricted to live songs, keyed by song id. Prepare once per songs/stats emission, not per type. */
+    fun liveStatsById(songs: List<Song>, stats: List<TrackStatsEntity>): Map<Long, TrackStatsEntity> {
+        val songIds = songs.mapTo(HashSet()) { it.id }
+        return stats.filter { it.songId in songIds }.associateBy { it.songId }
+    }
+
+    /** Completion summaries restricted to live songs, keyed by song id. Prepare once per songs/completions emission. */
+    fun liveCompletionsById(songs: List<Song>, completions: List<SongCompletionSummary>): Map<Long, SongCompletionSummary> {
+        val songIds = songs.mapTo(HashSet()) { it.id }
+        return completions.filter { it.songId in songIds }.associateBy { it.songId }
+    }
+
+    /** The collection summary for [result], or null when the visible result is empty (empty collections are omitted). */
+    fun summaryFor(type: SmartCollectionType, result: SmartCollectionSongResult): SmartCollection? =
+        if (result.songs.isEmpty()) null
+        else SmartCollection(
+            id                 = type.name,
+            title              = titleFor(type),
+            description        = descriptionFor(type),
+            type               = type,
+            songCount          = result.songs.size,
+            totalEligibleCount = result.totalEligibleCount,
+            visibleLimit       = result.visibleLimit,
+        )
+
+    fun build(
+        songs: List<Song>,
+        stats: List<TrackStatsEntity>,
+        completionSummaries: List<SongCompletionSummary> = emptyList(),
+        nowMs: Long = System.currentTimeMillis(),
+    ): List<SmartCollection> {
+        val statsById = liveStatsById(songs, stats)
+        val completionById = liveCompletionsById(songs, completionSummaries)
+        return SmartCollectionType.values().mapNotNull { type ->
+            summaryFor(type, resultFor(type, songs, statsById, completionById, nowMs))
+        }
+    }
+
+    fun songsFor(
+        type: SmartCollectionType,
+        songs: List<Song>,
+        stats: List<TrackStatsEntity>,
+        completionSummaries: List<SongCompletionSummary> = emptyList(),
+        nowMs: Long = System.currentTimeMillis(),
+    ): List<Song> = songsResultFor(type, songs, stats, completionSummaries, nowMs).songs
+
+    fun songsResultFor(
+        type: SmartCollectionType,
+        songs: List<Song>,
+        stats: List<TrackStatsEntity>,
+        completionSummaries: List<SongCompletionSummary> = emptyList(),
+        nowMs: Long = System.currentTimeMillis(),
+    ): SmartCollectionSongResult =
+        resultFor(type, songs, liveStatsById(songs, stats), liveCompletionsById(songs, completionSummaries), nowMs)
+
+    /**
+     * The single authority for one collection's rules, over PREPARED live-only maps ([liveStatsById] / [liveCompletionsById]).
+     * Ranks the FULL eligible set first, then applies the visible cap (D-11).
+     */
+    fun resultFor(
+        type: SmartCollectionType,
+        songs: List<Song>,
+        statsById: Map<Long, TrackStatsEntity>,
+        completionById: Map<Long, SongCompletionSummary>,
+        nowMs: Long,
+    ): SmartCollectionSongResult {
+        val rankedEligibleSongs = rankedEligibleSongs(type, songs, statsById, completionById, nowMs)
+        val visibleLimit = visibleLimitFor(type)
+        return SmartCollectionSongResult(
+            songs = visibleLimit?.let(rankedEligibleSongs::take) ?: rankedEligibleSongs,
+            totalEligibleCount = rankedEligibleSongs.size,
+            visibleLimit = visibleLimit,
+        )
+    }
+
+    private fun rankedEligibleSongs(
+        type: SmartCollectionType,
+        songs: List<Song>,
+        statsById: Map<Long, TrackStatsEntity>,
+        completionById: Map<Long, SongCompletionSummary>,
+        nowMs: Long,
+    ): List<Song> = when (type) {
+        SmartCollectionType.FAVORITES ->
+            songs
+                .filter { statsById[it.id]?.isFavorite == true }
+                .sortedWith(compareBy({ it.title }, { it.id }))
+
+        SmartCollectionType.MOST_PLAYED ->
+            songs
+                .filter { (statsById[it.id]?.playCount ?: 0) > 0 }
+                .sortedWith(
+                    compareByDescending<Song> { statsById[it.id]?.playCount ?: 0 }
+                        .thenBy { it.id },
+                )
+
+        SmartCollectionType.RECENTLY_PLAYED ->
+            songs
+                .filter { (statsById[it.id]?.lastListenedAt ?: 0L) > 0L }
+                .sortedWith(
+                    compareByDescending<Song> { statsById[it.id]?.lastListenedAt ?: 0L }
+                        .thenBy { it.id },
+                )
+
+        SmartCollectionType.FORGOTTEN_GEMS -> {
+            val quietThresholdMs = nowMs - FORGOTTEN_GEMS_QUIET_DAYS * 24 * 60 * 60 * 1_000L
+            songs
+                .filter { song ->
+                    val stat = statsById[song.id]
+                    stat != null &&
+                        stat.playCount >= FORGOTTEN_GEMS_PLAY_COUNT_MIN &&
+                        stat.lastPlayedAt > 0L &&
+                        stat.lastPlayedAt < quietThresholdMs
+                }
+                .sortedWith(
+                    compareByDescending<Song> { statsById[it.id]?.playCount ?: 0 }
+                        .thenBy { statsById[it.id]?.lastPlayedAt ?: 0L }
+                        .thenBy { it.id },
+                )
+        }
+
+        SmartCollectionType.NEVER_PLAYED ->
+            songs
+                .filter { (statsById[it.id]?.playCount ?: 0) == 0 }
+                .sortedWith(compareBy({ it.title }, { it.id }))
+
+        SmartCollectionType.RECENTLY_ADDED ->
+            songs
+                .filter { it.dateAdded > 0L }
+                .sortedWith(
+                    compareByDescending<Song> { it.dateAdded }
+                        .thenBy { it.id },
+                )
+
+        SmartCollectionType.MOST_SKIPPED ->
+            songs
+                .filter { (statsById[it.id]?.skipCount ?: 0) > 0 }
+                .sortedWith(
+                    compareByDescending<Song> { statsById[it.id]?.skipCount ?: 0 }
+                        .thenBy { it.id },
+                )
+
+        SmartCollectionType.LONG_TRACKS ->
+            songs
+                .filter { it.duration >= LONG_TRACK_THRESHOLD_MS }
+                .sortedWith(
+                    compareByDescending<Song> { it.duration }
+                        .thenBy { it.id },
+                )
+
+        SmartCollectionType.SHORT_TRACKS ->
+            songs
+                .filter { it.duration <= SHORT_TRACK_THRESHOLD_MS }
+                .sortedWith(
+                    compareBy<Song> { it.duration }
+                        .thenBy { it.id },
+                )
+
+        SmartCollectionType.ALWAYS_FINISH ->
+            songs
+                .filter { song ->
+                    val c = completionById[song.id]
+                    c != null &&
+                        c.nativePlays >= ALWAYS_FINISH_MIN_PLAYS &&
+                        c.avgCompletion >= ALWAYS_FINISH_THRESHOLD
+                }
+                .sortedWith(
+                    compareByDescending<Song> { completionById[it.id]?.avgCompletion ?: 0f }
+                        .thenByDescending { completionById[it.id]?.nativePlays ?: 0 }
+                        .thenBy { it.id },
+                )
+
+        SmartCollectionType.USUALLY_ABANDON ->
+            songs
+                .filter { song ->
+                    val c = completionById[song.id]
+                    if (c == null) return@filter false
+                    val attempts = c.nativePlays + c.nativeSkips
+                    if (attempts < USUALLY_ABANDON_MIN_ATTEMPTS) return@filter false
+                    val highSkipRate = c.nativeSkips.toFloat() / attempts >= USUALLY_ABANDON_SKIP_RATE
+                    val lowCompletion = c.validCompletionPlays >= USUALLY_ABANDON_MIN_VALID_PLAYS &&
+                        c.avgCompletion < USUALLY_ABANDON_COMPLETION
+                    highSkipRate || lowCompletion
+                }
+                .sortedWith(
+                    compareByDescending<Song> {
+                        val c = completionById[it.id]
+                        if (c == null) 0f
+                        else (c.nativePlays + c.nativeSkips).let { att ->
+                            if (att == 0) 0f else c.nativeSkips.toFloat() / att
+                        }
+                    }
+                        .thenBy { completionById[it.id]?.avgCompletion ?: 1f }
+                        .thenBy { it.id },
+                )
+    }
+
+    private fun visibleLimitFor(type: SmartCollectionType): Int? = when (type) {
+        SmartCollectionType.ALWAYS_FINISH -> ALWAYS_FINISH_LIMIT
+        SmartCollectionType.USUALLY_ABANDON -> USUALLY_ABANDON_LIMIT
+        SmartCollectionType.FORGOTTEN_GEMS -> FORGOTTEN_GEMS_LIMIT
+        SmartCollectionType.NEVER_PLAYED -> NEVER_PLAYED_LIMIT
+        else -> null
+    }
+
+    fun titleFor(type: SmartCollectionType): String = when (type) {
+        SmartCollectionType.FAVORITES       -> "Favorites"
+        SmartCollectionType.MOST_PLAYED     -> "Most Played"
+        SmartCollectionType.RECENTLY_PLAYED -> "Recently Played"
+        SmartCollectionType.FORGOTTEN_GEMS  -> "Forgotten Gems"
+        SmartCollectionType.NEVER_PLAYED    -> "Never Played"
+        SmartCollectionType.RECENTLY_ADDED  -> "Recently Added"
+        SmartCollectionType.MOST_SKIPPED    -> "Most Skipped"
+        SmartCollectionType.LONG_TRACKS     -> "Long Tracks"
+        SmartCollectionType.SHORT_TRACKS    -> "Short Tracks"
+        SmartCollectionType.ALWAYS_FINISH   -> "Always Finish"
+        SmartCollectionType.USUALLY_ABANDON -> "Usually Abandon"
+    }
+
+    fun descriptionFor(type: SmartCollectionType): String = when (type) {
+        SmartCollectionType.FAVORITES       -> "Songs you've marked as favorites"
+        SmartCollectionType.MOST_PLAYED     -> "Your most frequently played tracks"
+        SmartCollectionType.RECENTLY_PLAYED -> "Tracks you've played recently"
+        SmartCollectionType.FORGOTTEN_GEMS  -> "Songs you used to play often, but haven't heard in a while"
+        SmartCollectionType.NEVER_PLAYED    -> "Tracks you haven't played yet"
+        SmartCollectionType.RECENTLY_ADDED  -> "Tracks recently added to your library"
+        SmartCollectionType.MOST_SKIPPED    -> "Tracks you frequently skip"
+        SmartCollectionType.LONG_TRACKS     -> "Tracks longer than 7 minutes"
+        SmartCollectionType.SHORT_TRACKS    -> "Tracks shorter than 90 seconds"
+        SmartCollectionType.ALWAYS_FINISH   -> "Songs you almost always listen through."
+        SmartCollectionType.USUALLY_ABANDON -> "Songs you rarely finish."
+    }
+}
+
+data class SmartCollectionSongResult(
+    val songs: List<Song>,
+    val totalEligibleCount: Int,
+    val visibleLimit: Int?,
+) {
+    val isCapped: Boolean
+        get() = totalEligibleCount > songs.size
+}
