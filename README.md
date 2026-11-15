@@ -10,8 +10,9 @@ targetSdk 36 - Room schema 13.
 > source packages and backup file names) is the current development state; no StereoSine-branded release has been
 > published. A StereoSine upload key exists and is locally verified, but Google Play App Signing enrollment is unconfirmed
 > (see [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md)).
-> Legacy Wavdrop backups (`.wdbk` / `.json`, `wavdrop_backup` format) remain importable. The GitHub repository and
-> public privacy URL still use the old *wavdrop* names until they are migrated.
+> Legacy Wavdrop backups (`.wdbk` / `.json`, `wavdrop_backup` format) remain importable. The GitHub repository is
+> `mafuzanam02-wq/offline-music-player` (renamed from `wavdrop-music-player`; the old URL redirects), and the public legal
+> pages are `https://launchpointdigital.co.za/stereosine/privacy` and `https://launchpointdigital.co.za/stereosine/terms`.
 
 ## Current capabilities
 

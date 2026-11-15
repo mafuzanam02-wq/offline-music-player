@@ -7,14 +7,14 @@ import org.junit.Test
 import java.io.File
 
 /**
- * WPP-1: the in-app Privacy Policy is the authority for the public page at launchpointdigital.co.za/wavdrop/privacy. This
+ * WPP-1: the in-app Privacy Policy is the authority for the public page at launchpointdigital.co.za/stereosine/privacy. This
  * guard keeps one public URL constant, proves the in-app policy references it, pins the substantive disclosures the public
- * page must mirror, and proves the app still declares no INTERNET permission. It is source-text based because
- * `StereoSineAbout` is private to the About screen.
+ * page must mirror, and proves the app still declares no INTERNET permission. It is source-text based; the executable
+ * link behaviour (exact URLs, external VIEW intent, no-browser safety) is covered by LegalLinksTest.
  */
 class PrivacyPolicyGuardTest {
 
-    private val url = "https://launchpointdigital.co.za/wavdrop/privacy"
+    private val url = "https://launchpointdigital.co.za/stereosine/privacy"
     private val about = File("src/main/kotlin/com/launchpoint/stereosine/ui/screen/settings/SettingsAboutScreen.kt").readText()
     private val policy = about.substringAfter("val PRIVACY_POLICY = listOf(").substringBefore("val TERMS_OF_USE")
 
@@ -22,8 +22,14 @@ class PrivacyPolicyGuardTest {
         assertTrue(about.contains("""const val PRIVACY_POLICY_URL = "$url""""))
         assertEquals("the URL literal appears exactly once in the app sources", 1, Regex(Regex.escape(url)).findAll(about).count())
         val elsewhere = File("src/main/kotlin").walkTopDown().filter { it.isFile && it.extension == "kt" && it.name != "SettingsAboutScreen.kt" }
-            .filter { it.readText().contains("wavdrop/privacy") }.map { it.name }.toList()
+            .filter { it.readText().contains("/stereosine/privacy") }.map { it.name }.toList()
         assertTrue("the URL must not be scattered: $elsewhere", elsewhere.isEmpty())
+    }
+
+    @Test fun `the retired wavdrop privacy URL is no longer used by any app source`() {
+        val offenders = File("src/main/kotlin").walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { it.readText().contains("/wavdrop/privacy") }.map { it.name }.toList()
+        assertTrue("retired URL still referenced: $offenders", offenders.isEmpty())
     }
 
     @Test fun `the in-app privacy policy references the public URL through the constant`() {

@@ -1,8 +1,8 @@
 # StereoSine — Play Store Listing Draft
 
 > **Status (rebrand).** Draft for a future **StereoSine** listing; no StereoSine listing exists and the earlier Wavdrop beta
-> distribution is not described here. The public privacy URL still uses the old `wavdrop` path until a StereoSine page is
-> hosted and verified, and the signing identity is pending (see `docs/RELEASE_SIGNING.md`).
+> distribution is not described here. The public privacy URL is now `https://launchpointdigital.co.za/stereosine/privacy` (live; the old
+> `wavdrop` page remains for history), and a StereoSine upload key exists and was verified locally (2026-11-14), a signed release APK was built and verified locally but not published, Google Play App Signing enrollment is unconfirmed, and no StereoSine release has been published (see `docs/RELEASE_SIGNING.md`).
 
 Working draft for the Google Play store listing. All claims must remain
 accurate to the current shipped feature set. Do not add features that are

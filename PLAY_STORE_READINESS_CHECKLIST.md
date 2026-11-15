@@ -1,8 +1,19 @@
 # StereoSine Play Store Readiness Checklist
 
-> **Outstanding external identity (rebrand, not yet done):** new StereoSine release-signing identity (the original Wavdrop
-> key was lost; none is configured), public privacy URL for StereoSine (currently `https://launchpointdigital.co.za/wavdrop/privacy`),
-> GitHub repository rename (currently `mafuzanam02-wq/wavdrop-music-player`), and the Play Console listing/app record.
+> **Signing status (see `docs/RELEASE_SIGNING.md`):** the original Wavdrop key was lost and is not used. A StereoSine upload key
+> exists and was verified locally (2026-11-14); a signed release APK was built and verified locally but not published. Google
+> Play App Signing enrollment is **unconfirmed**, no AAB has been recorded as built or submitted, and **no StereoSine release has
+> been published**.
+>
+> **Outstanding external identity (rebrand, not yet done):** Google Play App Signing enrollment and first upload, and the Play
+> Console listing/app record. (Done since: public privacy URL `https://launchpointdigital.co.za/stereosine/privacy` is live, the
+> in-app Privacy Policy cites it as plain text, Terms has a View Terms Online action, and the GitHub repository is now
+> `mafuzanam02-wq/offline-music-player`.)
+>
+> **Outstanding disclosure-alignment issue (BRAND-09A review):** the public StereoSine Privacy Policy discloses optional,
+> best-effort scheduled automatic backup (user-selected folder; cloud-backed folders may be synced by the storage provider; a
+> pre-restore safety copy; import of earlier Wavdrop backups). The in-app Privacy Policy does not yet mention these, so the two
+> are **not equivalent**. Resolve before any release track (see the blocker table in section 9).
 
 Tracks every item needed before submitting to Google Play. Update each row
 as items are completed. Tick `[x]` when done; leave `[ ]` open.
@@ -57,7 +68,7 @@ No data leaves the device except via user-initiated file export or share sheet.
 | Does the app use advertising ID? | **No** | No ad SDK; `INTERNET` absent |
 | Does the app use crash reporting? | **No** | No Crashlytics, Firebase, or equivalent |
 | Can users request data deletion? | **Yes** | Uninstalling the app deletes all local DB and DataStore data |
-| Privacy Policy URL added to Play Console listing | ⬜ Pending | Publish at `https://launchpointdigital.co.za/wavdrop/privacy` |
+| Privacy Policy URL added to Play Console listing | ⬜ Pending | Use `https://launchpointdigital.co.za/stereosine/privacy` (live; Play Console entry not done) |
 | Privacy Policy URL added to app store listing | ⬜ Pending | Same URL in the listing Privacy Policy field |
 
 **Data Safety — detailed data type declarations:**
@@ -85,7 +96,7 @@ types to explicitly confirm as not collected:
 | Item | Status | Location |
 |---|---|---|
 | Privacy Policy dialog present | ✅ Done | Settings → About → Legal → Privacy Policy |
-| Privacy Policy covers local storage, permissions, backup, share, delete, import | ✅ Done | `StereoSineAbout.PRIVACY_POLICY` — 9 paragraphs |
+| Privacy Policy covers local storage, permissions, backup, share, delete, import | ⚠️ Partial | `StereoSineAbout.PRIVACY_POLICY` covers manual export only; optional automatic backup, cloud-folder sync, the pre-restore safety copy and earlier-Wavdrop imports are not mentioned in-app (the public page discloses them) — see disclosure-alignment blocker |
 | No cloud/future-sync promise in Privacy Policy | ✅ Done | Removed in legal polish pass |
 | Terms of Use dialog present | ✅ Done | Settings → About → Legal → Terms of Use |
 | Disclaimer covers delete permanence, share, music rights | ✅ Done | `StereoSineAbout.DISCLAIMER` — 8 items |
@@ -126,7 +137,7 @@ types to explicitly confirm as not collected:
 | Tablet screenshots | ⬜ Optional | Recommended if targeting tablets |
 | Short description (≤ 80 chars) | ⬜ Pending | See `PLAY_STORE_LISTING_DRAFT.md` |
 | Full description (≤ 4000 chars) | ⬜ Pending | See `PLAY_STORE_LISTING_DRAFT.md` |
-| Privacy Policy URL | ⬜ Pending | `https://launchpointdigital.co.za/wavdrop/privacy` |
+| Privacy Policy URL | ⬜ Pending | `https://launchpointdigital.co.za/stereosine/privacy` (live; Play Console entry not done) |
 | Contact email | ⬜ Pending | Confirm final support email address before listing |
 | Developer name | ⬜ Pending | Must match Play Console account name (LaunchPoint Digital) |
 
@@ -186,9 +197,10 @@ Items that must be resolved before any public release track.
 
 | Blocker | Owner | Notes |
 |---|---|---|
-| Public Privacy Policy URL | LaunchPoint Digital web team | `https://launchpointdigital.co.za/wavdrop/privacy` — page not yet live |
-| Production keystore generated and stored securely | Dev | Do not lose; required for all future updates |
-| Release-signed AAB built and tested | Dev | |
+| Public Privacy Policy URL | LaunchPoint Digital web team | `https://launchpointdigital.co.za/stereosine/privacy` — live (BRAND-06D); Terms online copy at `https://launchpointdigital.co.za/stereosine/terms` |
+| Production keystore generated and stored securely | Dev | Upload key created and locally verified; encrypted off-repository backups reported in `docs/RELEASE_SIGNING.md`. Do not lose; Play App Signing enrollment is unconfirmed |
+| Release-signed AAB built and tested | Dev | A signed release APK was built and verified locally; an AAB (`bundleRelease`) build/test and any upload are not recorded |
+| In-app and public Privacy Policy disclosure alignment | Dev + LaunchPoint web | In-app policy omits optional scheduled automatic backup (best-effort, user-selected folder, cloud-folder sync by the provider), the pre-restore safety copy and earlier-Wavdrop import that the public page discloses. Outstanding (BRAND-09A review); needs an owner decision on the in-app wording |
 | Store listing assets complete (icon, feature graphic, screenshots) | Design | |
 | Data Safety form completed in Play Console | Dev | All "No" for data collection; see Section 3 |
 | Privacy Policy URL entered in Play Console listing | Dev | |

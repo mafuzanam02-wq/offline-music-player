@@ -23,8 +23,11 @@ These are compatibility contracts or external identifiers, not branding leftover
 - Persisted identifiers: Room file `wavdrop.db`, DataStore names, stored event sources and media-browse ids
   (see `PersistenceContractTest`).
 - Legacy signing variables `WAVDROP_UPLOAD_*` (kept only as a documented compatibility fallback; primary names are now `STEREOSINE_UPLOAD_*`, see [RELEASE_SIGNING.md](RELEASE_SIGNING.md)).
-- Outstanding external identity (not yet migrated): the GitHub repository `mafuzanam02-wq/wavdrop-music-player` and
-  the privacy URL `https://launchpointdigital.co.za/wavdrop/privacy`.
+- External identity (migrated, BRAND-06/07/09A): the GitHub repository is now `mafuzanam02-wq/offline-music-player`
+  (renamed from `wavdrop-music-player`; the old URL redirects) and the in-app Privacy Policy cites
+  `https://launchpointdigital.co.za/stereosine/privacy` as plain text (not clickable). The Terms have an online copy at
+  `https://launchpointdigital.co.za/stereosine/terms` (Settings → About → Legal → Terms of Use → View Terms Online). The
+  historical `https://launchpointdigital.co.za/wavdrop/privacy` page stays published on the website and is no longer linked by the app.
 
 ## Backup file names
 

@@ -21,16 +21,20 @@ do not duplicate them here.
 The in-repo rebrand (BRAND-01..04) is complete for identity, symbols, backup file names and documentation. Not done, and
 each needs separate authorization:
 
-- Create a new StereoSine signing identity (upload key and Play App Signing); the original Wavdrop key was lost.
-- Host and verify a StereoSine privacy page, then update `StereoSineAbout.PRIVACY_POLICY_URL`, the privacy guard test and
-  the Play listing. The old `/wavdrop/privacy` URL stays until then.
-- Rename the GitHub repository (`mafuzanam02-wq/wavdrop-music-player`) and update remotes/links.
+- Signing: the original Wavdrop key was lost. A StereoSine upload key exists and was verified locally and a signed release APK was built locally (not published); still pending: Google Play App Signing enrollment, first upload, and any StereoSine release (see `docs/RELEASE_SIGNING.md`).
+- Disclosure alignment (BRAND-09A review): the public StereoSine Privacy Policy discloses optional best-effort automatic backup, cloud-folder sync by the storage provider, the pre-restore safety copy and earlier-Wavdrop import; the in-app Privacy Policy does not. Needs an owner decision on the in-app wording; the Terms paragraphs and in-app policy body were not changed by BRAND-09A.
+- Done (BRAND-06/09A): the StereoSine privacy page is hosted and verified at `https://launchpointdigital.co.za/stereosine/privacy`, and
+  `StereoSineAbout.PRIVACY_POLICY_URL` and the privacy guard test now use it. Still pending: the Play Console listing field. The old
+  `/wavdrop/privacy` page stays published on the website.
+- Done (BRAND-07A): the GitHub repository is now `mafuzanam02-wq/offline-music-player` (renamed from `wavdrop-music-player`; the old URL redirects).
 - Decide backup writer metadata (`app`, `packageName`, `database`) and the Desktop `wavdrop-desktop-lab` interop plan.
 - Done (BRAND-05B): signing variables are now `STEREOSINE_UPLOAD_*` with `WAVDROP_UPLOAD_*` kept as a legacy fallback. Still pending: enroll in Google Play App Signing and eventually remove the legacy variable names.
 
 ### Public Privacy Policy Page — IMPLEMENTED, PUSHED, DEPLOYED, LIVE HTTPS VALIDATED, CLOSED (WPP-1)
 
 The in-app policy carries `StereoSineAbout.PRIVACY_POLICY_URL`, and the LaunchPoint Digital site serves the prerendered `/wavdrop/privacy` route. Hosting was deployed and `https://launchpointdigital.co.za/wavdrop/privacy` was opened successfully over HTTPS; the owner confirmed the QA_CHECKLIST "WPP-1" items A–I.
+
+(Historical note, BRAND-09A: the app now links `https://launchpointdigital.co.za/stereosine/privacy`; the `/wavdrop/privacy` route above is the original WPP-1 deployment.)
 
 Original requirement: publish the StereoSine Privacy Policy at `https://launchpointdigital.co.za/wavdrop/privacy`. This URL is required for the Google Play store listing Privacy Policy field before public launch. The page should publish the same text as the in-app Privacy Policy dialog. Once the page is live, add a reference line to the bottom of the in-app Privacy Policy copy pointing to the URL.
 

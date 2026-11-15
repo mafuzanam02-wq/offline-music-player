@@ -35,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.launchpoint.stereosine.BuildConfig
 import com.launchpoint.stereosine.ui.components.FullChangelogDialog
@@ -201,9 +203,11 @@ fun SettingsAboutScreen(
     }
     if (showTermsDialog) {
         LegalInfoDialog(
-            title      = "Terms of Use",
-            paragraphs = StereoSineAbout.TERMS_OF_USE,
-            onDismiss  = { showTermsDialog = false },
+            title       = "Terms of Use",
+            paragraphs  = StereoSineAbout.TERMS_OF_USE,
+            onDismiss   = { showTermsDialog = false },
+            onlineLabel = StereoSineAbout.TERMS_ONLINE_LABEL,
+            onOnline    = { context.openExternalLink(StereoSineAbout.TERMS_URL) },
         )
     }
     if (showDisclaimerDialog) {
@@ -331,11 +335,18 @@ private fun CopyrightRow(modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * Read-only legal text dialog. The full [paragraphs] are always shown offline. When [onlineLabel] is set, a secondary
+ * "view online" button is added beside Close; it only calls [onOnline] on an explicit tap (opening the dialog never
+ * launches anything).
+ */
 @Composable
-private fun LegalInfoDialog(
+internal fun LegalInfoDialog(
     title: String,
     paragraphs: List<String>,
     onDismiss: () -> Unit,
+    onlineLabel: String? = null,
+    onOnline: () -> Unit = {},
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -354,6 +365,14 @@ private fun LegalInfoDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
+        },
+        dismissButton = onlineLabel?.let { label ->
+            {
+                TextButton(
+                    onClick  = onOnline,
+                    modifier = Modifier.semantics { contentDescription = "$label, opens in your web browser" },
+                ) { Text(label) }
+            }
         },
     )
 }
@@ -416,8 +435,15 @@ private fun FormatGroup(
 }
 
 private fun Context.openWebsite(url: String) {
-    runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+    openExternalLink(url)
 }
+
+/**
+ * Opens [url] in the user's external browser through an ACTION_VIEW intent (no WebView, no INTERNET permission needed by
+ * this app). Returns false instead of crashing when there is no browser or the launch is refused.
+ */
+internal fun Context.openExternalLink(url: String): Boolean =
+    runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.isSuccess
 
 private fun buildSupportEmailBody(): String {
     val versionName  = runCatching { BuildConfig.VERSION_NAME }.getOrDefault("unknown")
@@ -452,12 +478,14 @@ private fun Context.openSupportEmail(email: String, subject: String) {
     runCatching { startActivity(intent) }
 }
 
-private object StereoSineAbout {
+internal object StereoSineAbout {
     const val APP_NAME        = "StereoSine"
     const val PRODUCT_NAME    = "StereoSine"
     const val WEBSITE_URL     = "https://launchpointdigital.co.za"
     const val CONTACT_EMAIL   = "info@launchpointdigital.co.za"
-    const val PRIVACY_POLICY_URL = "https://launchpointdigital.co.za/wavdrop/privacy"
+    const val PRIVACY_POLICY_URL = "https://launchpointdigital.co.za/stereosine/privacy"
+    const val TERMS_URL          = "https://launchpointdigital.co.za/stereosine/terms"
+    const val TERMS_ONLINE_LABEL = "View Terms Online"
     const val SUPPORT_SUBJECT = "StereoSine Feedback"
     const val COPYRIGHT       = "© 2026 LaunchPoint Digital. All rights reserved."
 
