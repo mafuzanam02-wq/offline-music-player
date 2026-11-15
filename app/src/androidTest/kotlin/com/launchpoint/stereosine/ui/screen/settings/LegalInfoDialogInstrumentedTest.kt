@@ -98,6 +98,11 @@ class LegalInfoDialogInstrumentedTest {
         assertTrue("opening the dialog launches nothing", ctx.started.isEmpty())
     }
 
+    @Test fun privacy_every_paragraph_is_present_offline() {
+        showPrivacy()
+        StereoSineAbout.PRIVACY_POLICY.forEach { rule.onNodeWithText(it).assertExists() }
+    }
+
     @Test fun privacy_online_button_is_enabled_with_usable_touch_target() {
         showPrivacy()
         rule.onNodeWithText("View Privacy Policy Online").assertIsDisplayed().assertIsEnabled().assertHeightIsAtLeast(40.dp)

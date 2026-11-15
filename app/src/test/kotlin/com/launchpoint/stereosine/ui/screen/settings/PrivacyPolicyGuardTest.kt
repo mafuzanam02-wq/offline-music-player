@@ -58,7 +58,112 @@ class PrivacyPolicyGuardTest {
             "StereoSine itself makes no network requests.",
             "Questions about this policy: info@launchpointdigital.co.za",
         )) assertTrue("missing from the in-app policy: $statement", policy.contains(statement))
-        assertFalse("backups are not encrypted; the policy must not claim it", policy.contains("encrypt", ignoreCase = true))
+        assertFalse("backups are not encrypted; the policy must not claim it",
+            Regex("""(is|are|be|been|get|gets) encrypted|encrypted (backup|file)s?""", RegexOption.IGNORE_CASE).containsMatchIn(policy))
+    }
+
+    @Test fun `What We Store no longer says backups are created only through Export`() {
+        val s = StereoSineAbout.WHAT_WE_STORE.single { it.startsWith("Backup and export files:") }
+        assertFalse(s.contains("only created", ignoreCase = true))
+        assertFalse(s.contains("only when you explicitly use the Export", ignoreCase = true))
+        assertTrue(s.contains("when you save a backup yourself"))
+        assertTrue(s.contains("optional automatic backup (off by default)"))
+        assertTrue(s.contains("saved to a location you choose"))
+        assertTrue(s.contains("StereoSine does not upload them"))
+    }
+
+    @Test fun `backup files are described as unencrypted`() {
+        assertTrue(policy.contains("StereoSine does not encrypt backup files, so anyone who can open the file can read its contents."))
+    }
+
+    @Test fun `automatic backup disclosures are present and accurate`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Automatic backup:") }
+        for (statement in listOf(
+            "Automatic backup is optional and is off unless you turn it on.",
+            "daily, weekly or monthly interval and select a backup folder",
+            "You can also use Back up now to save one immediately.",
+            "best-effort basis through Android's background scheduler",
+            "a backup may run later than the interval you chose or not run",
+            "device storage is low or the selected folder is no longer available",
+            "saved only to the folder you select. StereoSine does not send them anywhere else.",
+            "file named with that day's date or replaces the previous StereoSine backup file",
+        )) assertTrue("missing: $statement", s.contains(statement))
+    }
+
+    @Test fun `cloud backed destination disclosure is present`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Cloud-backed backup destinations:") }
+        assertTrue(s.contains("cloud storage app or another storage provider, that provider may synchronize or upload the backup file under its own terms and privacy policy"))
+        assertTrue(s.contains("performed by the storage provider you selected, not by StereoSine"))
+        assertTrue(s.contains("not through any service operated by StereoSine or LaunchPoint Digital"))
+    }
+
+    @Test fun `safety copy disclosure matches Recovery restore behaviour`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Safety copy before Recovery restore:") }
+        for (statement in listOf(
+            "using Recovery mode",
+            "verified safety copy of your current StereoSine data in the app's private storage on your device",
+            "Recovery does not start if that copy cannot be verified",
+            "Only the latest safety copy is kept; a newer one replaces it",
+            "stays on your device and is not uploaded",
+        )) assertTrue("missing: $statement", s.contains(statement))
+    }
+
+    @Test fun `earlier Wavdrop backup compatibility is disclosed`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Earlier Wavdrop backups:") }
+        assertTrue(s.contains("StereoSine can still read backup files created by earlier Wavdrop versions"))
+        assertTrue(s.contains("reads the file you select on your device and sends nothing anywhere"))
+        assertTrue(StereoSineAbout.PRIVACY_POLICY.any { it.startsWith("BlackPlayer import:") })
+    }
+
+    @Test fun `disclosures are backed by the real behaviour they describe`() {
+        val main = File("src/main/kotlin/com/launchpoint/stereosine")
+        // optional and off by default
+        assertTrue(File(main, "data/settings/AppSettingsRepository.kt").readText().contains("?: AutoBackupInterval.OFF"))
+        // best effort: WorkManager periodic work, storage-not-low constraint, no network constraint
+        val scheduler = File(main, "data/backup/AutoBackupWorkScheduler.kt").readText()
+        assertTrue(scheduler.contains("PeriodicWorkRequestBuilder") && scheduler.contains("setRequiresStorageNotLow(true)"))
+        // the safety copy lives in app-private storage and is only taken for Recovery
+        val snapshot = File(main, "data/backup/RecoverySafetySnapshot.kt").readText()
+        assertTrue(snapshot.contains("recovery-safety") && snapshot.contains("app-private"))
+        assertTrue(File(main, "data/backup/BackupRestoreMode.kt").readText().contains("can only run after a VERIFIED pre-restore safety snapshot"))
+        // no encryption anywhere in the backup code, and Android platform auto-backup is off
+        val encryption = File(main, "data/backup").walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { Regex("Cipher|SecretKey|AES|encrypt", RegexOption.IGNORE_CASE).containsMatchIn(it.readText()) }.map { it.name }.toList()
+        assertTrue("backup code unexpectedly mentions encryption: $encryption", encryption.isEmpty())
+        assertTrue(manifest.contains("""android:allowBackup="false""""))
+    }
+
+    /**
+     * Cross-repository consistency with the published website policy. The website repository is optional in ordinary
+     * development environments: when it is absent this test is SKIPPED (visible in the report), never passed. Override the
+     * location with -Dstereosine.websitePolicy=<path to stereosinePrivacyPolicy.js>. It pins the shared backup, cloud,
+     * safety-copy and legacy disclosures; it does not prove the two documents are otherwise identical.
+     */
+    @Test fun `shared disclosures are also present in the published website policy source`() {
+        val candidates = listOfNotNull(
+            System.getProperty("stereosine.websitePolicy"),
+            "../../launchpoint-digital/src/stereosinePrivacyPolicy.js",
+        ).map { File(it) }
+        val site = candidates.firstOrNull { it.isFile }
+        org.junit.Assume.assumeTrue("website policy source not available (looked in $candidates); cross-repo check SKIPPED", site != null)
+        val web = site!!.readText().replace("\\\"", "\"").replace(Regex("""\s+"""), " ")
+        val shared = listOf(
+            "Automatic backup is optional and is off unless you turn it on.",
+            "daily, weekly or monthly interval and select a backup folder",
+            "You can also use Back up now to save one immediately.",
+            "Automatic backups are scheduled on a best-effort basis through Android's background scheduler.",
+            "a backup may run later than the interval you chose or not run, for example when device storage is low or the selected folder is no longer available.",
+            "Automatic backups are saved only to the folder you select. StereoSine does not send them anywhere else.",
+            "that provider may synchronize or upload the backup file under its own terms and privacy policy.",
+            "That transfer is performed by the storage provider you selected, not by StereoSine, and not through any service operated by StereoSine or LaunchPoint Digital.",
+            "StereoSine does not encrypt backup files, so anyone who can open the file can read its contents.",
+            "This copy stays on your device and is not uploaded.",
+        )
+        val app = StereoSineAbout.PRIVACY_POLICY.joinToString(" ").replace(Regex("""\s+"""), " ")
+        for (sentence in shared) {
+            assertTrue("missing from the website source: $sentence", web.contains(sentence))
+            assertTrue("missing from the in-app policy: $sentence", app.contains(sentence))
+        }
     }
 
     private val manifest = File("src/main/AndroidManifest.xml").readText()

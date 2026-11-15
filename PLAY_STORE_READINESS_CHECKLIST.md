@@ -10,10 +10,11 @@
 > in-app Privacy Policy cites it as plain text, Terms has a View Terms Online action, and the GitHub repository is now
 > `mafuzanam02-wq/offline-music-player`.)
 >
-> **Outstanding disclosure-alignment issue (BRAND-09A review):** the public StereoSine Privacy Policy discloses optional,
-> best-effort scheduled automatic backup (user-selected folder; cloud-backed folders may be synced by the storage provider; a
-> pre-restore safety copy; import of earlier Wavdrop backups). The in-app Privacy Policy does not yet mention these, so the two
-> are **not equivalent**. Resolve before any release track (see the blocker table in section 9).
+> **Disclosure alignment (BRAND-09A review, addressed in BRAND-10A):** the in-app Privacy Policy now discloses optional,
+> best-effort scheduled automatic backup, user-selected and cloud-backed backup folders, the unencrypted backup format, the
+> Recovery-mode safety copy and earlier-Wavdrop backup compatibility, verified against the Android implementation and pinned by
+> `PrivacyPolicyGuardTest`. This is a text alignment only: Google Play Data Safety review and legal review are **not** complete.
+> Residual items (BRAND-10A): the in-app Privacy Policy and Terms still say "Export StereoSine Data" where the Settings UI says "Save backup file"; and the public page words the safety copy as before any restore, whereas the app takes it only before a Recovery-mode restore.
 
 Tracks every item needed before submitting to Google Play. Update each row
 as items are completed. Tick `[x]` when done; leave `[ ]` open.
@@ -96,7 +97,7 @@ types to explicitly confirm as not collected:
 | Item | Status | Location |
 |---|---|---|
 | Privacy Policy dialog present | ✅ Done | Settings → About → Legal → Privacy Policy |
-| Privacy Policy covers local storage, permissions, backup, share, delete, import | ⚠️ Partial | `StereoSineAbout.PRIVACY_POLICY` covers manual export only; optional automatic backup, cloud-folder sync, the pre-restore safety copy and earlier-Wavdrop imports are not mentioned in-app (the public page discloses them) — see disclosure-alignment blocker |
+| Privacy Policy covers local storage, permissions, backup, share, delete, import | ✅ Done (text) | `StereoSineAbout.PRIVACY_POLICY` (BRAND-10A) covers manual export, optional automatic backup, cloud-backed folders, unencrypted backups, the Recovery safety copy, BlackPlayer and earlier-Wavdrop import; Data Safety and legal review are not complete |
 | No cloud/future-sync promise in Privacy Policy | ✅ Done | Removed in legal polish pass |
 | Terms of Use dialog present | ✅ Done | Settings → About → Legal → Terms of Use |
 | Disclaimer covers delete permanence, share, music rights | ✅ Done | `StereoSineAbout.DISCLAIMER` — 8 items |
@@ -200,7 +201,7 @@ Items that must be resolved before any public release track.
 | Public Privacy Policy URL | LaunchPoint Digital web team | `https://launchpointdigital.co.za/stereosine/privacy` — live (BRAND-06D); Terms online copy at `https://launchpointdigital.co.za/stereosine/terms` |
 | Production keystore generated and stored securely | Dev | Upload key created and locally verified; encrypted off-repository backups reported in `docs/RELEASE_SIGNING.md`. Do not lose; Play App Signing enrollment is unconfirmed |
 | Release-signed AAB built and tested | Dev | A signed release APK was built and verified locally; an AAB (`bundleRelease`) build/test and any upload are not recorded |
-| In-app and public Privacy Policy disclosure alignment | Dev + LaunchPoint web | In-app policy omits optional scheduled automatic backup (best-effort, user-selected folder, cloud-folder sync by the provider), the pre-restore safety copy and earlier-Wavdrop import that the public page discloses. Outstanding (BRAND-09A review); needs an owner decision on the in-app wording |
+| In-app and public Privacy Policy disclosure alignment | Dev + LaunchPoint web | In-app text aligned in BRAND-10A (see header). Still open: the public safety-copy sentence says "before StereoSine restores data" whereas the app takes the copy only before a Recovery-mode restore (website change needed, owner decision); "Export StereoSine Data" wording vs the "Save backup file" UI label |
 | Store listing assets complete (icon, feature graphic, screenshots) | Design | |
 | Data Safety form completed in Play Console | Dev | All "No" for data collection; see Section 3 |
 | Privacy Policy URL entered in Play Console listing | Dev | |

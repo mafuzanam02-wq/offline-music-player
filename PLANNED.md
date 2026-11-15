@@ -22,7 +22,7 @@ The in-repo rebrand (BRAND-01..04) is complete for identity, symbols, backup fil
 each needs separate authorization:
 
 - Signing: the original Wavdrop key was lost. A StereoSine upload key exists and was verified locally and a signed release APK was built locally (not published); still pending: Google Play App Signing enrollment, first upload, and any StereoSine release (see `docs/RELEASE_SIGNING.md`).
-- Disclosure alignment (BRAND-09A review): the public StereoSine Privacy Policy discloses optional best-effort automatic backup, cloud-folder sync by the storage provider, the pre-restore safety copy and earlier-Wavdrop import; the in-app Privacy Policy does not. Needs an owner decision on the in-app wording; the Terms paragraphs and in-app policy body were not changed by BRAND-09A.
+- Disclosure alignment (BRAND-09A review): resolved in the in-app Privacy Policy by BRAND-10A (automatic backup, cloud-backed folders, unencrypted backups, Recovery safety copy, earlier-Wavdrop import). Still open: the public page's safety-copy wording is broader than the app's Recovery-only behavior; "Export StereoSine Data" vs the "Save backup file" UI label. Google Play Data Safety and legal review remain not done.
 - Done (BRAND-06/09A): the StereoSine privacy page is hosted and verified at `https://launchpointdigital.co.za/stereosine/privacy`, and
   `StereoSineAbout.PRIVACY_POLICY_URL` and the privacy guard test now use it. Still pending: the Play Console listing field. The old
   `/wavdrop/privacy` page stays published on the website.

@@ -80,6 +80,10 @@ class LegalLinksTest {
         assertEquals("the privacy URL literal exists once", 1, Regex(Regex.escape("https://launchpointdigital.co.za/stereosine/privacy")).findAll(about).count())
     }
 
+    @Test fun `the Disclaimer keeps its eight approved paragraphs`() {
+        assertEquals(PINNED_DISCLAIMER, StereoSineAbout.DISCLAIMER)
+    }
+
     @Test fun `the online Terms action label is exactly View Terms Online`() {
         assertEquals("View Terms Online", StereoSineAbout.TERMS_ONLINE_LABEL)
     }
@@ -139,6 +143,17 @@ class LegalLinksTest {
     }
 
     private companion object {
+        val PINNED_DISCLAIMER = listOf(
+        "StereoSine is an independent music player. It is not affiliated with BlackPlayer or Immortal Soft, ExoPlayer, Kotlin, Jetpack Compose, Android, Google, Samsung, WhatsApp, Meta, or any music streaming service.",
+        "BlackPlayer import exists only to help you migrate your own listening statistics from .bpstat files you exported from your own BlackPlayer installation. StereoSine is not affiliated with Immortal Soft or the BlackPlayer product.",
+        "Audio format support depends partly on your Android device's media codecs. Not all file types are guaranteed to work on all devices.",
+        "You are responsible for your own music files, listening data, and backup files, and for ensuring you have appropriate rights to play, back up, or share any audio content you use with StereoSine. StereoSine does not verify music ownership or licensing.",
+        "StereoSine does not provide, host, sell, or stream music content.",
+        "The Delete from device feature permanently removes audio files from your device and cannot be undone. Android does not provide a recycle bin for shared media storage. StereoSine cannot recover deleted files.",
+        "When you share a track using the Share feature, StereoSine provides a content link to the app you choose. StereoSine is not responsible for how the receiving app handles the shared file.",
+        "StereoSine statistics, reports, and Wrapped are computed from listening activity recorded locally on your device. History begins from when you started using StereoSine; prior listening activity is not available unless imported via BlackPlayer import or a StereoSine backup.",
+        )
+
         val PINNED_TERMS = listOf(
             "By using StereoSine, you agree to the following terms. If you do not agree, please uninstall the app.",
             "Use of the app:\nStereoSine is designed for managing and playing audio files stored on your device.",

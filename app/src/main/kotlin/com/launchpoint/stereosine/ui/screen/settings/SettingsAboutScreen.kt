@@ -508,13 +508,23 @@ internal object StereoSineAbout {
             "· BLUETOOTH on Android 11 and earlier or BLUETOOTH_CONNECT on Android 12+ is used for Bluetooth audio connection-state handling and optional playback resume when an audio device reconnects. StereoSine does not scan for or discover nearby Bluetooth devices.\n\n" +
             "StereoSine does not request internet, location, contacts, camera, microphone, advertising ID, or any other unnecessary permissions.",
         "Backup and export:\n" +
-            "The Export StereoSine Data feature saves a StereoSine backup file to a location you choose, such as local storage or a cloud service you control. This file may contain your library metadata, statistics, playlists, custom lyrics, app preferences, and listening history. StereoSine does not upload this file. You are responsible for protecting your backup because it may contain personal listening data.",
+            "The Export StereoSine Data feature saves a StereoSine backup file to a location you choose, such as local storage or a cloud service you control. This file may contain your library metadata, statistics, playlists, custom lyrics, app preferences, and listening history. StereoSine does not upload this file. You are responsible for protecting your backup because it may contain personal listening data. StereoSine does not encrypt backup files, so anyone who can open the file can read its contents.",
+        "Automatic backup:\n" +
+            "Automatic backup is optional and is off unless you turn it on. When you choose a daily, weekly or monthly interval and select a backup folder, StereoSine saves a StereoSine backup file to that folder without you starting each backup. You can also use Back up now to save one immediately.\n\n" +
+            "Automatic backups are scheduled on a best-effort basis through Android's background scheduler. Android decides when background work runs, so a backup may run later than the interval you chose or not run, for example when device storage is low or the selected folder is no longer available.\n\n" +
+            "Automatic backups are saved only to the folder you select. StereoSine does not send them anywhere else. Depending on your settings, each backup is saved to a file named with that day's date or replaces the previous StereoSine backup file in that folder.",
+        "Cloud-backed backup destinations:\n" +
+            "If the folder you choose is managed by a cloud storage app or another storage provider, that provider may synchronize or upload the backup file under its own terms and privacy policy. That transfer is performed by the storage provider you selected, not by StereoSine, and not through any service operated by StereoSine or LaunchPoint Digital.",
+        "Safety copy before Recovery restore:\n" +
+            "When you restore a backup using Recovery mode, which replaces StereoSine's current recoverable data with the backup, StereoSine first saves a verified safety copy of your current StereoSine data in the app's private storage on your device. Recovery does not start if that copy cannot be verified. Only the latest safety copy is kept; a newer one replaces it. This copy stays on your device and is not uploaded.",
         "Share:\n" +
             "When you use the Share feature on a track, StereoSine passes a content link for that audio file to the Android share sheet and to the app you choose. StereoSine does not transmit any data itself and has no control over how the receiving app handles the shared file.",
         "Delete from device:\n" +
             "If you delete a track using Delete from device, the audio file is permanently removed from your device. StereoSine may retain listening statistics and history records associated with that deleted track so that reports, Wrapped summaries, and historical listening data remain accurate. The deleted audio file is not recoverable through StereoSine.",
         "BlackPlayer import:\n" +
             "The BlackPlayer import feature reads a .bpstat file from your device and writes matched play counts into StereoSine's local database. No data is sent anywhere during this process.",
+        "Earlier Wavdrop backups:\n" +
+            "StereoSine was previously distributed to testers as Wavdrop. For compatibility, StereoSine can still read backup files created by earlier Wavdrop versions. Importing reads the file you select on your device and sends nothing anywhere.",
         "Third-party services:\n" +
             "StereoSine does not use advertising SDKs, analytics services, crash-reporting tools, or third-party tracking. External links, such as the LaunchPoint Digital website and support email, open in your device's browser or email app. StereoSine itself makes no network requests.",
         "Contact:\n" +
@@ -565,7 +575,7 @@ internal object StereoSineAbout {
         "Custom lyrics:\n" +
             "Lyrics you manually add or paste inside the app are stored locally. They are not fetched from any online service.",
         "Backup and export files:\n" +
-            "Backup files are only created when you explicitly use the Export feature. They are saved to a location you choose — StereoSine does not upload them. You are responsible for protecting your backup files.",
+            "Backup files are created when you save a backup yourself or, if you turn on the optional automatic backup (off by default), on the schedule you choose. They are saved to a location you choose — StereoSine does not upload them. You are responsible for protecting your backup files.",
     )
 
     val DATA_OWNERSHIP = listOf(
