@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,81 +7,18 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// ── Release signing (WD-06) ───────────────────────────────────────────────────
-// Secrets NEVER live in Git. Supply them via one of:
-//   • keystore.properties at the repo root (gitignored; see keystore.properties.example)
-//   • the matching WAVDROP_UPLOAD_* environment variables (CI encrypted secrets)
-// The file wins over env vars. Three states are recognised:
-//   • NONE supplied     → release build stays UNSIGNED (safe local default).
-//   • ALL four supplied → release signing is configured.
-//   • SOME but not all  → fail configuration with a clear GradleException naming
-//                         the MISSING property names (never the supplied values).
+// ── Release signing ───────────────────────────────────────────────────────────
+// Secrets NEVER live in Git. The resolution rules (sources, precedence, partial/conflict failures, missing-keystore
+// check) live in gradle/release-signing.gradle.kts, which is also exercised by ReleaseSigningConfigurationTest.
+// Summary: ONE complete identity from keystore.properties, else STEREOSINE_UPLOAD_*, else legacy WAVDROP_UPLOAD_*
+// environment variables; none supplied → unsigned release; incomplete or conflicting → configuration failure.
 // There is no fallback to the debug key for release.
-val keystorePropertiesFile = rootProject.file("keystore.properties")
-val keystoreProperties = Properties().apply {
-    if (keystorePropertiesFile.exists()) {
-        keystorePropertiesFile.inputStream().use { load(it) }
-    }
-}
-
-fun resolveSigningValue(propertyKey: String, envKey: String): String? =
-    (keystoreProperties.getProperty(propertyKey) ?: System.getenv(envKey))
-        ?.takeIf { it.isNotBlank() }
-
-// Property name → resolved value. Order defines the reporting order for missing keys.
-val releaseSigningValues: Map<String, String?> = linkedMapOf(
-    "storeFile" to resolveSigningValue("storeFile", "WAVDROP_UPLOAD_STORE_FILE"),
-    "storePassword" to resolveSigningValue("storePassword", "WAVDROP_UPLOAD_STORE_PASSWORD"),
-    "keyAlias" to resolveSigningValue("keyAlias", "WAVDROP_UPLOAD_KEY_ALIAS"),
-    "keyPassword" to resolveSigningValue("keyPassword", "WAVDROP_UPLOAD_KEY_PASSWORD"),
-)
-
-val suppliedSigningKeys = releaseSigningValues.filterValues { it != null }.keys
-val missingSigningKeys = releaseSigningValues.filterValues { it == null }.keys
-
-// Partial configuration is a misconfiguration — refuse rather than silently
-// producing an unsigned artifact the developer believes is signed. The message
-// names only which properties are MISSING; supplied secrets are never referenced.
-if (suppliedSigningKeys.isNotEmpty() && missingSigningKeys.isNotEmpty()) {
-    throw GradleException(
-        "Incomplete release signing configuration: missing " +
-            missingSigningKeys.joinToString(", ") + ". " +
-            "Supply all of storeFile, storePassword, keyAlias, keyPassword via " +
-            "keystore.properties or the matching WAVDROP_UPLOAD_* environment " +
-            "variables, or supply none to build an unsigned release. " +
-            "(Values are intentionally not echoed.)",
-    )
-}
-
-val hasReleaseSigningConfig = missingSigningKeys.isEmpty()
-val releaseStoreFilePath = releaseSigningValues["storeFile"]
-val releaseStorePassword = releaseSigningValues["storePassword"]
-val releaseKeyAlias = releaseSigningValues["keyAlias"]
-val releaseKeyPassword = releaseSigningValues["keyPassword"]
-
-val releaseStoreFile = if (hasReleaseSigningConfig) {
-    rootProject.file(releaseStoreFilePath!!)
-} else {
-    null
-}
-
-// Fail early and clearly if the keystore file is absent, but only when this build
-// will actually sign a release artifact (AGP schedules validateSigningRelease for
-// every release packaging task). Debug-only builds and unit tests do not need the
-// release keystore. Only the file NAME is surfaced, not the full (potentially
-// sensitive) path. Passwords are never validated here.
-if (releaseStoreFile != null) {
-    gradle.taskGraph.whenReady {
-        val signsRelease = allTasks.any { it.project == project && it.name == "validateSigningRelease" }
-        if (signsRelease && !releaseStoreFile.exists()) {
-            throw GradleException(
-                "Release keystore file not found: '${releaseStoreFile.name}'. Check the storeFile " +
-                    "path in keystore.properties / WAVDROP_UPLOAD_STORE_FILE. " +
-                    "The keystore must live outside version control.",
-            )
-        }
-    }
-}
+apply(from = rootProject.file("gradle/release-signing.gradle.kts"))
+val hasReleaseSigningConfig: Boolean by extra
+val releaseStoreFile: File? by extra
+val releaseStorePassword: String? by extra
+val releaseKeyAlias: String? by extra
+val releaseKeyPassword: String? by extra
 
 // ── P5-F validation variant (debug only) ─────────────────────────────────────
 // `-PstereosineValidationBounded=true` compiles the bounded physical queue ON into the DEBUG build only, so the owner can A/B the
@@ -155,6 +90,8 @@ android {
             // Makes Android API stubs return safe defaults (0/null/false) in JVM unit tests
             // instead of throwing RuntimeException. Required for Log.d and similar calls.
             isReturnDefaultValues = true
+            // ReleaseSigningConfigurationTest runs fixture builds with this Gradle installation (CLI; no TestKit on the test classpath).
+            all { it.systemProperty("stereosine.test.gradleHome", gradle.gradleHomeDir!!.absolutePath) }
         }
     }
 

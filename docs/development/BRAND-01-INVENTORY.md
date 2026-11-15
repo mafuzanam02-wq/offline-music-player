@@ -29,7 +29,7 @@ After slice 1: 280 files / 2,378 matches (see residual table). `docs/` and root 
 | B/A? | Backup file names `wavdrop-backup[-date].wdbk` (+ `isBackupFileName` recognition) | User-visible but used to find/replace previous backups; needs a decision (write StereoSine, recognise both). |
 | A (later slice) | Kotlin type/symbol names: `WavdropDatabase`, `WavdropBackup*`, `WavdropTheme`, `WavdropMotion`, `WavdropNavGraph`, `WavdropWidget*`, `WavdropMediaLibrary` (+ browse ids `wavdrop_root`…), `WavdropPreset*`, test class names | Internal only; rename with refactor tooling. Backup-related names stay with the legacy-format code if kept. |
 | A (later slice) | Log tags (`Wavdrop-Startup`, `WavdropBackup`, …), `WAVDROP_VALIDATION_BOUNDED` BuildConfig, `-PwavdropValidationBounded`, `wavdrop.bench`, `Capture-WavdropValidation.ps1` | Tooling; coupled to tests and the capture script. |
-| B (signing) | `WAVDROP_UPLOAD_*` env vars, `keyAlias=wavdrop-upload` in `keystore.properties.example` | Signing migration is out of scope; local secrets keep working. |
+| B (signing) — migrated in BRAND-05B | Primary env vars are now `STEREOSINE_UPLOAD_*`; `WAVDROP_UPLOAD_*` is a documented legacy fallback; `keystore.properties.example` is StereoSine placeholders only | One complete identity per source, no cross-source mixing, conflicts/partials fail (see `docs/RELEASE_SIGNING.md`). Existing `keystore.properties` property names unchanged. |
 | C | `docs/WAVDROP_*.md` format specs, `RELEASE_NOTES.md`, `WHATS_NEW.md`, QA/readiness docs, `ENGINEERING_BACKLOG…`, `PROJECT_CONTEXT.md`, `README.md` | Docs slice: current-product docs rebranded, release history labelled legacy. `VersionConfigTest` asserts `WHATS_NEW.md` title `Wavdrop Beta 10.0`; change both together. |
 | E | GitHub repo URL `mafuzanam02-wq/wavdrop-music-player`; privacy URL `https://launchpointdigital.co.za/wavdrop/privacy` | Needs separate authorization / new hosted page. |
 | D | `app/build/`, `build/`, `release-builds/`, `releases/`, old APKs, `.gradle/`, stray `C:...build.log` | Untracked/ignored; not in patch. |
@@ -138,11 +138,11 @@ production code, format, schema, version (`0.1.0-beta10` / `versionCode 10`) or 
   (file names kept) and the identifiers `wavdrop_backup`, `wavdrop_wdbk`, `wavdrop-desktop-lab`, `wavdrop.db`, DataStore names, event sources.
 - **External (kept, documented as outstanding):** GitHub `mafuzanam02-wq/wavdrop-music-player`; privacy URL `…/wavdrop/privacy`
   (and the external site's `wavdropPrivacyPolicy.js` / `WavdropPrivacyPage.jsx` file names).
-- **Signing:** `WAVDROP_UPLOAD_*`, `keyAlias=wavdrop-upload`; docs now state the original key was lost and no StereoSine signing identity exists yet.
+- **Signing (updated by BRAND-05A/05B):** the original Wavdrop key was lost. A StereoSine upload key now exists and is locally verified (certificate SHA-256 in `docs/RELEASE_SIGNING.md`); a signed release APK was built and verified locally but **not published**. Build wiring uses `STEREOSINE_UPLOAD_*` (primary), `keystore.properties`, and `WAVDROP_UPLOAD_*` as a legacy fallback. Google Play App Signing enrollment remains unconfirmed.
 - **Stale/misleading corrected:** docs claimed package/ID `com.launchpoint.wavdrop`, `WavdropAbout`, `wavdrop_icon_*`, `wavdrop-backup*` as current.
 
 ## Remaining work (not done in this slice)
-1. New StereoSine signing identity and rename of `WAVDROP_UPLOAD_*` / `keystore.properties.example`.
+1. ~~New StereoSine signing identity and rename of `WAVDROP_UPLOAD_*` / `keystore.properties.example`~~ — done (BRAND-05A key, BRAND-05B wiring). Still open: Play App Signing enrollment, and later removal of the legacy `WAVDROP_UPLOAD_*` fallback.
 2. Host and verify a StereoSine privacy page, then change `PRIVACY_POLICY_URL` (+ `PrivacyPolicyGuardTest`) and the Play listing.
 3. Rename the GitHub repository and update remotes/links.
 4. Backup writer metadata decision (`app`, `packageName`, `database`) and Desktop `wavdrop-desktop-lab` plan.

@@ -8,7 +8,8 @@ targetSdk 36 - Room schema 13.
 
 > **Status.** The app was previously published to testers as *Wavdrop*. The StereoSine identity (new application ID,
 > source packages and backup file names) is the current development state; no StereoSine-branded release has been
-> published, and a new release-signing identity is still pending (see [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md)).
+> published. A StereoSine upload key exists and is locally verified, but Google Play App Signing enrollment is unconfirmed
+> (see [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md)).
 > Legacy Wavdrop backups (`.wdbk` / `.json`, `wavdrop_backup` format) remain importable. The GitHub repository and
 > public privacy URL still use the old *wavdrop* names until they are migrated.
 
@@ -49,8 +50,9 @@ gradlew.bat :app:testDebugUnitTest
 gradlew.bat :app:testDebugUnitTest :app:assembleRelease
 ```
 
-`assembleRelease` produces an unsigned APK unless release-signing credentials are supplied (see
-[docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md)). Instrumentation tests under `app/src/androidTest`
+`assembleRelease` produces an unsigned APK unless one complete set of release-signing credentials is supplied via the
+gitignored `keystore.properties` or the `STEREOSINE_UPLOAD_*` environment variables (`WAVDROP_UPLOAD_*` is accepted as a
+legacy fallback); a partial or conflicting set fails the build (see [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md)). Instrumentation tests under `app/src/androidTest`
 require a device or emulator (`gradlew.bat :app:connectedDebugAndroidTest`).
 
 ## Architecture in brief

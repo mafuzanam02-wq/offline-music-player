@@ -18,7 +18,7 @@ as items are completed. Tick `[x]` when done; leave `[ ]` open.
 | `minSdk = 26` (Android 8.0) | ✅ Set | Covers a wide device range |
 | `versionCode` set to production value | ⬜ Pending | Currently `10` (`app/build.gradle.kts`); must be incremented before every Play Console upload (each upload requires a unique, higher value) |
 | `versionName` set to release value | ✅ `"0.1.0-beta10"` | Current value in `app/build.gradle.kts`; appropriate for the beta track |
-| Release build signed with upload key | ⬜ Pending | Signing is wired in `app/build.gradle.kts` (see `docs/RELEASE_SIGNING.md`): all four credentials (`keystore.properties` or `WAVDROP_UPLOAD_*`) produce a signed release; none produces an unsigned release; a partial set fails the build. Credentials are never committed. Play Console enrollment / first upload is not recorded here and remains to be confirmed. |
+| Release build signed with upload key | ⬜ Pending | Signing is wired in `app/build.gradle.kts` (see `docs/RELEASE_SIGNING.md`): one complete credential set (`keystore.properties`, `STEREOSINE_UPLOAD_*`, or legacy `WAVDROP_UPLOAD_*`) produces a signed release; a StereoSine upload key exists and a signed APK was verified locally but not published; none produces an unsigned release; a partial set fails the build. Credentials are never committed. Play Console enrollment / first upload is not recorded here and remains to be confirmed. |
 | ProGuard/R8 enabled for release build | ✅ `isMinifyEnabled = true`, `isShrinkResources = true` | Confirmed in `app/build.gradle.kts` |
 | Debug APK removed from release track | ⬜ Pending | Only upload a release-signed APK/AAB |
 | AAB (Android App Bundle) built for upload | ⬜ Pending | Play Console prefers `.aab` over `.apk` |

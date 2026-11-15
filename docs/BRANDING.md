@@ -22,7 +22,7 @@ These are compatibility contracts or external identifiers, not branding leftover
   Desktop `wavdrop-desktop-lab`, the `.wdbk` markers and the `docs/WAVDROP_*.md` specifications.
 - Persisted identifiers: Room file `wavdrop.db`, DataStore names, stored event sources and media-browse ids
   (see `PersistenceContractTest`).
-- Signing variables `WAVDROP_UPLOAD_*`.
+- Legacy signing variables `WAVDROP_UPLOAD_*` (kept only as a documented compatibility fallback; primary names are now `STEREOSINE_UPLOAD_*`, see [RELEASE_SIGNING.md](RELEASE_SIGNING.md)).
 - Outstanding external identity (not yet migrated): the GitHub repository `mafuzanam02-wq/wavdrop-music-player` and
   the privacy URL `https://launchpointdigital.co.za/wavdrop/privacy`.
 

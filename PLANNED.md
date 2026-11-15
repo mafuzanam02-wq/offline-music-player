@@ -26,7 +26,7 @@ each needs separate authorization:
   the Play listing. The old `/wavdrop/privacy` URL stays until then.
 - Rename the GitHub repository (`mafuzanam02-wq/wavdrop-music-player`) and update remotes/links.
 - Decide backup writer metadata (`app`, `packageName`, `database`) and the Desktop `wavdrop-desktop-lab` interop plan.
-- Rename the `WAVDROP_UPLOAD_*` signing variables and `keystore.properties.example` as part of the signing migration.
+- Done (BRAND-05B): signing variables are now `STEREOSINE_UPLOAD_*` with `WAVDROP_UPLOAD_*` kept as a legacy fallback. Still pending: enroll in Google Play App Signing and eventually remove the legacy variable names.
 
 ### Public Privacy Policy Page — IMPLEMENTED, PUSHED, DEPLOYED, LIVE HTTPS VALIDATED, CLOSED (WPP-1)
 

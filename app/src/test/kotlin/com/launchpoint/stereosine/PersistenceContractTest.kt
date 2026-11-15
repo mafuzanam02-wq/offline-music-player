@@ -92,10 +92,12 @@ class PersistenceContractTest {
         assertTrue(gradle.substringAfter("        release {").substringBefore("proguardFiles").contains("\"STEREOSINE_VALIDATION_BOUNDED\", \"false\""))
     }
 
-    @Test fun `signing environment variable names are untouched`() {
-        val gradle = File(moduleDir, "build.gradle.kts").readText()
+    @Test fun `signing environment variables are STEREOSINE primary with the legacy WAVDROP fallback kept`() {
+        val script = File(moduleDir.absoluteFile.normalize().parentFile, "gradle/release-signing.gradle.kts").readText()
+        assertTrue(script.contains("envSource(\"STEREOSINE_UPLOAD_* environment variables\", \"STEREOSINE_UPLOAD\")"))
+        assertTrue("legacy WAVDROP_UPLOAD_* names must stay accepted", script.contains("\"WAVDROP_UPLOAD\")"))
         listOf("STORE_FILE", "STORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD").forEach {
-            assertTrue("WAVDROP_UPLOAD_$it", gradle.contains("WAVDROP_UPLOAD_$it"))
+            assertTrue(it, script.contains("\"$it\""))
         }
     }
 }
