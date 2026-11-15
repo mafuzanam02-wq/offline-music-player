@@ -27,7 +27,7 @@ each needs separate authorization:
   `StereoSineAbout.PRIVACY_POLICY_URL` and the privacy guard test now use it. Still pending: the Play Console listing field. The old
   `/wavdrop/privacy` page stays published on the website.
 - Done (BRAND-07A): the GitHub repository is now `mafuzanam02-wq/offline-music-player` (renamed from `wavdrop-music-player`; the old URL redirects).
-- Search history disclosure (SEARCH-01): recent searches are now stored locally on the device (separate store, not backed up, never uploaded). The in-app Privacy Policy "Data stored locally" list does not yet mention them; adding that line is a legal-text change that needs owner approval and a matching website update.
+- Search history disclosure (SEARCH-01): recent searches are stored locally on the device (separate store, not backed up, never uploaded). PRIVACY-SEARCH-01A added the in-app disclosure (a "Recent searches" paragraph and a local-data bullet). Still pending, in a separate website slice: add the matching public disclosure to `src/stereosinePrivacyPolicy.js` (a "Recent searches" section after "Data stored locally" and a matching data-list item) and its pins in `scripts/stereosinePrivacyTest.mjs`, then deploy. Until then the in-app and public policies differ.
 - Decide backup writer metadata (`app`, `packageName`, `database`) and the Desktop `wavdrop-desktop-lab` interop plan.
 - Done (BRAND-05B): signing variables are now `STEREOSINE_UPLOAD_*` with `WAVDROP_UPLOAD_*` kept as a legacy fallback. Still pending: enroll in Google Play App Signing and eventually remove the legacy variable names.
 

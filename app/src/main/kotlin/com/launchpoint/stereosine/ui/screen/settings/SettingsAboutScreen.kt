@@ -500,8 +500,11 @@ internal object StereoSineAbout {
             "· Per-play and per-skip event records with timestamps, used for statistics, monthly reports, and Wrapped\n" +
             "· Playlists and their track order\n" +
             "· Custom lyrics you add manually inside the app\n" +
-            "· App settings and preferences, such as startup screen, scan folders, theme, icon choice, and compact mode\n\n" +
+            "· App settings and preferences, such as startup screen, scan folders, theme, icon choice, and compact mode\n" +
+            "· Recent searches you complete in the app (described under Recent searches below)\n\n" +
             "None of this data is transmitted to StereoSine, LaunchPoint Digital, or any third party.",
+        "Recent searches:\n" +
+            "StereoSine saves searches you complete on your device so you can use them again. A search is saved when you press Search on the keyboard, open a search result, or tap a recent search; text is not saved while you type. It keeps up to 30 different recent searches, each for up to 90 days after you last used it. Expired searches stop appearing when you next open search or when the recent-search list updates. Expired entries are removed from local storage when the history is next changed. You can remove individual searches or clear your whole recent search history from the search screen. This history stays on your device, is not uploaded by StereoSine, and is not included in StereoSine backup files. It is removed if you clear StereoSine's app data or uninstall the app.",
         "Android permissions:\n" +
             "· READ_EXTERNAL_STORAGE on Android 8–12 or READ_MEDIA_AUDIO on Android 13+ is used to find and play audio files on your device\n" +
             "· FOREGROUND_SERVICE and FOREGROUND_SERVICE_MEDIA_PLAYBACK are used to keep music playing when the screen is off\n" +

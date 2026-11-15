@@ -72,6 +72,40 @@ class PrivacyPolicyGuardTest {
         assertTrue(s.contains("StereoSine does not upload them"))
     }
 
+    @Test fun `recent searches are disclosed accurately`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Recent searches:") }
+        for (statement in listOf(
+            "saves searches you complete on your device so you can use them again",
+            "press Search on the keyboard, open a search result, or tap a recent search",
+            "text is not saved while you type",
+            "up to 30 different recent searches",
+            "each for up to 90 days after you last used it",
+            "You can remove individual searches or clear your whole recent search history from the search screen",
+            "stays on your device, is not uploaded by StereoSine, and is not included in StereoSine backup files",
+            "removed if you clear StereoSine's app data or uninstall the app",
+        )) assertTrue("missing: $statement", s.contains(statement))
+        assertTrue("the local-data list mentions recent searches", StereoSineAbout.PRIVACY_POLICY[1].contains("Recent searches you complete in the app"))
+    }
+
+    @Test fun `the 90 day retention is not promised as instant or continuous deletion`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Recent searches:") }
+        assertTrue(s.contains("Expired searches stop appearing when you next open search or when the recent-search list updates."))
+        assertTrue(s.contains("Expired entries are removed from local storage when the history is next changed."))
+        assertFalse(Regex("(automatically|immediately|instantly|exactly|continuously)[^.]*(deleted|removed|cleared)", RegexOption.IGNORE_CASE).containsMatchIn(s))
+    }
+
+    @Test fun `the recent searches disclosure matches the implemented limits`() {
+        val rules = File("src/main/kotlin/com/launchpoint/stereosine/data/search/SearchHistoryRules.kt").readText()
+        assertTrue(rules.contains("const val MAX_ENTRIES = 30"))
+        assertTrue(rules.contains("const val RETENTION_DAYS = 90"))
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Recent searches:") }
+        assertFalse("must not claim the history is uploaded or synced", Regex("(is|are|will be) (uploaded|sent|shared|synced) to", RegexOption.IGNORE_CASE).containsMatchIn(s))
+        // the claim "not included in backup files" is true only while the backup code never reads the history store
+        val backup = File("src/main/kotlin/com/launchpoint/stereosine/data/backup").walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { it.readText().contains("SearchHistory") }.map { it.name }.toList()
+        assertTrue("backup code must not touch search history: $backup", backup.isEmpty())
+    }
+
     @Test fun `backup files are described as unencrypted`() {
         assertTrue(policy.contains("StereoSine does not encrypt backup files, so anyone who can open the file can read its contents."))
     }
