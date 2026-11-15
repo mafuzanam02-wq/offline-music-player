@@ -1,6 +1,7 @@
 package com.launchpoint.stereosine.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,6 +32,7 @@ fun SearchTopAppBar(
     onQueryChange: (String) -> Unit,
     onClose: () -> Unit,
     placeholder: String = "Search…",
+    onSearch: (() -> Unit)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -50,6 +52,7 @@ fun SearchTopAppBar(
                 singleLine      = true,
                 textStyle       = MaterialTheme.typography.bodyLarge,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearch?.invoke() }),
                 colors          = TextFieldDefaults.colors(
                     focusedContainerColor   = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,

@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.launchpoint.stereosine.data.model.SmartCollectionType
@@ -46,6 +47,8 @@ fun GlobalSearchRoute(
     val favoriteSongIds  by viewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val playlists        by viewModel.playlists.collectAsStateWithLifecycle()
     val allPlaylistSongs by playlistVm.allPlaylistSongs.collectAsStateWithLifecycle()
+    val recentSearches   by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val keyboard         = LocalSoftwareKeyboardController.current
 
     val context        = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -61,49 +64,65 @@ fun GlobalSearchRoute(
                 query         = localQuery,
                 onQueryChange = { localQuery = it; viewModel.setSearchQuery(it) },
                 onClose       = onNavigateBack,
+                onSearch      = { viewModel.commitSearch(localQuery); keyboard?.hide() },
                 placeholder   = "Search songs, artists, albums, playlists, collections, folders…",
             )
         },
     ) { innerPadding ->
-        GroupedSearchContent(
-            results = filteredResults,
-            query   = localQuery,
-            songActions = SongSearchActions(
-                currentSongId    = nowPlaying.song?.id,
-                favoriteSongIds  = favoriteSongIds,
-                onSongClick      = viewModel::playSearchResult,
-                onPlayNext       = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.playNext(song)) },
-                onAddToQueue     = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.addToQueue(song)) },
-                onToggleFavorite = { song, wasFavorite ->
-                    viewModel.toggleFavorite(song.id)
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            if (wasFavorite) "Removed from Favorites" else "Added to Favorites",
-                        )
-                    }
+        if (localQuery.isBlank()) {
+            RecentSearchesPanel(
+                entries    = recentSearches,
+                onSelect   = { query ->
+                    localQuery = query
+                    viewModel.setSearchQuery(query)
+                    viewModel.commitSearch(query)
+                    keyboard?.hide()
                 },
-                onAddToPlaylist  = { song -> addToPlaylistSong = song },
-                onTrackDetailsClick = onTrackDetailsClick,
-                onAlbumClick     = onAlbumClick,
-                onArtistClick    = onArtistClick,
-                onFolderClick    = onFolderClick,
-                onShare          = { song ->
-                    shareSong(context, song) {
+                onRemove   = viewModel::removeRecentSearch,
+                onClearAll = viewModel::clearRecentSearches,
+                modifier   = Modifier.padding(innerPadding),
+            )
+        } else {
+            GroupedSearchContent(
+                results = filteredResults,
+                query   = localQuery,
+                songActions = SongSearchActions(
+                    currentSongId    = nowPlaying.song?.id,
+                    favoriteSongIds  = favoriteSongIds,
+                    onSongClick      = { song -> viewModel.commitSearch(localQuery); viewModel.playSearchResult(song) },
+                    onPlayNext       = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.playNext(song)) },
+                    onAddToQueue     = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.addToQueue(song)) },
+                    onToggleFavorite = { song, wasFavorite ->
+                        viewModel.toggleFavorite(song.id)
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Could not share this track")
+                            snackbarHostState.showSnackbar(
+                                if (wasFavorite) "Removed from Favorites" else "Added to Favorites",
+                            )
                         }
-                    }
-                },
-            ),
-            onAlbumClick           = onAlbumClick,
-            onArtistClick          = onArtistClick,
-            onFolderClick          = onFolderClick,
-            onPlaylistClick        = onPlaylistClick,
-            onSmartCollectionClick = onSmartCollectionClick,
-            modifier               = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        )
+                    },
+                    onAddToPlaylist  = { song -> addToPlaylistSong = song },
+                    onTrackDetailsClick = onTrackDetailsClick,
+                    onAlbumClick     = { key -> viewModel.commitSearch(localQuery); onAlbumClick(key) },
+                    onArtistClick    = { key -> viewModel.commitSearch(localQuery); onArtistClick(key) },
+                    onFolderClick    = { key -> viewModel.commitSearch(localQuery); onFolderClick(key) },
+                    onShare          = { song ->
+                        shareSong(context, song) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Could not share this track")
+                            }
+                        }
+                    },
+                ),
+                onAlbumClick           = { key -> viewModel.commitSearch(localQuery); onAlbumClick(key) },
+                onArtistClick          = { key -> viewModel.commitSearch(localQuery); onArtistClick(key) },
+                onFolderClick          = { key -> viewModel.commitSearch(localQuery); onFolderClick(key) },
+                onPlaylistClick        = { id -> viewModel.commitSearch(localQuery); onPlaylistClick(id) },
+                onSmartCollectionClick = { type -> viewModel.commitSearch(localQuery); onSmartCollectionClick(type) },
+                modifier               = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+        }
     }
 
     addToPlaylistSong?.let { song ->

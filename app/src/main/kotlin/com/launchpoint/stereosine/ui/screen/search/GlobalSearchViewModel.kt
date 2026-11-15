@@ -10,6 +10,8 @@ import com.launchpoint.stereosine.data.repository.SmartCollectionRepository
 import com.launchpoint.stereosine.data.repository.SongRepository
 import com.launchpoint.stereosine.data.repository.StatsRepository
 import com.launchpoint.stereosine.data.search.LibrarySearchIndex
+import com.launchpoint.stereosine.data.search.SearchHistoryEntry
+import com.launchpoint.stereosine.data.search.SearchHistoryRepository
 import com.launchpoint.stereosine.playback.QueueActionResult
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.settings.SearchTapBehavior
@@ -43,12 +45,36 @@ class GlobalSearchViewModel @Inject constructor(
     private val appSettingsRepository: AppSettingsRepository,
     private val smartCollectionRepository: SmartCollectionRepository,
     private val playlistRepository: PlaylistRepository,
+    private val searchHistoryRepository: SearchHistoryRepository,
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    /** SEARCH-01: recent committed searches, newest first. Separate from listening history and playback statistics. */
+    val recentSearches: StateFlow<List<SearchHistoryEntry>> = searchHistoryRepository.entries
+        .stateIn(
+            scope        = viewModelScope,
+            started      = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    /** Records a COMMITTED search (keyboard Search, a tapped result, a tapped recent entry). Typing alone never calls this. */
+    fun commitSearch(query: String) {
+        // Not viewModelScope: a result tap pops this destination at once, which cancels viewModelScope before the write lands.
+        // The repository performs the write in its own singleton-owned scope (non-blocking, atomic).
+        searchHistoryRepository.commit(query)
+    }
+
+    fun removeRecentSearch(query: String) {
+        searchHistoryRepository.forget(query)
+    }
+
+    fun clearRecentSearches() {
+        searchHistoryRepository.clear()
+    }
 
     val allSongs: StateFlow<List<Song>> = songRepository.songs
         .stateIn(
