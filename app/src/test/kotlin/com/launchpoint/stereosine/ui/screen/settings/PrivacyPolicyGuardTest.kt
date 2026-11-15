@@ -167,6 +167,142 @@ class PrivacyPolicyGuardTest {
         assertTrue(manifest.contains("""android:allowBackup="false""""))
     }
 
+    // ── RELEASE-02A: disclosure corrections ──────────────────────────────────────────────────────────────────────────
+
+    private val mainDir = File("src/main/kotlin/com/launchpoint/stereosine")
+    private fun mainSources() = mainDir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+
+    @Test fun `online searches are disclosed as user initiated browser searches`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Online searches you choose to start:") }
+        for (statement in listOf(
+            "Search lyrics online and Search artist online",
+            "These run only when you select them",
+            "asks Android to open a web search in your device's browser, or another app that handles web links",
+            "The song title and artist name (or the artist name alone, for the artist search) are included in that search request",
+            "currently Google Search",
+            "may process the request under its own terms and privacy policy",
+            "StereoSine does not send the request itself, does not receive the results",
+            "does not automatically send your music library or your recent searches anywhere",
+        )) assertTrue("missing: $statement", s.contains(statement))
+        assertFalse("must not claim the app holds INTERNET or makes direct requests", Regex("INTERNET|background request|StereoSine (sends|uploads|fetches)", RegexOption.IGNORE_CASE).containsMatchIn(s))
+        assertTrue("the third-party section points at the online searches", StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Third-party services:") }.contains("the online searches described above"))
+    }
+
+    @Test fun `the online search disclosure matches the implementation`() {
+        val np = File(mainDir, "ui/screen/nowplaying/NowPlayingScreen.kt").readText().replace("\r\n", "\n")
+        val lyrics = np.substringAfter("private fun searchLyricsOnline").substringBefore("private fun searchArtistOnline")
+        val artist = np.substringAfter("private fun searchArtistOnline").substringBefore("@Composable")
+        // the query is the title (with the artist when known) for lyrics, the artist alone for the artist search
+        assertTrue(lyrics.contains("song.displayArtist") && lyrics.contains("song.displayTitle") && lyrics.contains("""https://www.google.com/search?q="""))
+        assertTrue(artist.contains("song.displayArtist") && !artist.contains("displayTitle") && artist.contains("""https://www.google.com/search?q="""))
+        // handed to Android as a VIEW intent (external browser), never fetched by the app
+        for (body in listOf(lyrics, artist)) assertTrue(body.contains("Intent(Intent.ACTION_VIEW, Uri.parse(url))") && body.contains("context.startActivity(intent)"))
+        // only ever started from an explicit user selection, and only from these call sites
+        val callers = Regex("""(searchLyricsOnline|searchArtistOnline)\(context, song\)""").findAll(np).count()
+        assertEquals("one definition-free call per menu item or lyrics button", 3, callers)
+        assertEquals(1, Regex("""onSearchOnline\s*=\s*\{ searchLyricsOnline\(context, song\) \}""").findAll(np).count())
+        // no other source reaches the network, and the manifest has no INTERNET
+        val searchUrls = mainSources().filter { it.readText().contains("google.com/search") }.map { it.name }
+        assertEquals(listOf("NowPlayingScreen.kt"), searchUrls)
+        val networking = mainSources().filter { Regex("""HttpURLConnection|HttpsURLConnection|OkHttp|java\.net\.Socket|java\.net\.URL\b|openConnection|android\.webkit\.WebView""").containsMatchIn(it.readText()) }.map { it.name }
+        assertTrue("direct networking appeared: $networking", networking.isEmpty())
+        assertFalse(manifest.contains("android.permission.INTERNET"))
+    }
+
+    @Test fun `sharing is disclosed for audio tracks and Wrapped images and videos`() {
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Share:") }
+        for (statement in listOf(
+            "Sharing happens only when you choose it",
+            "passes a content link for that audio file to the Android share sheet and to the app you choose",
+            "When you share a Wrapped image or video, StereoSine creates the file in the app's temporary storage",
+            "a Wrapped image or video can show your listening statistics",
+            "StereoSine does not transmit any data itself",
+            "handles the shared file under its own terms and privacy policy",
+        )) assertTrue("missing: $statement", s.contains(statement))
+        assertFalse("sharing must not be described as automatic", Regex("automatic", RegexOption.IGNORE_CASE).containsMatchIn(s))
+    }
+
+    @Test fun `every share intent in the app is one of the disclosed user initiated shares`() {
+        val senders = mainSources().filter { it.readText().contains("Intent.ACTION_SEND)") }.map { it.name }.sorted()
+        assertEquals(listOf("AudioShareHelper.kt", "WrappedShareHelper.kt", "WrappedVideoShare.kt"), senders)
+        for (name in senders) {
+            val text = mainSources().single { it.name == name }.readText()
+            assertTrue("$name goes through the system chooser", text.contains("Intent.createChooser"))
+        }
+        // Wrapped files are created in the app cache and exposed only through the non-exported FileProvider
+        val paths = File("src/main/res/xml/file_paths.xml").readText()
+        assertTrue(paths.contains("<cache-path name=\"wrapped_share\"") && paths.contains("<cache-path name=\"wrapped_video\""))
+        assertEquals("only cache paths are exposed", 2, Regex("<[a-z-]+-path ").findAll(paths).count())
+        assertTrue(manifest.contains("""android:exported="false"""") && manifest.contains("android.support.FILE_PROVIDER_PATHS"))
+    }
+
+    @Test fun `the Settings library summary accounts for optional scheduled backups`() {
+        val s = StereoSineAbout.LIBRARY_STAYS_YOURS
+        assertFalse("must not imply data leaves only by manual export", Regex("unless you manually", RegexOption.IGNORE_CASE).containsMatchIn(s))
+        for (statement in listOf(
+            "stored on your device, and StereoSine does not upload them",
+            "saved only to a location you choose",
+            "when you save one or if you turn on optional scheduled backups",
+            "managed by a cloud storage app, that app may sync the file",
+            "StereoSine runs no upload service",
+        )) assertTrue("missing: $statement", s.contains(statement))
+        // the summary is the text actually shown on the About card
+        assertTrue(about.contains("body = StereoSineAbout.LIBRARY_STAYS_YOURS"))
+        // it stays consistent with the policy's three-way distinction (local/user folder, provider sync, no StereoSine upload service)
+        assertTrue(policy.contains("performed by the storage provider you selected, not by StereoSine"))
+    }
+
+    @Test fun `manual backup naming is explained consistently with the real controls`() {
+        val backupScreen = File(mainDir, "ui/screen/settings/SettingsBackupScreen.kt").readText()
+        assertTrue("the manual control is labelled Save backup file", Regex("""title\s*=\s*"Save backup file"""").containsMatchIn(backupScreen))
+        assertTrue("the screen is titled Backup & Migration", backupScreen.contains("""Text("Backup & Migration")"""))
+        assertTrue("and reached from a Settings row with the same title", File(mainDir, "ui/screen/settings/SettingsScreen.kt").readText().contains("""title       = "Backup & Migration""""))
+        val s = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Backup and export:") }
+        assertTrue(s.contains("Settings → Backup & Migration → Save backup file"))
+        assertTrue(s.contains("also calls exporting your StereoSine data"))
+        assertTrue(StereoSineAbout.DATA_OWNERSHIP.single { it.startsWith("Exporting your data:") }.contains("Settings → Backup & Migration"))
+        assertFalse("the policy no longer names a control that does not exist", policy.contains("The Export StereoSine Data feature"))
+    }
+
+    @Test fun `the permission wording covers every permission in the merged manifest`() {
+        val intermediates = File("build/intermediates/merged_manifest")
+        val merged = listOf("release/processReleaseMainManifest", "debug/processDebugMainManifest")
+            .map { File(intermediates, "$it/AndroidManifest.xml") }.firstOrNull { it.isFile }
+        org.junit.Assume.assumeTrue("merged manifest not built yet (run :app:processReleaseMainManifest); merged-manifest check SKIPPED", merged != null)
+        val permissions = Regex("""<uses-permission[^>]*android:name="([^"]+)"""").findAll(merged!!.readText()).map { it.groupValues[1] }.toSet()
+        // the app's own signature permission for non-exported dynamic receivers is internal, not user-facing
+        val userFacing = permissions.filterNot { it.endsWith("DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION") }
+        assertTrue("merged manifest unexpectedly empty", userFacing.isNotEmpty())
+        val section = StereoSineAbout.PRIVACY_POLICY.single { it.startsWith("Android permissions:") }
+        for (p in userFacing) assertTrue("the policy must name ${p.substringAfterLast('.')}", section.contains(p.substringAfterLast('.')))
+        assertFalse("no INTERNET in the merged manifest", permissions.any { it.endsWith(".INTERNET") })
+        // the library-added permissions are explained as library-added, not as internet access, and not as prompts
+        for (p in listOf("ACCESS_NETWORK_STATE", "WAKE_LOCK", "RECEIVE_BOOT_COMPLETED")) assertTrue("merged manifest has $p", permissions.any { it.endsWith(p) })
+        assertTrue(section.contains("added automatically by the Android libraries StereoSine uses"))
+        assertTrue(section.contains("They do not give StereoSine internet access"))
+        assertTrue(section.contains("Not every permission listed here is shown to you as a permission prompt"))
+        assertFalse("absolute 'unnecessary permissions' claim removed", section.contains("any other unnecessary permissions"))
+        // the source manifest does not declare them itself (libraries merge them in), so "added automatically by the libraries" is right
+        for (p in listOf("ACCESS_NETWORK_STATE", "WAKE_LOCK", "RECEIVE_BOOT_COMPLETED")) assertFalse(declared.any { it.endsWith(p) })
+    }
+
+    @Test fun `Terms and Disclaimer are unchanged by the disclosure corrections`() {
+        fun sha(list: List<String>) = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(list.joinToString("\u0000").toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        assertEquals(9, StereoSineAbout.TERMS_OF_USE.size)
+        assertEquals(8, StereoSineAbout.DISCLAIMER.size)
+        assertEquals("f137d312d592fe940c084e91f6083d5f663970287826615401b2064eec7191a8", sha(StereoSineAbout.TERMS_OF_USE))
+        assertEquals("1443eae814255ebebec90ec4e38d9f5eeba8c8910461693f6e397c918f21678e", sha(StereoSineAbout.DISCLAIMER))
+    }
+
+    @Test fun `both online legal links keep their exact destinations`() {
+        assertEquals("https://launchpointdigital.co.za/stereosine/privacy", StereoSineAbout.PRIVACY_POLICY_URL)
+        assertEquals("https://launchpointdigital.co.za/stereosine/terms", StereoSineAbout.TERMS_URL)
+        assertEquals("View Privacy Policy Online", StereoSineAbout.PRIVACY_ONLINE_LABEL)
+        assertEquals("View Terms Online", StereoSineAbout.TERMS_ONLINE_LABEL)
+    }
+
+
     /**
      * Cross-repository consistency with the published website policy. The website repository is optional in ordinary
      * development environments: when it is absent this test is SKIPPED (visible in the report), never passed. Override the

@@ -15,6 +15,8 @@
 > Recovery-mode safety copy and earlier-Wavdrop backup compatibility, verified against the Android implementation and pinned by
 > `PrivacyPolicyGuardTest`. This is a text alignment only: Google Play Data Safety review and legal review are **not** complete.
 > Residual items (BRAND-10A): the in-app Privacy Policy and Terms still say "Export StereoSine Data" where the Settings UI says "Save backup file"; and the public page words the safety copy as before any restore, whereas the app takes it only before a Recovery-mode restore.
+>
+> **RELEASE-02A (in-app text only):** the in-app Privacy Policy now explains that "Save backup file" (Settings → Backup & Migration) is what the policy also calls exporting StereoSine data (the Terms are unchanged); discloses the user-started Google searches from Now Playing; covers user-initiated sharing of Wrapped images and videos as well as audio tracks; names the permissions that libraries (WorkManager, Media3) merge into the manifest; and the Settings "Your library stays yours" card accounts for optional scheduled backups. The public website still carries the previous wording and must be updated in a separate website slice; the safety-copy wording difference above is unchanged.
 
 Tracks every item needed before submitting to Google Play. Update each row
 as items are completed. Tick `[x]` when done; leave `[ ]` open.
@@ -47,7 +49,10 @@ as items are completed. Tick `[x]` when done; leave `[ ]` open.
 | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | ✅ | ✅ | Matches `foregroundServiceType=mediaPlayback` in service |
 | `BLUETOOTH` | ✅ | ✅ | `maxSdkVersion="30"`; used only to receive profile connection broadcasts for auto-resume |
 | `BLUETOOTH_CONNECT` | ✅ | ✅ | API 31+; reconnect broadcasts and output-route detection. No scan/discovery is performed; no location permission |
-| `INTERNET` | ✅ Absent | ✅ | App makes no network requests |
+| `ACCESS_NETWORK_STATE` | ➕ Merged | ✅ | Merged in by `work-runtime` 2.9.1, `media3-exoplayer`/`media3-common` 1.11.1 (manifest-merger report); not declared in the source manifest. Network-state checks inside those libraries; StereoSine's own backup schedule has no network constraint. Not a runtime prompt. Named in the in-app policy (RELEASE-02A) |
+| `WAKE_LOCK` | ➕ Merged | ✅ | Merged in by `work-runtime` and `media3-exoplayer`; lets those libraries hold the device awake while work runs. Not a runtime prompt. Named in the in-app policy |
+| `RECEIVE_BOOT_COMPLETED` | ➕ Merged | ✅ | Merged in by `work-runtime` and `media3-session`; lets scheduled work be restored after a restart. Not a runtime prompt. Named in the in-app policy |
+| `INTERNET` | ✅ Absent | ✅ | StereoSine itself makes no network requests (also absent from the merged release manifest); the browser search action hands a URL to the user's browser |
 | Location | ✅ Absent | ✅ | Not used |
 | Camera | ✅ Absent | ✅ | Not used |
 | Microphone | ✅ Absent | ✅ | Not used |
@@ -59,13 +64,13 @@ as items are completed. Tick `[x]` when done; leave `[ ]` open.
 ## 3. Privacy / Data Safety
 
 Google Play Data Safety form — all answers are derived from the code audit.
-No data leaves the device except via user-initiated file export or share sheet.
+StereoSine itself makes no network requests and runs no upload service. Data is handled outside the app only after a user action, in three ways: (1) backup/export files saved to a destination the user selects, including destinations whose storage provider may synchronize the file to cloud storage; (2) audio tracks and Wrapped images/videos shared through the Android share sheet to an app the user picks; (3) the Now Playing online lyrics and artist searches, which open an external browser or link-handling app and can send the song title or artist name to Google Search. In each case another app or provider handles the data under its own terms. How these should be answered in the Data safety form has not been decided or verified.
 
 | Question | Answer | Evidence |
 |---|---|---|
 | Does the app collect user data and send it to your servers? | **No** | No `INTERNET` permission; no networking libraries. (Now Playing "search online" actions open a search URL in the user's own browser via `ACTION_VIEW`; StereoSine sends nothing itself.) |
-| Does the app share data with third parties? | **No** | Share sheet is user-initiated OS feature; no data pipeline |
-| Is data encrypted in transit? | **N/A** | No data in transit |
+| Does the app share data with third parties? | **No** | Share sheet is a user-initiated OS feature for audio tracks and for Wrapped images/videos (created in the app cache, exposed through the non-exported FileProvider); the browser search actions are user-initiated ACTION_VIEW intents. No data pipeline. Whether these user-initiated actions need a Data safety declaration is an owner/legal determination that has not been made |
+| Is data encrypted in transit? | **Not decided** | StereoSine itself transmits nothing over the network, so it has no transit encryption to declare. Transfers after a user action (browser search, share target, storage-provider sync) are performed by other apps and are outside StereoSine's control; whether they affect this answer is an owner/legal determination |
 | Does the app use advertising ID? | **No** | No ad SDK; `INTERNET` absent |
 | Does the app use crash reporting? | **No** | No Crashlytics, Firebase, or equivalent |
 | Can users request data deletion? | **Yes** | Uninstalling the app deletes all local DB and DataStore data |
@@ -103,6 +108,7 @@ types to explicitly confirm as not collected:
 | Disclaimer covers delete permanence, share, music rights | ✅ Done | `StereoSineAbout.DISCLAIMER` — 8 items |
 | Open Source Licenses: no placeholder text | ✅ Done | Apache 2.0 attribution for all 8 major dependencies |
 | Backup export subtitle accurate | ✅ Done | `SettingsBackupScreen.kt` |
+| Policy discloses user-started online lyric/artist searches, Wrapped sharing, merged permissions, optional scheduled backup in the Settings summary | ✅ Done (in-app text, RELEASE-02A) | `StereoSineAbout.PRIVACY_POLICY`, `StereoSineAbout.LIBRARY_STAYS_YOURS`; pinned by `PrivacyPolicyGuardTest`. Website not yet updated |
 | Backup import subtitle accurate (restore is live) | ✅ Done | `SettingsBackupScreen.kt` |
 | Permission request wording clear | ✅ Done | `AudioPermissionGate.kt` — "audio files on this device" |
 | Onboarding privacy promise present | ✅ Done | Page 2: "Your music stays yours" |
