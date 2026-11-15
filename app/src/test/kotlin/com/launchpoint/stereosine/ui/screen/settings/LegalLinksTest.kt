@@ -53,6 +53,33 @@ class LegalLinksTest {
         assertEquals(PINNED_TERMS, StereoSineAbout.TERMS_OF_USE)
     }
 
+    @Test fun `the online Privacy Policy action label is exactly View Privacy Policy Online`() {
+        assertEquals("View Privacy Policy Online", StereoSineAbout.PRIVACY_ONLINE_LABEL)
+    }
+
+    @Test fun `opening the Privacy Policy link starts one external ACTION_VIEW for the privacy URL`() {
+        val ctx = RecordingContext(app)
+        assertTrue(ctx.openExternalLink(StereoSineAbout.PRIVACY_POLICY_URL))
+        assertEquals(1, ctx.started.size)
+        val intent = ctx.started.single()
+        assertEquals(Intent.ACTION_VIEW, intent.action)
+        assertEquals("https://launchpointdigital.co.za/stereosine/privacy", intent.data.toString())
+    }
+
+    @Test fun `no browser or a refused launch for the Privacy Policy link is handled without a crash`() {
+        val missing = RecordingContext(app, ActivityNotFoundException("no browser"))
+        assertFalse(missing.openExternalLink(StereoSineAbout.PRIVACY_POLICY_URL))
+        assertEquals(1, missing.started.size)
+        assertFalse(RecordingContext(app, SecurityException("blocked")).openExternalLink(StereoSineAbout.PRIVACY_POLICY_URL))
+    }
+
+    @Test fun `the Privacy Policy link is requested from exactly one UI control using the single URL constant`() {
+        val about = File("src/main/kotlin/com/launchpoint/stereosine/ui/screen/settings/SettingsAboutScreen.kt").readText()
+        assertEquals(1, Regex("""openExternalLink\(StereoSineAbout\.PRIVACY_POLICY_URL\)""").findAll(about).count())
+        assertEquals(1, Regex("""onlineLabel\s*=\s*StereoSineAbout\.PRIVACY_ONLINE_LABEL""").findAll(about).count())
+        assertEquals("the privacy URL literal exists once", 1, Regex(Regex.escape("https://launchpointdigital.co.za/stereosine/privacy")).findAll(about).count())
+    }
+
     @Test fun `the online Terms action label is exactly View Terms Online`() {
         assertEquals("View Terms Online", StereoSineAbout.TERMS_ONLINE_LABEL)
     }

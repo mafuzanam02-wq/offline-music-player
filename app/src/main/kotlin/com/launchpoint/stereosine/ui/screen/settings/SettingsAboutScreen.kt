@@ -199,6 +199,8 @@ fun SettingsAboutScreen(
             title      = "Privacy Policy",
             paragraphs = StereoSineAbout.PRIVACY_POLICY,
             onDismiss  = { showPrivacyPolicyDialog = false },
+            onlineLabel = StereoSineAbout.PRIVACY_ONLINE_LABEL,
+            onOnline    = { context.openExternalLink(StereoSineAbout.PRIVACY_POLICY_URL) },
         )
     }
     if (showTermsDialog) {
@@ -484,6 +486,7 @@ internal object StereoSineAbout {
     const val WEBSITE_URL     = "https://launchpointdigital.co.za"
     const val CONTACT_EMAIL   = "info@launchpointdigital.co.za"
     const val PRIVACY_POLICY_URL = "https://launchpointdigital.co.za/stereosine/privacy"
+    const val PRIVACY_ONLINE_LABEL = "View Privacy Policy Online"
     const val TERMS_URL          = "https://launchpointdigital.co.za/stereosine/terms"
     const val TERMS_ONLINE_LABEL = "View Terms Online"
     const val SUPPORT_SUBJECT = "StereoSine Feedback"
