@@ -12,6 +12,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
@@ -3660,6 +3661,7 @@ class PlayerController @Inject constructor(
      * handed that window with the PHYSICAL start index. Once the façade presents the logical queue Media3's own install is skipped
      * (the change-items commands are unavailable), so there is no second install and no whole-queue install ever.
      */
+    @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
     internal fun adoptPlaybackResumption(plan: PlaybackResumptionPlan): androidx.media3.session.MediaSession.MediaItemsWithStartPosition {
         hydrationCount++ // a service-owned resumption is a session load, not a queue edit
         bumpQueueGeneration()
@@ -3708,6 +3710,7 @@ class PlayerController @Inject constructor(
             PhysicalQueuePolicy.modeFor(queueSize, boundedEnabled = PhysicalQueuePolicy.BOUNDED_WINDOW_ENABLED || PhysicalQueuePolicy.VALIDATION_BOUNDED || boundedInstallEnabledForTesting) == QueueMode.Bounded
 
     /** The bounded half of a resumption: see [adoptPlaybackResumption]. Nothing here touches a MediaController. */
+    @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
     private fun installBoundedResumptionWindow(plan: PlaybackResumptionPlan): androidx.media3.session.MediaSession.MediaItemsWithStartPosition {
         val port = requireBoundedPort()
         installedQueueMode = QueueMode.Bounded

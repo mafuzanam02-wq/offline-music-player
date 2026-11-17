@@ -51,6 +51,7 @@ internal class PeriodOccurrenceUid(val occurrence: Long, val periodInOccurrence:
  * field, is the physical player's). Built once per physical timeline instance in O(windows + periods); every method afterwards is
  * O(1). [occurrenceOfWindow] holds the minted occurrence id of each window, in window order.
  */
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 internal class OccurrenceTimeline(
     private val base: Timeline,
     private val occurrenceOfWindow: LongArray,
@@ -167,6 +168,7 @@ internal class OccurrenceIdentityPlayer(
  * logical queue (the new physical player's own uids are mapped onto the ones controllers already hold). Everything else is
  * [base]'s. Both directions are O(1) hash lookups on occurrence uids, whose hashes do not cancel.
  */
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 internal class AliasedTimeline(
     private val base: Timeline,
     private val windowAlias: Map<Any, Any>,

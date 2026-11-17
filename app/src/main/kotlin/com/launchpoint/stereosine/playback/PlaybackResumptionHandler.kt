@@ -143,6 +143,7 @@ private class OwnedCompletionFuture<V>(
  * What a read-only (recent item) request gets: Full plans keep returning the whole queue, exactly as before; a bounded plan returns
  * only the saved current item, so nothing is materialized or installed for a queue that is never installed whole.
  */
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 internal fun PlaybackResumptionPlan.toQueryResult(): MediaSession.MediaItemsWithStartPosition =
     if (!bounded) toMedia3Resumption()
     else MediaSession.MediaItemsWithStartPosition(

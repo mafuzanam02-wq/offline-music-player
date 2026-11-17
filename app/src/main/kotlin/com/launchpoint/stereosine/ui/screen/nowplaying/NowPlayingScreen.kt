@@ -762,6 +762,7 @@ private fun FixedBottomNowPlayingLayout(
     }
 }
 
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @Composable
 private fun UpperNowPlayingContent(
     song: Song,
@@ -904,6 +905,7 @@ private fun UpperNowPlayingContent(
     }
 }
 
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @Composable
 private fun BottomPlaybackPanel(
     state: NowPlayingState,
@@ -1151,6 +1153,7 @@ private fun LyricsEditorDialog(
     }
 }
 
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @Composable
 private fun ArtworkWithLyricsOverlay(
     song: Song,
@@ -1293,6 +1296,7 @@ private fun ArtworkWithLyricsOverlay(
     }
 }
 
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @Composable
 private fun LyricsOverlayContent(
     songId: Long,
