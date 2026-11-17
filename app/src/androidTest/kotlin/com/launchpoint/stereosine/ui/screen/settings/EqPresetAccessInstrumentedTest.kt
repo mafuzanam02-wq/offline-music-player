@@ -1,5 +1,6 @@
 package com.launchpoint.stereosine.ui.screen.settings
 
+import androidx.compose.ui.geometry.Offset
 import android.media.AudioManager
 import android.net.Uri
 import androidx.compose.runtime.*
@@ -191,6 +192,66 @@ class EqPresetAccessInstrumentedTest {
         assertEquals(custom, requested().eqCustomBandLevels)
     }
 
+    private fun savedHeadphones() = runBlocking { repo.headphonePresets.first().presets }
+    private fun scrollTo(matcher: SemanticsMatcher) {
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(matcher)
+    }
+    private fun namePreset(name: String) {
+        rule.onNode(hasSetTextAction()).performTextReplacement(name)
+        rule.onNodeWithText("Save").performClick()
+        rule.runOnIdle {
+            (rule.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                .hideSoftInputFromWindow(rule.activity.window.decorView.windowToken, 0)
+        }
+    }
+    private fun readyHeadphoneLibrary(): HeadphoneEqPreset {
+        start()
+        val caps = EqualizerCapabilities(5, -1500, 1500, listOf(60, 230, 910, 3600, 14000), emptyList())
+        runBlocking {
+            repo.selectProfile(OutputProfile.WIRED)
+            repo.setEqCustomBandLevels(custom, OutputProfile.WIRED, caps.centerFrequenciesHz)
+        }
+        rule.runOnIdle { repo.updateCapabilities(caps) }
+        assertEquals(HeadphonePresetResult.SAVED, runBlocking { repo.saveHeadphonePreset(OutputProfile.WIRED, requested(), caps, "Existing") })
+        return savedHeadphones().single()
+    }
+    private fun showHeadphones() {
+        val vm = viewModel()
+        rule.runOnIdle { rule.activity.setContent { StereoSineTheme { SettingsHeadphonesScreen({}, {}, {}, vm) } } }
+    }
+    @Test fun headphonesOnGlobalOrSpeakerNeverSelectsOrAppliesAutomatically() {
+        val saved = readyHeadphoneLibrary()
+        for (profile in listOf(OutputProfile.GLOBAL, OutputProfile.SPEAKER)) {
+            runBlocking { repo.selectProfile(profile) }
+            if (profile == OutputProfile.GLOBAL) showHeadphones()
+            rule.waitUntil(10_000) { rule.onAllNodesWithText("Selected profile: ${profile.displayName}.", substring = true).fetchSemanticsNodes().isNotEmpty() }
+            val before = runBlocking { repo.profiles.first() }
+            scrollTo(hasTestTag("headphone-save")); rule.onNodeWithTag("headphone-save").assertIsNotEnabled()
+            scrollTo(hasTestTag("headphone-apply-${saved.id}")); rule.onNodeWithTag("headphone-apply-${saved.id}").assertIsNotEnabled()
+            assertEquals(before, runBlocking { repo.profiles.first() })
+        }
+    }
+    @Test fun cancelledOrStaleHeadphoneActionsRetainTheLibraryAndProfiles() {
+        val saved = readyHeadphoneLibrary(); showHeadphones()
+        scrollTo(hasTestTag("headphone-rename-${saved.id}")); rule.onNodeWithTag("headphone-rename-${saved.id}").performClick()
+        runBlocking { repo.selectProfile(OutputProfile.BLUETOOTH) }
+        namePreset("Stale rename")
+        runBlocking { repo.selectProfile(OutputProfile.BLUETOOTH) } // serialized barrier after the queued UI mutation
+        assertEquals(saved, savedHeadphones().single())
+        scrollTo(hasTestTag("headphone-delete-${saved.id}")); rule.onNodeWithTag("headphone-delete-${saved.id}").performClick()
+        rule.onNodeWithText("Cancel").performClick()
+        assertEquals(saved, savedHeadphones().single())
+        val profiles = runBlocking { repo.profiles.first() }
+        rule.onNodeWithTag("headphone-delete-${saved.id}").performClick()
+        assertEquals(HeadphonePresetResult.RENAMED, runBlocking { repo.renameHeadphonePreset(OutputProfile.BLUETOOTH, saved, "Changed elsewhere") })
+        rule.onNodeWithText("Delete preset").performClick()
+        runBlocking { repo.selectProfile(OutputProfile.BLUETOOTH) }
+        assertEquals(saved.copy(name = "Changed elsewhere"), savedHeadphones().single())
+        assertEquals(profiles, runBlocking { repo.profiles.first() })
+        rule.runOnIdle { repo.updateCapabilities(null) }
+        rule.onNodeWithTag("headphone-apply-${saved.id}").assertIsNotEnabled()
+    }
+
     @Test
     @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
     fun manualProfileEditsRestoreAndPlaybackAndSystemVolumeStayUnchanged() {
@@ -199,9 +260,15 @@ class EqPresetAccessInstrumentedTest {
         rule.runOnIdle {
             rule.activity.setContent {
                 StereoSineTheme {
-                    var edit by remember { mutableStateOf(false) }
-                    if (edit) SettingsEqualizerScreen({ edit = false }, vm)
-                    else SettingsOutputProfilesScreen({}, { edit = true }, vm)
+                    var page by remember { mutableStateOf("profiles") }
+                    var editorReturn by remember { mutableStateOf("profiles") }
+                    when (page) {
+                        "eq" -> SettingsEqualizerScreen({ page = editorReturn }, vm)
+                        "profiles" -> SettingsOutputProfilesScreen({ page = "settings" }, { editorReturn = "profiles"; page = "eq" }, vm)
+                        "headphones" -> SettingsHeadphonesScreen({ page = "settings" }, { page = "profiles" }, { editorReturn = "headphones"; page = "eq" }, vm)
+                        else -> SettingsScreen({}, { editorReturn = "settings"; page = "eq" }, {}, {}, {}, {}, {}, {}, {},
+                            onOutputProfilesClick = { page = "profiles" }, onHeadphonesClick = { page = "headphones" })
+                    }
                 }
             }
         }
@@ -209,12 +276,12 @@ class EqPresetAccessInstrumentedTest {
         val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val volume = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
         val wav = File(context.cacheDir, "listen-02-${System.nanoTime()}.wav").also(files::add)
-        val size = 120 * 16_000 * 2
+        val size = 300 * 16_000 * 2
         val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
             .put("RIFF".toByteArray()).putInt(36 + size).put("WAVEfmt ".toByteArray())
             .putInt(16).putShort(1).putShort(1).putInt(16_000).putInt(32_000)
             .putShort(2).putShort(16).put("data".toByteArray()).putInt(size).array()
-        wav.outputStream().use { out -> out.write(header); repeat(120) { out.write(ByteArray(32_000)) } }
+        wav.outputStream().use { out -> out.write(header); repeat(300) { out.write(ByteArray(32_000)) } }
         lateinit var assembly: PlaybackAssembly
         lateinit var controller: AudioEnhancementController
         val playbackScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).also(scopes::add)
@@ -279,6 +346,52 @@ class EqPresetAccessInstrumentedTest {
             select(OutputProfile.BLUETOOTH)
             select(OutputProfile.GLOBAL)
             assertEquals(custom, requested().eqCustomBandLevels)
+            // LISTEN-03: actual Settings entry, existing slider editor and named library under real playback.
+            select(OutputProfile.WIRED); edit()
+            rule.onNode(hasText("Equalizer") and hasClickAction()).performClick()
+            rule.waitUntil(10_000) { requested().eqEnabled && repo.capabilities.value != null }
+            val oldLevel = requested().eqCustomBandLevels.first()
+            rule.onAllNodes(sliders).onFirst().performTouchInput { swipe(center, Offset(width * 0.8f, center.y), durationMillis = 300) }
+            rule.waitUntil(10_000) { requested().eqCustomBandLevels.first() != oldLevel }
+            rule.onNodeWithContentDescription("Back").performClick()
+            rule.onNodeWithContentDescription("Back").performClick()
+            rule.onNodeWithText("Headphones").performClick()
+            val beforeSave = requested()
+            scrollTo(hasTestTag("headphone-save")); rule.onNodeWithTag("headphone-save").assertIsEnabled().performClick()
+            namePreset("Daily")
+            rule.waitUntil(10_000) { savedHeadphones().size == 1 }
+            val saved = savedHeadphones().single()
+            assertEquals(beforeSave, requested())
+            scrollTo(hasTestTag("headphone-rename-${saved.id}")); rule.onNodeWithTag("headphone-rename-${saved.id}").performClick()
+            namePreset("Commute")
+            rule.waitUntil(10_000) { savedHeadphones().single().name == "Commute" }
+            val renamed = saved.copy(name = "Commute")
+            assertEquals(renamed, savedHeadphones().single())
+            scrollTo(hasTestTag("headphone-delete-${saved.id}")); rule.onNodeWithTag("headphone-delete-${saved.id}").performClick()
+            rule.onNodeWithText("Cancel").performClick()
+            assertEquals(renamed, savedHeadphones().single())
+            edit()
+            rule.onAllNodes(sliders).onFirst().performTouchInput { swipe(center, Offset(width * 0.2f, center.y), durationMillis = 300) }
+            rule.waitUntil(10_000) { requested().eqCustomBandLevels != saved.levels }
+            rule.onNodeWithContentDescription("Back").performClick()
+            assertEquals(renamed, savedHeadphones().single())
+            scrollTo(hasTestTag("headphone-apply-${saved.id}")); rule.onNodeWithTag("headphone-apply-${saved.id}").assertIsEnabled().performClick()
+            rule.waitUntil(10_000) { requested().eqCustomBandLevels == saved.levels }
+            assertTrue(requested().eqEnabled)
+            rule.waitUntil(10_000) { repo.applicationState.value.requested == requested() && repo.applicationState.value.requestedConfigurationConfirmed }
+            scrollTo(hasText("Output Profiles")); rule.onNodeWithText("Output Profiles").performClick()
+            select(OutputProfile.BLUETOOTH)
+            rule.onNodeWithContentDescription("Back").performClick()
+            rule.onNodeWithText("Headphones").performClick()
+            scrollTo(hasTestTag("headphone-apply-${saved.id}")); rule.onNodeWithTag("headphone-apply-${saved.id}").assertIsEnabled().performClick()
+            rule.waitUntil(10_000) { requested().eqCustomBandLevels == saved.levels }
+            rule.waitUntil(10_000) { repo.applicationState.value.requested == requested() && repo.applicationState.value.requestedConfigurationConfirmed }
+            assertEquals(custom, runBlocking { repo.profiles.first().configurations.getValue(OutputProfile.GLOBAL).eqCustomBandLevels })
+            val beforeDelete = runBlocking { repo.profiles.first() }
+            scrollTo(hasTestTag("headphone-delete-${saved.id}")); rule.onNodeWithTag("headphone-delete-${saved.id}").performClick()
+            rule.onNodeWithText("Delete preset").performClick()
+            rule.waitUntil(10_000) { savedHeadphones().isEmpty() }
+            assertEquals(beforeDelete, runBlocking { repo.profiles.first() })
             rule.runOnIdle {
                 assertTrue(assembly.currentPlayer.isPlaying)
                 assertEquals(1, assembly.currentPlayer.mediaItemCount)

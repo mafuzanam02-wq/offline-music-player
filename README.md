@@ -22,7 +22,8 @@ targetSdk 36 - Room schema 13.
   a home-screen widget. An Equalizer (device-supported bands, platform and built-in presets) is
   available in Settings. Manual Output Profiles save independent Global/default, Speaker, Wired and
   Bluetooth EQ settings; they do not select the phone's output device. EQ/profile settings are not
-  included in explicit backups.
+  included in explicit backups. Headphones offers user-named Custom EQ snapshots for manual reuse in
+  Wired/Bluetooth profiles; this local library is also excluded from backups.
 - **Library**: MediaStore scan (whole device or selected folders), songs / albums / artists / folders,
   global search, alphabet index, 11 computed smart collections, playlists with drag-to-reorder.
 - **Lyrics**: embedded, same-folder `.lrc` (synchronized) and `.txt` sidecars, and editable app-managed

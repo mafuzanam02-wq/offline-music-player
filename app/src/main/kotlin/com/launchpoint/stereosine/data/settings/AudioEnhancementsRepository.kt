@@ -1,6 +1,7 @@
 package com.launchpoint.stereosine.data.settings
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -44,6 +45,119 @@ class AudioEnhancementsRepository @Inject constructor(
 
     /** Sole effective EQ authority for the editor, effects and crossfade. */
     val settings: Flow<AudioEnhancementSettings> = profiles.map { it.effective }.distinctUntilChanged()
+
+    val headphonePresets: Flow<HeadphonePresetLibrary> = dataStore.data
+        .map { headphoneDocument(it)?.library ?: HeadphonePresetLibrary(writable = false) }
+        .catch { error -> if (error is IOException) emit(HeadphonePresetLibrary(writable = false)) else throw error }
+        .distinctUntilChanged()
+
+    private fun headphoneDocument(p: Preferences): HeadphonePresetCodec.Document? {
+        val raw = p.asMap()[HEADPHONE_PRESETS]
+        return if (raw == null) HeadphonePresetCodec.document(null) else (raw as? String)?.let(HeadphonePresetCodec::document)
+    }
+
+    private suspend fun headphoneEdit(action: (MutablePreferences) -> HeadphonePresetResult): HeadphonePresetResult {
+        var result = HeadphonePresetResult.STORAGE_UNAVAILABLE
+        try { dataStore.edit { result = action(it) } }
+        catch (_: IOException) { return HeadphonePresetResult.STORAGE_UNAVAILABLE }
+        return result
+    }
+
+    suspend fun saveHeadphonePreset(expected: OutputProfile, request: AudioEnhancementSettings, confirmed: EqualizerCapabilities, rawName: String): HeadphonePresetResult {
+        return headphoneEdit { p ->
+            val state = resolveProfiles(p)
+            val currentCaps = capabilities.value
+            when {
+                state.active != expected -> HeadphonePresetResult.PROFILE_CHANGED
+                !expected.supportsHeadphonePresets() -> HeadphonePresetResult.WRONG_PROFILE
+                state.usingGlobalFallback -> HeadphonePresetResult.STORAGE_UNAVAILABLE
+                state.effective != request -> HeadphonePresetResult.CONFIGURATION_CHANGED
+                request.eqPresetType != EqPresetType.CUSTOM -> HeadphonePresetResult.NOT_CUSTOM
+                currentCaps == null -> HeadphonePresetResult.CAPABILITIES_UNAVAILABLE
+                currentCaps != confirmed -> HeadphonePresetResult.CAPABILITIES_CHANGED
+                !headphoneSaveCompatible(request, currentCaps, applicationState.value) -> HeadphonePresetResult.INCOMPATIBLE
+                else -> {
+                    val name = HeadphonePresetCodec.name(rawName)
+                    val doc = headphoneDocument(p)
+                    when {
+                        name == null -> HeadphonePresetResult.INVALID_NAME
+                        doc == null || !doc.library.writable -> HeadphonePresetResult.STORAGE_UNAVAILABLE
+                        doc.indexed.size >= HeadphonePresetCodec.MAX_PRESETS || doc.entries.length() >= HeadphonePresetCodec.MAX_ENTRIES -> HeadphonePresetResult.LIMIT_REACHED
+                        else -> {
+                            val id = java.util.UUID.randomUUID().toString()
+                            if ((0 until doc.entries.length()).any { doc.entries.optJSONObject(it)?.optString("id") == id }) {
+                                HeadphonePresetResult.PRESET_CHANGED
+                            } else {
+                                val preset = HeadphoneEqPreset(id, name, request.eqCustomBandLevels.toList(), confirmed.centerFrequenciesHz.toList())
+                                doc.entries.put(HeadphonePresetCodec.encode(preset))
+                                val raw = doc.serialized()
+                                if (raw == null) HeadphonePresetResult.LIMIT_REACHED else {
+                                    p[HEADPHONE_PRESETS] = raw; HeadphonePresetResult.SAVED
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun applyHeadphonePreset(expected: OutputProfile, preset: HeadphoneEqPreset, confirmed: EqualizerCapabilities): HeadphonePresetResult {
+        return headphoneEdit { p ->
+            val state = resolveProfiles(p)
+            val currentCaps = capabilities.value
+            val doc = headphoneDocument(p)
+            when {
+                state.active != expected -> HeadphonePresetResult.PROFILE_CHANGED
+                !expected.supportsHeadphonePresets() -> HeadphonePresetResult.WRONG_PROFILE
+                state.usingGlobalFallback || doc == null -> HeadphonePresetResult.STORAGE_UNAVAILABLE
+                doc.indexed[preset.id]?.second != preset -> HeadphonePresetResult.PRESET_CHANGED
+                currentCaps == null -> HeadphonePresetResult.CAPABILITIES_UNAVAILABLE
+                currentCaps != confirmed -> HeadphonePresetResult.CAPABILITIES_CHANGED
+                !headphoneCurveCompatible(preset.levels, preset.frequenciesHz, currentCaps) -> HeadphonePresetResult.INCOMPATIBLE
+                else -> {
+                    val updated = state.effective.copy(eqPresetType = EqPresetType.CUSTOM,
+                        eqCustomBandLevels = preset.levels.toList(), eqCustomBandFrequenciesHz = preset.frequenciesHz.toList(),
+                        eqPlatformPresetIndex = null, eqStereoSinePresetId = null)
+                    if (updated == state.effective) HeadphonePresetResult.UNCHANGED else {
+                        // Same canonical category encoding used by every active-profile edit; never touches other profiles/library.
+                        p[CATEGORY_KEYS.getValue(state.active)] = OutputProfileCodec.encode(updated)
+                        HeadphonePresetResult.COPIED_TO_PROFILE
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun renameHeadphonePreset(expected: OutputProfile, preset: HeadphoneEqPreset, rawName: String): HeadphonePresetResult =
+        editHeadphonePreset(expected, preset, rawName)
+
+    suspend fun deleteHeadphonePreset(expected: OutputProfile, preset: HeadphoneEqPreset): HeadphonePresetResult =
+        editHeadphonePreset(expected, preset, null)
+
+    private suspend fun editHeadphonePreset(expected: OutputProfile, preset: HeadphoneEqPreset, rawName: String?): HeadphonePresetResult {
+        return headphoneEdit { p ->
+            val state = resolveProfiles(p)
+            val doc = headphoneDocument(p)
+            when {
+                state.active != expected -> HeadphonePresetResult.PROFILE_CHANGED
+                doc == null || !doc.library.writable -> HeadphonePresetResult.STORAGE_UNAVAILABLE
+                doc.indexed[preset.id]?.second != preset -> HeadphonePresetResult.PRESET_CHANGED
+                rawName != null && HeadphonePresetCodec.name(rawName) == null -> HeadphonePresetResult.INVALID_NAME
+                rawName != null && HeadphonePresetCodec.name(rawName) == preset.name -> HeadphonePresetResult.UNCHANGED
+                else -> {
+                    val index = doc.indexed.getValue(preset.id).first
+                    if (rawName == null) doc.entries.remove(index)
+                    else doc.entries.getJSONObject(index).put("name", HeadphonePresetCodec.name(rawName))
+                    val raw = doc.serialized()
+                    if (raw == null) HeadphonePresetResult.LIMIT_REACHED else {
+                        p[HEADPHONE_PRESETS] = raw
+                        if (rawName == null) HeadphonePresetResult.DELETED else HeadphonePresetResult.RENAMED
+                    }
+                }
+            }
+        }
+    }
 
     private fun global(p: Preferences) = AudioEnhancementSettings(
         eqEnabled = p[EQ_ENABLED] ?: false,
@@ -191,6 +305,7 @@ class AudioEnhancementsRepository @Inject constructor(
         editActive(expected) { it.copy(eqPresetType = EqPresetType.WAVDROP_PRESET, eqStereoSinePresetId = id, eqPlatformPresetIndex = null) }
 
     companion object {
+        private val HEADPHONE_PRESETS = stringPreferencesKey("eq_headphone_presets_v1")
         private val ACTIVE_PROFILE = stringPreferencesKey("eq_active_output_profile")
         private val PROFILES_INITIALIZED = booleanPreferencesKey("eq_output_profiles_initialized_v1")
         private val CATEGORY_KEYS = mapOf(

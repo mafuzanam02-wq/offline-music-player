@@ -1,5 +1,10 @@
 # StereoSine Backup Preservation Contract
 
+User-named Headphones preset IDs, names, curves and frequencies are local DataStore preferences and are
+not included or protected by the explicit backup/export format. Applying a preset copies it into profile
+EQ settings, which also remain excluded. This slice adds no library backup/restore behavior or schema fields.
+
+
 Manual Output Profiles, their active selection and EQ frequency metadata remain local preferences and
 are not part of the explicit backup/export/restore format. Global EQ settings also remain excluded.
 Runtime effect status, capabilities and audio-session state are never profile backup data.

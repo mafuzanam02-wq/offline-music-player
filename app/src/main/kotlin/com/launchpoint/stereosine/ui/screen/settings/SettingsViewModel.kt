@@ -177,6 +177,28 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { audioEnhancementsRepository.selectProfile(profile) }
     }
 
+    val headphonePresets = audioEnhancementsRepository.headphonePresets.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5_000), com.launchpoint.stereosine.data.settings.HeadphonePresetLibrary(),
+    )
+    private val _headphoneMessage = MutableStateFlow<String?>(null)
+    val headphoneMessage = _headphoneMessage.asStateFlow()
+    private var headphoneAction = 0L
+    private fun headphoneMutation(profile: com.launchpoint.stereosine.data.settings.OutputProfile, operation: suspend () -> com.launchpoint.stereosine.data.settings.HeadphonePresetResult) {
+        val generation = ++headphoneAction
+        viewModelScope.launch {
+            val result = operation()
+            if (generation == headphoneAction) _headphoneMessage.value = headphonePresetResultMessage(result, profile)
+        }
+    }
+    fun saveHeadphonePreset(profile: com.launchpoint.stereosine.data.settings.OutputProfile, request: com.launchpoint.stereosine.data.settings.AudioEnhancementSettings, caps: EqualizerCapabilities, name: String) =
+        headphoneMutation(profile) { audioEnhancementsRepository.saveHeadphonePreset(profile, request, caps, name) }
+    fun applyHeadphonePreset(profile: com.launchpoint.stereosine.data.settings.OutputProfile, preset: com.launchpoint.stereosine.data.settings.HeadphoneEqPreset, caps: EqualizerCapabilities) =
+        headphoneMutation(profile) { audioEnhancementsRepository.applyHeadphonePreset(profile, preset, caps) }
+    fun renameHeadphonePreset(profile: com.launchpoint.stereosine.data.settings.OutputProfile, preset: com.launchpoint.stereosine.data.settings.HeadphoneEqPreset, name: String) =
+        headphoneMutation(profile) { audioEnhancementsRepository.renameHeadphonePreset(profile, preset, name) }
+    fun deleteHeadphonePreset(profile: com.launchpoint.stereosine.data.settings.OutputProfile, preset: com.launchpoint.stereosine.data.settings.HeadphoneEqPreset) =
+        headphoneMutation(profile) { audioEnhancementsRepository.deleteHeadphonePreset(profile, preset) }
+
     val eqEnabled: StateFlow<Boolean> =
         audioEnhancementsRepository.settings
             .map { it.eqEnabled }

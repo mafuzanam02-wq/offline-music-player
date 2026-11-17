@@ -1,5 +1,11 @@
 # StereoSine - Project Context
 
+Headphones now manages a local library of user-named Custom EQ snapshots for explicit Wired/Bluetooth
+profile application, reusing the existing editor and effective-EQ authority. No device detection or
+calibration; no automatic profile/EQ enabling. The library is not part of explicit backups. See the
+architecture document for bounds, compatibility and stale-action protections.
+
+
 Manual Output Profiles now reuse the existing Equalizer: explicit Global/default, Speaker, Wired and
 Bluetooth selection, independent local configurations, no route switching or system-volume change.
 Existing Global behavior remains until explicit selection; first category selection copies current Global

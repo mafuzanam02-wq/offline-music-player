@@ -37,6 +37,7 @@ fun SettingsScreen(
     onStatisticsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onOutputProfilesClick: () -> Unit = {},
+    onHeadphonesClick: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -78,9 +79,10 @@ fun SettingsScreen(
                         onClick  = onOutputProfilesClick,
                     )
                     CardInternalDivider()
-                    DisabledSettingsRow(
+                    ClickableSettingsRow(
                         title    = "Headphones",
-                        subtitle = "Headphone tuning and profiles. Coming later.",
+                        subtitle = "Save and reuse named Custom EQ curves.",
+                        onClick  = onHeadphonesClick,
                     )
                     CardInternalDivider()
                     DisabledSettingsRow(

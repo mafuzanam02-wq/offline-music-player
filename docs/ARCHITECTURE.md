@@ -382,6 +382,38 @@ application status is attributed only to a matching requested configuration; sel
 labelled audible application. Global/profile settings, metadata and active selection are NOT included
 in the explicit backup format. No detected routes, session IDs, capabilities or application status persist.
 
+### Reusable Headphone EQ presets
+
+The Headphones settings screen manages a separate local library through AudioEnhancementsRepository.
+HeadphoneEqPreset snapshots have canonical UUIDs, user names, Custom millibel levels, reported Hz band
+centers and schema version 1. They are not built-in StereoSinePresetCatalog entries or live profile
+references. Saving/renaming/deleting changes only the library; applying explicitly copies a compatible
+curve into the active Wired or Bluetooth profile through the same canonical category encoding/effective
+settings flow, preserving its enabled flag and every other profile. No other effect or volume owner.
+
+Every mutation rechecks the expected active profile in the serialized DataStore edit. Apply/rename/delete
+also recheck the UUID and complete entry snapshot, preventing stale dialogs from overwriting a renamed,
+removed or replaced entry. Save rechecks the named request and capability snapshot. Apply requires exact
+live frequency/count equality and in-range gains; absent/stale/incompatible metadata never causes index
+remapping or automatic enabling. Saving known-frequency Custom requests requires compatible live metadata.
+A legacy unknown-frequency request additionally requires matching successful API band readback before
+capturing current reported frequencies. These are requested-setting/API facts, not measured acoustics.
+
+The versioned document is limited to 64 KiB UTF-8, 32 valid presets, 40 UTF-16 name units and 128 bands
+per curve. Parsing also bounds total raw entries (64) and JSON depth (8). Canonical UUIDs, integer values,
+positive frequencies, paired array lengths and schema versions are validated. Invalid/ambiguous-ID entries
+stay stored while unrelated valid entries remain usable; unknown/oversized/unparseable top-level documents
+are read-only. Mutations retain unrelated raw entries. Duplicate names are allowed because identity is UUID,
+not name or order. I/O failure reports unavailable without inventing a successful save.
+
+Headphones never changes the selected output profile on entry. Global/Speaker users are directed to Output
+Profiles before saving/applying; library rename/delete remain available. The existing Equalizer editor and
+explicit custom-band recovery are reused. EQ-off profiles normally have no live capabilities: users may
+explicitly enable EQ in the editor to obtain them; applying never enables it automatically. No model database,
+device detection, calibration, compensation, spatial audio or loudness processing. Names/curves/IDs are
+private local preferences and are NOT included in explicit backup/export/restore. Deleting a library entry
+leaves already copied profile curves intact; later profile edits never mutate saved snapshots.
+
 ---
 
 ## 5. Crossfade subsystem (engineering foundation only)

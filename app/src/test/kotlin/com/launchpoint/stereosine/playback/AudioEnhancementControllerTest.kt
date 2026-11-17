@@ -282,4 +282,32 @@ class AudioEnhancementControllerTest {
         assertTrue(f.state.requested!!.eqEnabled)
     }
 
+    @Test fun headphoneLibraryDoesNotReapplyEffectsAndCopiedCurvesSurviveControllerRecreation() = withControllerScope { scope ->
+        val f = Fixture(scope)
+        f.repo.selectProfile(OutputProfile.WIRED)
+        f.repo.setEqCustomBandLevels(listOf(200, -100), OutputProfile.WIRED, listOf(100, 200)); f.repo.setEqEnabled(true)
+        val caps = f.repo.capabilities.value!!
+        val writes = f.effects.single().writes
+        assertEquals(HeadphonePresetResult.SAVED, f.repo.saveHeadphonePreset(OutputProfile.WIRED, f.repo.settings.first(), caps, "Headphones"))
+        val saved = f.repo.headphonePresets.first().presets.single()
+        assertEquals(HeadphonePresetResult.RENAMED, f.repo.renameHeadphonePreset(OutputProfile.WIRED, saved, "Renamed"))
+        val renamed = f.repo.headphonePresets.first().presets.single()
+        assertEquals(writes, f.effects.single().writes)
+        assertEquals(HeadphonePresetResult.UNCHANGED, f.repo.applyHeadphonePreset(OutputProfile.WIRED, renamed, caps))
+        assertEquals(writes, f.effects.single().writes)
+        f.repo.setEqCustomBandLevels(listOf(0, 0), OutputProfile.WIRED, caps.centerFrequenciesHz)
+        assertEquals(HeadphonePresetResult.COPIED_TO_PROFILE, f.repo.applyHeadphonePreset(OutputProfile.WIRED, renamed, caps))
+        assertEquals(listOf(200, -100), f.state.reportedBandLevels)
+        assertTrue(crossfadeEqualizerBlocks(true, f.repo.settings.first().eqEnabled))
+        val request = f.repo.settings.first(); val afterApply = f.effects.single().writes
+        assertEquals(HeadphonePresetResult.DELETED, f.repo.deleteHeadphonePreset(OutputProfile.WIRED, renamed))
+        assertEquals(afterApply, f.effects.single().writes); assertEquals(request, f.repo.settings.first())
+        f.controller.release()
+        val recreated = AudioEnhancementController(f.repo, scope) { Effect() }
+        try {
+            recreated.attachSession(17)
+            assertEquals(request, f.state.requested); assertTrue(f.state.requestedConfigurationConfirmed)
+        } finally { recreated.release() }
+    }
+
 }

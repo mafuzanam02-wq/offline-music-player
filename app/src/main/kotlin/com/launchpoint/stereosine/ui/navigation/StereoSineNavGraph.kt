@@ -54,6 +54,7 @@ import com.launchpoint.stereosine.ui.screen.settings.SettingsBackupScreen
 import com.launchpoint.stereosine.ui.screen.settings.SettingsBluetoothScreen
 import com.launchpoint.stereosine.ui.screen.settings.SettingsDiagnosticsScreen
 import com.launchpoint.stereosine.ui.screen.settings.SettingsLibraryScreen
+import com.launchpoint.stereosine.ui.screen.settings.SettingsHeadphonesScreen
 import com.launchpoint.stereosine.ui.screen.settings.SettingsOutputProfilesScreen
 import com.launchpoint.stereosine.ui.screen.settings.SettingsEqualizerScreen
 import com.launchpoint.stereosine.ui.screen.settings.SettingsPlaybackScreen
@@ -78,6 +79,7 @@ sealed class Screen(val route: String) {
     data object BackupImportPreview : Screen("backup_import_preview")
     data object NowPlaying          : Screen("now_playing")
     data object Settings            : Screen("settings")
+    data object SettingsHeadphones : Screen("settings/headphones")
     data object SettingsOutputProfiles : Screen("settings/output_profiles")
     data object SettingsEqualizer   : Screen("settings/equalizer")
     data object SettingsPlayback    : Screen("settings/playback")
@@ -474,6 +476,7 @@ fun StereoSineNavGraph(
                 onNavigateBack           = { navController.popBackStack() },
                 onEqualizerClick         = { navController.navigate(Screen.SettingsEqualizer.route) },
                 onOutputProfilesClick    = { navController.navigate(Screen.SettingsOutputProfiles.route) },
+                onHeadphonesClick        = { navController.navigate(Screen.SettingsHeadphones.route) },
                 onPlaybackClick          = { navController.navigate(Screen.SettingsPlayback.route) },
                 onBluetoothClick         = { navController.navigate(Screen.SettingsBluetooth.route) },
                 onLibrarySettingsClick   = { navController.navigate(Screen.SettingsLibrary.route) },
@@ -481,6 +484,13 @@ fun StereoSineNavGraph(
                 onAppearanceClick        = { navController.navigate(Screen.SettingsAppearance.route) },
                 onStatisticsClick        = { navController.navigate(Screen.SettingsStatistics.route) },
                 onAboutClick             = { navController.navigate(Screen.SettingsAbout.route) },
+            )
+        }
+        composable(Screen.SettingsHeadphones.route) {
+            SettingsHeadphonesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOutputProfilesClick = { navController.navigate(Screen.SettingsOutputProfiles.route) },
+                onEqualizerClick = { navController.navigate(Screen.SettingsEqualizer.route) },
             )
         }
         composable(Screen.SettingsOutputProfiles.route) {

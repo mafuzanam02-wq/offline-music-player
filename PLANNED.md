@@ -76,7 +76,8 @@ Queue Sheet header menu -> "Save queue as playlist" saves the current logical qu
 - Android Auto support.
 - Lock-screen widgets / additional widget surfaces (a home-screen widget already ships).
 - Equalizer expansion beyond the shipped device Equalizer (portable/custom curves; automatic profile selection,
-  Headphones and Loudness Protection remain deferred; manual Output Profiles are implemented).
+  headphone calibration/automatic detection and Loudness Protection remain deferred; manual Output Profiles
+  and user-named Headphones presets are implemented).
 - Metadata / ID3 tag editing.
 - In-app reset / clear-data (if ever added it must require an export-before-reset prompt).
 

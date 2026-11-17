@@ -382,6 +382,15 @@ that contains the song and an album queue).
 
 ## 28. Equalizer
 
+Headphones: select Wired/Bluetooth explicitly; save a compatible Custom curve with a bounded nonblank
+name. Edit the profile and verify the saved snapshot stays unchanged; apply it to Wired and Bluetooth,
+checking only the selected profile changes and EQ enabled intent, queue, position and system volume stay
+unchanged. Rename preserves ID/curve; duplicate names have distinct IDs. Cancel deletion preserves data;
+confirmed deletion removes only that library entry and leaves copied profile curves. Global/Speaker entry
+must not auto-select a headphone profile. Missing/mismatched capabilities disable application with an
+explanation. Stale profile/entry/capability actions must be rejected. Presets are local-only, not backed up.
+
+
 Manual Output Profiles: select Speaker/Wired/Bluetooth explicitly; first category selection must retain
 Global sound settings and initialize all three categories from that snapshot. Edit each via the existing
 Equalizer, switch away/back, and restart: selection and independent requested configurations must survive.
