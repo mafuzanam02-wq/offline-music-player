@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
@@ -27,6 +28,7 @@ import kotlinx.coroutines.withContext
  * duration and frame rate), hard cuts, H.264, no audio, fully offline. No effect is applied: the 720x1280 PNGs are
  * already the target size, so `media3-effect` is not used directly.
  */
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 internal fun buildWrappedVideoComposition(request: WrappedVideoRequest): Composition {
     val items = request.slides.map { slide ->
         // 1.11.1: a still image needs its display duration on the MediaItem (setImageDurationMs); without it the
@@ -48,6 +50,7 @@ internal fun buildWrappedVideoComposition(request: WrappedVideoRequest): Composi
  * otherwise); every such call is therefore posted to [looper]. The encode itself runs on Transformer's own threads, so
  * the UI thread is never blocked: this class only posts short calls and suspends for their results.
  */
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 internal class Media3WrappedVideoEngine(
     context: Context,
     private val looper: Looper = Looper.getMainLooper(),
