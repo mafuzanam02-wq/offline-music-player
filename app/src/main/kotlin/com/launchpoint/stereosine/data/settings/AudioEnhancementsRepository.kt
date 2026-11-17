@@ -26,8 +26,15 @@ class AudioEnhancementsRepository @Inject constructor(
     private val _capabilities = MutableStateFlow<EqualizerCapabilities?>(null)
     val capabilities: StateFlow<EqualizerCapabilities?> = _capabilities.asStateFlow()
 
-    fun updateCapabilities(caps: EqualizerCapabilities) {
+    fun updateCapabilities(caps: EqualizerCapabilities?) {
         _capabilities.value = caps
+    }
+
+    private val _applicationState = MutableStateFlow(EqualizerApplicationState())
+    val applicationState: StateFlow<EqualizerApplicationState> = _applicationState.asStateFlow()
+
+    internal fun updateApplicationState(state: EqualizerApplicationState) {
+        _applicationState.value = state
     }
 
     val settings: Flow<AudioEnhancementSettings> = dataStore.data

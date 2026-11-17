@@ -13,7 +13,7 @@ data class StereoSinePreset(
 //   Band 0: 60 Hz  · Band 1: 230 Hz · Band 2: 910 Hz
 //   Band 3: 3.6 kHz · Band 4: 14 kHz
 //
-// All values are within ±500 mB (±5 dB) — conservative, clipping-safe without preamp.
+// All values are within ±500 mB (±5 dB) — bounded boosts, not a clipping or hearing-safety guarantee.
 // IDs are stable lowercase-kebab strings. Never rename or reorder after shipping.
 object StereoSinePresetCatalog {
 

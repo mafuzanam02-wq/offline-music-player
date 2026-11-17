@@ -316,10 +316,37 @@ Invariants:
 
 ### 4.4 Equalizer
 
-`AudioEnhancementController` owns the platform `Equalizer` effect attached to the primary player's
-audio session, driven entirely by `AudioEnhancementsRepository` (presets: flat, StereoSine, platform,
-custom bands). Every effect call is guarded; failures log and continue. The secondary crossfade path
-has **no** EQ forwarding.
+`AudioEnhancementController` owns the platform `Equalizer` attached to the player's audio session,
+driven by `AudioEnhancementsRepository` (flat, StereoSine, platform and custom presets). A small
+`EqualizerEffect` boundary contains the Android calls. The service forwards current-player session changes
+and releases effects before the player engine. Capabilities are live effect metadata: disable, failed
+construction, session invalidation and release clear them. The screen does not substitute cached or
+invented device capabilities for released effects. Preset selection remains available without live
+capabilities: Flat and StereoSine-owned requests can be saved independently of effect application.
+Custom editing/initialization and platform choices require live capability metadata; custom values
+remain intact while editing is unavailable. Known runtime band compatibility rules still apply.
+An enabled request before the service observes it is displayed as pending; a disabled state is labelled disabled.
+
+`EqualizerApplicationState` is transient, never persisted or included in backups. Disabled means no EQ
+request is being applied; Pending waits for application/a valid session; Unavailable covers unsupported
+effects, lost control or released resources; Failed records unsuccessful writes, enablement or readback.
+Applied means the API reported control, successful enablement and enabled readback. Explicit band
+requests require matching effective band values; platform presets require a matching selected index
+and readable band values (the controller cannot independently verify a vendor preset response). This is an observation at application time, not a
+measurement or guarantee of audible output. Fallback-to-flat and device-range clamping are explicit
+issues on the effective application; they never rewrite the requested settings. Failed partial writes
+retain the previous best-effort playback behavior but are not reported as confirmed.
+
+Platform preset names retain their original indices even if another name lookup fails. The runtime
+preset count independently validates stored selections, including unnamed but valid indices. Repeated
+identical requests are not rewritten; session recreation or regained effect control supplies a retry
+boundary. Old-effect callbacks cannot publish into the current session. Control/enable status listeners
+invalidate confirmation when control is lost or the effect is externally disabled.
+
+Crossfade remains unavailable while the persisted EQ-enabled request is on (also while its initial state
+is unknown), even if runtime application fails. Application reporting does not introduce another playback
+policy or claim simultaneous EQ/crossfade support. A shared effective configuration for future manual
+profiles is a separate integration slice; no new processing, output routing or volume ownership is added.
 
 ---
 

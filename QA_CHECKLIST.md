@@ -388,6 +388,10 @@ that contains the song and an album queue).
 | Enable the Equalizer and pick a platform preset, a StereoSine preset, then custom bands. | Sound changes audibly; settings persist after leaving the screen. | |
 | Restart the app and the process. | Equalizer settings persist and apply to the next track. | |
 | Switch output (speaker / Bluetooth / wired) with the Equalizer on. | No crash; the effect stays applied or re-attaches. | |
+| With EQ enabled and no live effect capabilities, select Flat and a StereoSine preset; later restore capabilities. | Preset selector stays accessible without claiming application; no invented band editor/system presets; saved custom values survive and runtime-supported editing returns. | |
+| Observe EQ status after enable, disable, failed/unsupported effect and session recreation. | Status distinguishes API-confirmed application from pending, unavailable and failed; no claim of measured audible processing. | |
+| Lose effect control or disable it externally, then release/recreate the session. | Confirmation invalidates without transport changes; released capabilities disappear and stale callbacks cannot restore them. | |
+| Use custom levels outside the device range or a saved preset incompatible with current capabilities. | Clamping/flat fallback is explicit; saved requested levels/preset remain unchanged. Platform preset indices survive missing name lookups. | |
 | Note: Equalizer settings are not part of backups today. | Restoring a backup does not change Equalizer settings. | |
 
 ## 29. Home-Screen Widget

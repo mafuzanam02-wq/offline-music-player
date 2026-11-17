@@ -214,13 +214,9 @@ class SettingsViewModel @Inject constructor(
                 initialValue = null,
             )
 
-    val eqCapabilities: StateFlow<EqualizerCapabilities?> =
-        audioEnhancementsRepository.capabilities
-            .stateIn(
-                scope        = viewModelScope,
-                started      = SharingStarted.WhileSubscribed(5_000),
-                initialValue = null,
-            )
+    val eqApplicationState = audioEnhancementsRepository.applicationState
+
+    val eqCapabilities: StateFlow<EqualizerCapabilities?> = audioEnhancementsRepository.capabilities
 
     val sleepTimerState: StateFlow<SleepTimerState> = playerController.sleepTimerState
 

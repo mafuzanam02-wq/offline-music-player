@@ -27,7 +27,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.launchpoint.stereosine.data.settings.EqualizerApplicationState
+import com.launchpoint.stereosine.data.settings.EqualizerApplicationStatus
+import com.launchpoint.stereosine.data.settings.EqualizerApplicationIssue
 import com.launchpoint.stereosine.data.settings.EqualizerCapabilities
 import com.launchpoint.stereosine.data.settings.EqualizerPlatformPreset
 import com.launchpoint.stereosine.data.settings.EqPresetType
@@ -55,20 +57,15 @@ fun SettingsEqualizerScreen(
     val eqCustomBandLevels    by viewModel.eqCustomBandLevels.collectAsStateWithLifecycle()
     val eqStereoSinePresetId     by viewModel.eqStereoSinePresetId.collectAsStateWithLifecycle()
     val eqCapabilities        by viewModel.eqCapabilities.collectAsStateWithLifecycle()
+    val applicationState by viewModel.eqApplicationState.collectAsStateWithLifecycle()
     var showPresetDialog by remember { mutableStateOf(false) }
 
-    // Survive the one-frame null that collectAsStateWithLifecycle delivers on entry
-    // before the hot StateFlow emits the cached real value.
-    var rememberedCaps by remember { mutableStateOf<EqualizerCapabilities?>(null) }
-    LaunchedEffect(eqCapabilities) {
-        if (eqCapabilities != null) rememberedCaps = eqCapabilities
-    }
-    val caps = eqCapabilities ?: rememberedCaps ?: EQ_FALLBACK_CAPABILITIES
+    val caps = eqCapabilities
 
     val eqPresetLabel = when (eqPresetType) {
         EqPresetType.FLAT           -> "Flat"
         EqPresetType.WAVDROP_PRESET -> StereoSinePresetCatalog.findById(eqStereoSinePresetId)?.displayName ?: "StereoSine"
-        EqPresetType.PLATFORM       -> caps.platformPresets.getOrNull(eqPlatformPresetIndex ?: -1)?.name ?: "Flat"
+        EqPresetType.PLATFORM       -> caps?.platformPresets?.firstOrNull { it.index.toInt() == eqPlatformPresetIndex }?.name ?: "System preset ${eqPlatformPresetIndex ?: "unavailable"}"
         EqPresetType.CUSTOM         -> "Custom"
     }
 
@@ -105,6 +102,7 @@ fun SettingsEqualizerScreen(
                 )
             }
             if (eqEnabled) {
+                item { SettingsMessageRow(message = equalizerApplicationSummary(applicationState, requestedEnabled = eqEnabled)) }
                 item {
                     ClickableSettingsRow(
                         title    = "Preset",
@@ -112,29 +110,33 @@ fun SettingsEqualizerScreen(
                         onClick  = { showPresetDialog = true },
                     )
                 }
-                if (eqPresetType == EqPresetType.CUSTOM || eqPresetType == EqPresetType.WAVDROP_PRESET) {
-                    item {
-                        val initialLevels = if (eqPresetType == EqPresetType.WAVDROP_PRESET) {
-                            StereoSinePresetCatalog.findById(eqStereoSinePresetId)
-                                ?.bandLevels?.takeIf { it.size == caps.bandCount }
-                                ?: List(caps.bandCount) { 0 }
-                        } else {
-                            eqCustomBandLevels
-                        }
-                        EqBandSection(
-                            bandLevels         = initialLevels,
-                            capabilities       = caps,
-                            onBandLevelsChange = viewModel::setEqCustomBandLevels,
-                        )
-                    }
+                if (caps == null) {
+                    item { SettingsMessageRow(message = "Device EQ capabilities are unavailable. You can save a preset; band editing and system presets require device capabilities.") }
                 } else {
-                    item {
-                        val helperText = if (eqPresetType == EqPresetType.PLATFORM) {
-                            "System presets are managed by your device. Choose Custom or a StereoSine preset to fine-tune bands."
-                        } else {
-                            "EQ is flat. Choose Custom or a StereoSine preset to shape your sound."
+                    if (eqPresetType == EqPresetType.CUSTOM || eqPresetType == EqPresetType.WAVDROP_PRESET) {
+                        item {
+                            val initialLevels = if (eqPresetType == EqPresetType.WAVDROP_PRESET) {
+                                StereoSinePresetCatalog.findById(eqStereoSinePresetId)
+                                    ?.bandLevels?.takeIf { it.size == caps.bandCount }
+                                    ?: List(caps.bandCount) { 0 }
+                            } else {
+                                eqCustomBandLevels
+                            }
+                            EqBandSection(
+                                bandLevels         = initialLevels,
+                                capabilities       = caps,
+                                onBandLevelsChange = viewModel::setEqCustomBandLevels,
+                            )
                         }
-                        SettingsMessageRow(message = helperText)
+                    } else {
+                        item {
+                            val helperText = if (eqPresetType == EqPresetType.PLATFORM) {
+                                "System presets are managed by your device. Choose Custom or a StereoSine preset to fine-tune bands."
+                            } else {
+                                "EQ is flat. Choose Custom or a StereoSine preset to shape your sound."
+                            }
+                            SettingsMessageRow(message = helperText)
+                        }
                     }
                 }
             }
@@ -147,9 +149,8 @@ fun SettingsEqualizerScreen(
             stereoSinePresetId         = eqStereoSinePresetId,
             platformPresetIndex     = eqPlatformPresetIndex,
             capabilities            = caps,
-            stereoSinePresetsAvailable = caps.bandCount == 5,
             onSelectFlat            = { viewModel.setEqFlat(); showPresetDialog = false },
-            onSelectCustom          = { viewModel.setEqCustomPreset(caps.bandCount); showPresetDialog = false },
+            onSelectCustom          = { caps?.let { viewModel.setEqCustomPreset(it.bandCount) }; showPresetDialog = false },
             onSelectStereoSinePreset   = { id -> viewModel.setEqStereoSinePreset(id); showPresetDialog = false },
             onSelectPlatformPreset  = { index -> viewModel.setEqPlatformPreset(index); showPresetDialog = false },
             onDismiss               = { showPresetDialog = false },
@@ -297,8 +298,7 @@ private fun EqPresetDialog(
     presetType: EqPresetType,
     stereoSinePresetId: String?,
     platformPresetIndex: Int?,
-    capabilities: EqualizerCapabilities,
-    stereoSinePresetsAvailable: Boolean,
+    capabilities: EqualizerCapabilities?,
     onSelectFlat: () -> Unit,
     onSelectCustom: () -> Unit,
     onSelectStereoSinePreset: (String) -> Unit,
@@ -316,14 +316,16 @@ private fun EqPresetDialog(
                     selected = presetType == EqPresetType.FLAT,
                     onClick  = onSelectFlat,
                 )
-                // 2. Custom
-                PresetDialogRow(
-                    label    = "Custom",
-                    selected = presetType == EqPresetType.CUSTOM,
-                    onClick  = onSelectCustom,
-                )
-                // 3. StereoSine Presets (5-band devices only)
-                if (stereoSinePresetsAvailable) {
+                // Custom initialization depends on the runtime band count; never seed invented bands.
+                if (capabilities != null) {
+                    PresetDialogRow(
+                        label    = "Custom",
+                        selected = presetType == EqPresetType.CUSTOM,
+                        onClick  = onSelectCustom,
+                    )
+                }
+                // Saving an owned preset does not assert hardware compatibility or application.
+                if (capabilities == null || capabilities.bandCount == 5) {
                     Text(
                         text     = "StereoSine",
                         style    = MaterialTheme.typography.labelSmall,
@@ -340,14 +342,14 @@ private fun EqPresetDialog(
                     }
                 }
                 // 4. System Presets
-                if (capabilities.platformPresets.isNotEmpty()) {
+                if (!capabilities?.platformPresets.isNullOrEmpty()) {
                     Text(
                         text     = "System",
                         style    = MaterialTheme.typography.labelSmall,
                         color    = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
                     )
-                    capabilities.platformPresets.forEach { preset ->
+                    capabilities?.platformPresets.orEmpty().forEach { preset ->
                         PresetDialogRow(
                             label    = preset.name,
                             selected = presetType == EqPresetType.PLATFORM && platformPresetIndex == preset.index.toInt(),
@@ -398,4 +400,30 @@ private fun PresetDialogRow(
             }
         }
     }
+}
+
+/** API confirmation is deliberately described separately from measured audio output. */
+internal fun equalizerApplicationSummary(
+    state: EqualizerApplicationState,
+    requestedEnabled: Boolean = state.requested?.eqEnabled == true,
+): String {
+    // An enabled saved request can precede the playback service's first observation.
+    if (requestedEnabled && state.status == EqualizerApplicationStatus.DISABLED) return "Equalizer application pending."
+    val base = when (state.status) {
+        EqualizerApplicationStatus.DISABLED -> "Equalizer is disabled."
+        EqualizerApplicationStatus.PENDING -> "Equalizer application pending."
+        EqualizerApplicationStatus.APPLIED -> "Device API reports EQ enabled and settings read back. Audible output is not measured."
+        EqualizerApplicationStatus.FAILED -> "Equalizer application could not be confirmed. Playback can continue."
+        EqualizerApplicationStatus.UNAVAILABLE -> "Equalizer is unavailable. Playback can continue."
+    }
+    val details = state.issues.map { issue ->
+        when (issue) {
+            EqualizerApplicationIssue.FLAT_FALLBACK -> "Flat fallback used; requested preset is unchanged."
+            EqualizerApplicationIssue.CLAMPED -> "Band levels limited to the device range; saved levels are unchanged."
+            EqualizerApplicationIssue.CONTROL_UNAVAILABLE -> "Effect control is unavailable."
+            EqualizerApplicationIssue.EXTERNALLY_DISABLED -> "The device effect was disabled externally."
+            else -> ""
+        }
+    }.filter { it.isNotEmpty() }
+    return (listOf(base) + details).joinToString(" ")
 }
