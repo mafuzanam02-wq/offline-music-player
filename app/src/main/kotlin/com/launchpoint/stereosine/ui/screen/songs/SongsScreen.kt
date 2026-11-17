@@ -94,6 +94,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SongsScreen(
     onNavigateBack: () -> Unit,
+    onSongsClick: () -> Unit = {},
     onHomeClick: () -> Unit,
     onLibraryClick: () -> Unit,
     onNowPlayingClick: () -> Unit,
@@ -178,7 +179,7 @@ fun SongsScreen(
                 PrimaryNavigationBar(
                     selected        = PrimaryDestination.SONGS,
                     onHomeClick     = onHomeClick,
-                    onSongsClick    = {},
+                    onSongsClick    = onSongsClick,
                     onLibraryClick  = onLibraryClick,
                     onInsightsClick = onInsightsClick,
                 )

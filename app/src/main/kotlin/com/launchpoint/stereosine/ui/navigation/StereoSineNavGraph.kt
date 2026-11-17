@@ -123,25 +123,6 @@ sealed class Screen(val route: String) {
     }
 }
 
-private fun NavHostController.navigatePrimary(route: String) {
-    if (route == Screen.Home.route) {
-        // popBackStack avoids the saveState/restoreState cycle that would re-add
-        // nested screens (e.g. NowPlaying) on top of Home. If Home is not in the
-        // back stack (startup != Home), navigate to it fresh.
-        if (!popBackStack(route, inclusive = false)) {
-            navigate(route) { launchSingleTop = true }
-        }
-    } else {
-        navigate(route) {
-            launchSingleTop = true
-            restoreState = true
-            popUpTo(Screen.Home.route) {
-                saveState = true
-            }
-        }
-    }
-}
-
 private fun NavHostController.navigateNowPlaying() {
     navigate(Screen.NowPlaying.route) {
         launchSingleTop = true
@@ -213,6 +194,7 @@ fun StereoSineNavGraph(
         }
         composable(Screen.Home.route) {
             HomeScreen(
+                onHomeClick         = { navController.navigatePrimary(Screen.Home.route) },
                 onSettingsClick     = { navController.navigate(Screen.Settings.route) },
                 onInsightsClick     = { navController.navigatePrimary(Screen.SettingsStatistics.route) },
                 onSongsClick        = { navController.navigatePrimary(Screen.Songs.route) },
@@ -237,6 +219,8 @@ fun StereoSineNavGraph(
         }
         composable(Screen.Library.route) {
             LibraryScreen(
+                onLibraryClick          = { navController.navigatePrimary(Screen.Library.route) },
+                onSongsTabClick         = { navController.navigatePrimary(Screen.Songs.route) },
                 onSongsClick            = { navController.navigate(Screen.Songs.route) },
                 onAlbumsClick           = { navController.navigate(Screen.Albums.route) },
                 onArtistsClick          = { navController.navigate(Screen.Artists.route) },
@@ -252,6 +236,7 @@ fun StereoSineNavGraph(
         }
         composable(Screen.Songs.route) {
             SongsScreen(
+                onSongsClick          = { navController.navigatePrimary(Screen.Songs.route) },
                 onNavigateBack         = { navController.popBackStack() },
                 onHomeClick            = { navController.navigatePrimary(Screen.Home.route) },
                 onLibraryClick         = { navController.navigatePrimary(Screen.Library.route) },
@@ -550,7 +535,7 @@ fun StereoSineNavGraph(
                 onHomeClick            = { navController.navigatePrimary(Screen.Home.route) },
                 onSongsClick           = { navController.navigatePrimary(Screen.Songs.route) },
                 onLibraryClick         = { navController.navigatePrimary(Screen.Library.route) },
-                onInsightsClick        = {},
+                onInsightsClick        = { navController.navigatePrimary(Screen.SettingsStatistics.route) },
                 onNowPlayingClick      = { navController.navigateNowPlaying() },
                 onSearchClick          = { navController.navigate(Screen.GlobalSearch.route) },
                 onSettingsClick        = { navController.navigate(Screen.Settings.route) },

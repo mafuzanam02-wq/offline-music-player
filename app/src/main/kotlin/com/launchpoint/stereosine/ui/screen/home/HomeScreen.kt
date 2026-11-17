@@ -111,6 +111,7 @@ private const val RESUME_SESSION_GRACE_MS = 2_000L
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    onHomeClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onInsightsClick: () -> Unit = {},
     onSongsClick: () -> Unit = {},
@@ -215,7 +216,7 @@ fun HomeScreen(
                 )
                 PrimaryNavigationBar(
                     selected = PrimaryDestination.HOME,
-                    onHomeClick = {},
+                    onHomeClick = onHomeClick,
                     onSongsClick = onSongsClick,
                     onLibraryClick = onLibraryClick,
                     onInsightsClick = onInsightsClick,

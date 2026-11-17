@@ -68,6 +68,8 @@ fun LibraryScreen(
     onNowPlayingClick: () -> Unit,
     onInsightsClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onLibraryClick: () -> Unit = {},
+    onSongsTabClick: () -> Unit = onSongsClick,
     onLibrarySettingsClick: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
     playbackVm: PlaybackControlsViewModel = hiltViewModel(),
@@ -109,8 +111,8 @@ fun LibraryScreen(
                 PrimaryNavigationBar(
                     selected = PrimaryDestination.LIBRARY,
                     onHomeClick = onHomeClick,
-                    onSongsClick = onSongsClick,
-                    onLibraryClick = {},
+                    onSongsClick = onSongsTabClick,
+                    onLibraryClick = onLibraryClick,
                     onInsightsClick = onInsightsClick,
                 )
             }

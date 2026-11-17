@@ -350,6 +350,9 @@ background behaviour can only be validated on hardware.
 | Artist artwork. | Artist list/details use local album-art-derived image or fallback. | |
 | About/legal screens. | Privacy, Disclaimer, Open Source, Supported Formats, and Diagnostics all open. | |
 | Insights naming. | Bottom-nav tab and Settings entry both read "Insights". | |
+| Primary tabs (NAV-01). | One tap opens the requested Home, Songs, Library or Insights main screen, including non-Home startup and taps during transitions; no restored child screen or duplicate tab entries. | |
+| Same-tab reselection (NAV-01). | Repeated taps on the actual current main screen preserve its entry, scroll/UI state and playback without refresh. | |
+| Primary-tab Back (NAV-01). | Switching leaves only the live startup anchor and requested main; Back returns to that anchor. If onboarding removed the anchor, tab override clears to the root and Back exits. Ordinary secondary-screen Back remains unchanged. | |
 | Library statistics card. | Library shows compact song/album/artist/duration summary. | |
 | Sleep Timer state. | Timer can be turned off and does not persist after process kill. | |
 
