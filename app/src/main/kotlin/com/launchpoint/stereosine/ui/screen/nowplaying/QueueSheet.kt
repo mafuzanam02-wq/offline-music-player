@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -1248,7 +1249,10 @@ private fun QueueSectionHeader(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onAction) {
+        TextButton(
+            onClick = onAction,
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
             Text(text = actionLabel, style = MaterialTheme.typography.labelMedium)
         }
     }
@@ -1675,7 +1679,7 @@ private fun QueueItemRow(
                     onClick = { expanded = false; onMoveTo() },
                 )
                 DropdownMenuItem(
-                    text = { Text("Remove from queue") },
+                    text = { Text("Remove from queue", color = MaterialTheme.colorScheme.error) },
                     onClick = { expanded = false; onRemove() },
                 )
                 DropdownMenuItem(

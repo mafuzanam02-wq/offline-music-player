@@ -313,7 +313,7 @@ fun PlaylistDetailsScreen(
                                     onClick     = { menuExpanded = false; viewModel.startExport() },
                                 )
                                 DropdownMenuItem(
-                                    text        = { Text("Delete playlist") },
+                                    text        = { Text("Delete playlist", color = MaterialTheme.colorScheme.error) },
                                     leadingIcon = {
                                         Icon(
                                             Icons.Default.Delete,
@@ -1107,7 +1107,7 @@ private fun PlaylistSongRow(
                     )
                 }
                 DropdownMenuItem(
-                    text    = { Text("Remove from playlist") },
+                    text    = { Text("Remove from playlist", color = MaterialTheme.colorScheme.error) },
                     onClick = { menuExpanded = false; onRemove() },
                 )
             }

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -145,9 +146,9 @@ fun SongRowWithOverflow(
             }
             if (onRemove != null) {
                 DropdownMenuItem(
-                    text    = { Text("Remove") },
+                    text    = { Text("Remove", color = MaterialTheme.colorScheme.error) },
                     onClick = { expanded = false; onRemove() },
-                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                 )
             }
         }

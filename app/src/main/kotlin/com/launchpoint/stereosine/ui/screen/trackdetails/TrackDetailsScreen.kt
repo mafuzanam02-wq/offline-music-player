@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -508,7 +509,10 @@ private fun LyricsEditorDialog(
         dismissButton = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (hasCustomLyrics) {
-                    OutlinedButton(onClick = onClear) {
+                    OutlinedButton(
+                        onClick = onClear,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    ) {
                         Text("Clear")
                     }
                     Spacer(Modifier.size(8.dp))
@@ -572,7 +576,10 @@ private fun LyricsHeader(
             Text("Edit")
         }
         if (hasCustomLyrics) {
-            TextButton(onClick = onClearLyrics) {
+            TextButton(
+                onClick = onClearLyrics,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
                 Text("Clear")
             }
         }

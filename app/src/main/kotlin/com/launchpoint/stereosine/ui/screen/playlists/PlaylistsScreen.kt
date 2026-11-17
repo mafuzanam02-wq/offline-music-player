@@ -325,7 +325,7 @@ private fun PlaylistRow(
                     onClick       = { menuExpanded = false; onRename() },
                 )
                 DropdownMenuItem(
-                    text          = { Text("Delete") },
+                    text          = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                     leadingIcon   = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                     onClick       = { menuExpanded = false; onDelete() },
                 )

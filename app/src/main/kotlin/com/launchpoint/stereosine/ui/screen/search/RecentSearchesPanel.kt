@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -75,7 +76,10 @@ fun RecentSearchesPanel(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
-                TextButton(onClick = { confirmClear = true }) { Text("Clear all") }
+                TextButton(
+                    onClick = { confirmClear = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text("Clear all") }
             }
         }
         items(entries, key = { "recent_${it.query.lowercase()}" }) { entry ->
@@ -102,7 +106,7 @@ fun RecentSearchesPanel(
                     onClick  = { onRemove(entry.query) },
                     modifier = Modifier.semantics { contentDescription = "Remove ${entry.query} from recent searches" },
                 ) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = null)
+                    Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -114,9 +118,17 @@ fun RecentSearchesPanel(
             title            = { Text("Clear recent searches?") },
             text             = { Text("This removes all saved searches from this device. Your music and listening history are not affected.") },
             confirmButton    = {
-                TextButton(onClick = { confirmClear = false; onClearAll() }) { Text("Clear all") }
+                TextButton(
+                    onClick = { confirmClear = false; onClearAll() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text("Clear all") }
             },
-            dismissButton    = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
+            dismissButton    = {
+                TextButton(
+                    onClick = { confirmClear = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                ) { Text("Cancel") }
+            },
         )
     }
 }
