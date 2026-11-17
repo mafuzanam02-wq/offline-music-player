@@ -1,5 +1,10 @@
 # StereoSine QA Checklist
 
+Player-gain ownership follow-up (manual checks remain pending; emulator/API checks are not hardware sign-off):
+- [ ] External controllers do not advertise app-volume/mute while Play/Pause, notification controls and queue navigation work.
+- [ ] Hardware/system music-volume keys retain their normal Android behavior, including during crossfade and ducking.
+- [ ] Do not claim persisted attenuation startup readiness: that boundary remains a separate dependency; no attenuation exists yet.
+
 Current comprehensive manual / physical QA checklist. Use it on a real Android phone with a realistic local
 music library. Record device model, Android version, StereoSine version (Settings -> About), and any screen
 recordings or logs for failures. Automated JVM tests do not replace these checks; Bluetooth, OEM, and

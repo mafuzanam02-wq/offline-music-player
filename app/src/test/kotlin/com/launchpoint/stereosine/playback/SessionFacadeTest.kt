@@ -30,7 +30,7 @@ class SessionFacadeTest {
 
     // ── 1. initial state ────────────────────────────────────────────────────────────────────────
 
-    @Test fun initialStateEqualsDelegateState() {
+    @Test fun initialStateEqualsDelegateStateExceptUnsupportedPlayerGainCommand() {
         val physical = abc("P", index = 1, positionMs = 42_000L)
         val facade = SessionFacade(physical)
         idleMainLooper()
@@ -53,7 +53,7 @@ class SessionFacadeTest {
         assertEquals(physical.mediaMetadata.title, facade.mediaMetadata.title)
         assertEquals(physical.playbackSuppressionReason, facade.playbackSuppressionReason)
         assertEquals(physical.playerError, facade.playerError)
-        assertEquals(physical.availableCommands, facade.availableCommands)
+        assertEquals(physical.availableCommands.buildUpon().remove(Player.COMMAND_SET_VOLUME).build(), facade.availableCommands)
         assertEquals(physical.volume, facade.volume, 0f)
         // the REAL timeline is exposed, not a synthesized one
         assertEquals(physical.mediaItemCount, facade.mediaItemCount)

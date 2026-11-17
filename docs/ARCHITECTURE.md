@@ -230,6 +230,21 @@ lyrics for timed LRC content. StereoSine never writes audio tags and never fetch
 
 ## 4. Playback architecture
 
+### Player-volume command ownership
+
+`PlayerEngine` composes focus ducking, transport fade and the per-slot crossfade fade before writing
+physical player volume. `SessionFacade` removes Media3's `COMMAND_SET_VOLUME` from its available
+commands; this same flag governs player volume, mute and unmute, including direct facade calls.
+The session connection result also excludes that flag. Unsupported app-gain commands are not
+advertised. Independent device-volume command flags and Android system/hardware-volume handling
+are unchanged; transport and queue commands retain their existing policy.
+
+Startup readiness for future persisted gain is **not implemented** by this restriction. Existing
+startup restoration and cold-PLAY authority govern queue adoption and command freshness, not an
+initial gain read. Delaying session publication would affect connection/resumption behavior;
+deferring audible PLAY requires a separately reviewed lifecycle and intent-ordering boundary.
+No attenuation preference, extra gain factor or loudness protection is introduced here.
+
 ### 4.1 Process and session ownership
 
 ```

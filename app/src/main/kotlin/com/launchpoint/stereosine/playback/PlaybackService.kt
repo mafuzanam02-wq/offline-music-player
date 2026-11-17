@@ -775,6 +775,9 @@ class PlaybackService : MediaLibraryService() {
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                 .setAvailableSessionCommands(enrichedCommands)
+                // Deny app gain/mute even at the session boundary; retain independent device-volume commands.
+                .setAvailablePlayerCommands(defaultResult.availablePlayerCommands.buildUpon()
+                    .remove(Player.COMMAND_SET_VOLUME).build())
                 .build()
         }
 

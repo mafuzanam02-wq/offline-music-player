@@ -257,7 +257,13 @@ internal class SessionFacade private constructor(
     }
 
     override fun getState(): SimpleBasePlayer.State {
-        val physical = super.getState()
+        // Player volume, mute and unmute share COMMAND_SET_VOLUME in Media3. Do not advertise
+        // this unsupported path: forwarding it would bypass the engine's gain composer on CURRENT
+        // alone. SimpleBasePlayer also checks this flag for direct calls. Device volume is separate.
+        val forwarded = super.getState()
+        val physical = forwarded.buildUpon().setAvailableCommands(
+            forwarded.availableCommands.buildUpon().remove(Player.COMMAND_SET_VOLUME).build(),
+        ).build()
         val owner = playWhenReadyOwner
         val withOwner = if (owner == null) physical else physical.buildUpon()
             .setPlayWhenReady(owner.logicalPlayWhenReady, owner.logicalPlayWhenReadyChangeReason)

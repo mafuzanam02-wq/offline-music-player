@@ -7,6 +7,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -45,6 +47,12 @@ class PlaybackServiceConnectionResultTest {
                 assertTrue(actual.availablePlayerCommands.contains(command))
             }
             val defaults = MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller).build()
+            assertFalse(actual.availablePlayerCommands.contains(Player.COMMAND_SET_VOLUME))
+            listOf(Player.COMMAND_GET_VOLUME, Player.COMMAND_GET_DEVICE_VOLUME, Player.COMMAND_SET_DEVICE_VOLUME,
+                Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS, Player.COMMAND_ADJUST_DEVICE_VOLUME,
+                Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS).forEach { command ->
+                assertEquals(defaults.availablePlayerCommands.contains(command), actual.availablePlayerCommands.contains(command))
+            }
             for (command in defaults.availableSessionCommands.commands) {
                 assertTrue(actual.availableSessionCommands.contains(command))
             }
