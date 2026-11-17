@@ -21,6 +21,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
@@ -604,7 +605,7 @@ class PlaybackService : MediaLibraryService() {
         return libraryFuture {
             val item = StereoSineMediaLibrary.item(mediaId, songRepository.songs.first())
             if (item != null) LibraryResult.ofItem(item, null)
-            else LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+            else LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
         }
     }
 
@@ -633,7 +634,7 @@ class PlaybackService : MediaLibraryService() {
             )
             LibraryResult.ofItemList(StereoSineMediaLibrary.page(items, page, pageSize), params)
         }
-        else -> Futures.immediateFuture(LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE))
+        else -> Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
     }
 
     // Media-button PLAY_PAUSE while a cold PLAY is still hydrating: Media3 would resolve it against the empty physical
@@ -741,7 +742,7 @@ class PlaybackService : MediaLibraryService() {
             future.set(
                 runCatching { block() }.getOrElse { error ->
                     logResume("library query failed: ${error::class.simpleName} ${error.message}")
-                    LibraryResult.ofError(LibraryResult.RESULT_ERROR_IO)
+                    LibraryResult.ofError(SessionError.ERROR_IO)
                 },
             )
         }
