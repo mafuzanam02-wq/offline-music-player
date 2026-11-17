@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.launchpoint.stereosine.ui.components.DestructiveConfirmDialog
+import com.launchpoint.stereosine.data.settings.OutputProfile
+import com.launchpoint.stereosine.data.settings.customEqRecoveryAvailable
+import com.launchpoint.stereosine.data.settings.customEqMatchesCapabilities
+import com.launchpoint.stereosine.data.settings.forRequest
 import com.launchpoint.stereosine.data.settings.EqualizerApplicationState
 import com.launchpoint.stereosine.data.settings.EqualizerApplicationStatus
 import com.launchpoint.stereosine.data.settings.EqualizerApplicationIssue
@@ -45,22 +52,32 @@ import com.launchpoint.stereosine.data.settings.EqPresetType
 import com.launchpoint.stereosine.data.settings.StereoSinePresetCatalog
 import kotlin.math.roundToInt
 
+private data class CustomBandResetRequest(val profile: OutputProfile, val capabilities: EqualizerCapabilities)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsEqualizerScreen(
     onNavigateBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
-    val eqEnabled             by viewModel.eqEnabled.collectAsStateWithLifecycle()
-    val eqPresetType          by viewModel.eqPresetType.collectAsStateWithLifecycle()
-    val eqPlatformPresetIndex by viewModel.eqPlatformPresetIndex.collectAsStateWithLifecycle()
-    val eqCustomBandLevels    by viewModel.eqCustomBandLevels.collectAsStateWithLifecycle()
-    val eqStereoSinePresetId     by viewModel.eqStereoSinePresetId.collectAsStateWithLifecycle()
+    val profileState by viewModel.outputProfiles.collectAsStateWithLifecycle()
+    val requested = profileState.effective
+    val selectedProfile = profileState.active
+    val eqEnabled = requested.eqEnabled
+    val eqPresetType = requested.eqPresetType
+    val eqPlatformPresetIndex = requested.eqPlatformPresetIndex
+    val eqCustomBandLevels = requested.eqCustomBandLevels
+    val eqStereoSinePresetId = requested.eqStereoSinePresetId
     val eqCapabilities        by viewModel.eqCapabilities.collectAsStateWithLifecycle()
     val applicationState by viewModel.eqApplicationState.collectAsStateWithLifecycle()
     var showPresetDialog by remember { mutableStateOf(false) }
+    var resetRequest by remember { mutableStateOf<CustomBandResetRequest?>(null) }
 
     val caps = eqCapabilities
+    // A withdrawn/replaced live capability snapshot cannot authorize a later confirmation.
+    LaunchedEffect(caps, resetRequest) {
+        if (resetRequest != null && caps != resetRequest?.capabilities) resetRequest = null
+    }
 
     val eqPresetLabel = when (eqPresetType) {
         EqPresetType.FLAT           -> "Flat"
@@ -96,24 +113,41 @@ fun SettingsEqualizerScreen(
             item {
                 ToggleSettingsRow(
                     title           = "Equalizer",
-                    subtitle        = "Tune StereoSine's playback using your device's audio session.",
+                    subtitle        = "Saved settings: ${selectedProfile.displayName}",
                     checked         = eqEnabled,
-                    onCheckedChange = viewModel::setEqualizerEnabled,
+                    onCheckedChange = { viewModel.setEqualizerEnabled(it, selectedProfile) },
+                    enabled         = !profileState.usingGlobalFallback,
                 )
             }
+            if (profileState.usingGlobalFallback) {
+                item { SettingsMessageRow(message = "This saved profile is unavailable. Global settings are in use; select Global/default to edit. Stored profile data is unchanged.") }
+            }
             if (eqEnabled) {
-                item { SettingsMessageRow(message = equalizerApplicationSummary(applicationState, requestedEnabled = eqEnabled)) }
+                item { SettingsMessageRow(message = equalizerApplicationSummary(applicationState.forRequest(requested), requestedEnabled = eqEnabled)) }
                 item {
                     ClickableSettingsRow(
                         title    = "Preset",
                         subtitle = eqPresetLabel,
-                        onClick  = { showPresetDialog = true },
+                        enabled  = !profileState.usingGlobalFallback,
+                        onClick  = { if (!profileState.usingGlobalFallback) showPresetDialog = true },
                     )
                 }
                 if (caps == null) {
                     item { SettingsMessageRow(message = "Device EQ capabilities are unavailable. You can save a preset; band editing and system presets require device capabilities.") }
                 } else {
-                    if (eqPresetType == EqPresetType.CUSTOM || eqPresetType == EqPresetType.WAVDROP_PRESET) {
+                    if (profileState.usingGlobalFallback || caps.centerFrequenciesHz.any { it <= 0 } ||
+                        (eqPresetType == EqPresetType.CUSTOM && !customEqMatchesCapabilities(requested, caps))) {
+                        item { SettingsMessageRow(message = "Saved bands do not match current device capabilities. They remain saved; band editing is unavailable.") }
+                        if (!profileState.usingGlobalFallback && customEqRecoveryAvailable(requested, caps)) {
+                            item {
+                                TextButton(
+                                    onClick = { resetRequest = CustomBandResetRequest(selectedProfile, caps) },
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                ) { Text("Reset Custom Bands for This Device") }
+                            }
+                        }
+                    } else if (eqPresetType == EqPresetType.CUSTOM || eqPresetType == EqPresetType.WAVDROP_PRESET) {
                         item {
                             val initialLevels = if (eqPresetType == EqPresetType.WAVDROP_PRESET) {
                                 StereoSinePresetCatalog.findById(eqStereoSinePresetId)
@@ -125,7 +159,7 @@ fun SettingsEqualizerScreen(
                             EqBandSection(
                                 bandLevels         = initialLevels,
                                 capabilities       = caps,
-                                onBandLevelsChange = viewModel::setEqCustomBandLevels,
+                                onBandLevelsChange = { viewModel.setEqCustomBandLevels(it, selectedProfile, caps.centerFrequenciesHz) },
                             )
                         }
                     } else {
@@ -143,16 +177,29 @@ fun SettingsEqualizerScreen(
         }
     }
 
+    resetRequest?.takeIf { it.capabilities == caps }?.let { target ->
+        DestructiveConfirmDialog(
+            title = "Reset custom bands?",
+            message = "Replace ${target.profile.displayName}'s saved custom curve with ${target.capabilities.bandCount} flat bands for this device? This cannot be undone. Other profiles stay unchanged.",
+            confirmLabel = "Reset Custom Bands",
+            onConfirm = {
+                viewModel.resetCustomBandsForDevice(target.profile, target.capabilities)
+                resetRequest = null
+            },
+            onDismiss = { resetRequest = null },
+        )
+    }
+
     if (showPresetDialog) {
         EqPresetDialog(
             presetType              = eqPresetType,
             stereoSinePresetId         = eqStereoSinePresetId,
             platformPresetIndex     = eqPlatformPresetIndex,
             capabilities            = caps,
-            onSelectFlat            = { viewModel.setEqFlat(); showPresetDialog = false },
-            onSelectCustom          = { caps?.let { viewModel.setEqCustomPreset(it.bandCount) }; showPresetDialog = false },
-            onSelectStereoSinePreset   = { id -> viewModel.setEqStereoSinePreset(id); showPresetDialog = false },
-            onSelectPlatformPreset  = { index -> viewModel.setEqPlatformPreset(index); showPresetDialog = false },
+            onSelectFlat            = { viewModel.setEqFlat(selectedProfile); showPresetDialog = false },
+            onSelectCustom          = { caps?.let { viewModel.setEqCustomPreset(it.bandCount, selectedProfile, it.centerFrequenciesHz) }; showPresetDialog = false },
+            onSelectStereoSinePreset   = { id -> viewModel.setEqStereoSinePreset(id, selectedProfile); showPresetDialog = false },
+            onSelectPlatformPreset  = { index -> viewModel.setEqPlatformPreset(index, selectedProfile); showPresetDialog = false },
             onDismiss               = { showPresetDialog = false },
         )
     }

@@ -36,6 +36,7 @@ fun SettingsScreen(
     onAppearanceClick: () -> Unit,
     onStatisticsClick: () -> Unit,
     onAboutClick: () -> Unit,
+    onOutputProfilesClick: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -71,9 +72,10 @@ fun SettingsScreen(
                         leadingIcon = Icons.Default.GraphicEq,
                     )
                     CardInternalDivider()
-                    DisabledSettingsRow(
+                    ClickableSettingsRow(
                         title    = "Output Profiles",
-                        subtitle = "Speaker, wired, and Bluetooth profiles. Coming later.",
+                        subtitle = "Manually select saved sound settings.",
+                        onClick  = onOutputProfilesClick,
                     )
                     CardInternalDivider()
                     DisabledSettingsRow(

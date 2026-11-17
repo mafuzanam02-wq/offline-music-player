@@ -215,20 +215,6 @@ class PlaybackService : MediaLibraryService() {
                     lastObservedCrossfadeDurationMs = duration
                 }
         }
-        // CF-2I2: one narrow collector of the persisted EQ-enabled flag. The cache is updated first; only OFF->ON cancels.
-        serviceScope.launch {
-            audioEnhancementsRepository.settings
-                .map { it.eqEnabled }
-                .distinctUntilChanged()
-                .collect { enabled ->
-                    val previous = crossfadeEqualizerEnabled
-                    crossfadeEqualizerEnabled = enabled
-                    crossfadeEqualizerKnown = true
-                    if (shouldCancelCrossfadeForEqualizerChange(previous, enabled)) {
-                        recoverCrossfadeFromEqualizerEnabled(crossfadeCancelSink)
-                    }
-                }
-        }
         // CF-2G2: app UI position seeks notify this lifecycle-scoped callback (cleared in onDestroy).
         playerController.setExplicitSeekListener { recoverCrossfadeFromExplicitSeek(crossfadeCancelSink) }
         // CF-2G3: app skipToNext/skipToPrevious notify this lifecycle-scoped callback (cleared in onDestroy).
@@ -421,7 +407,23 @@ class PlaybackService : MediaLibraryService() {
         enhancementController = AudioEnhancementController(
             repository = audioEnhancementsRepository,
             scope = serviceScope,
-        ).also { it.attach(player) }
+        ).also { it.attach(player, observeSettings = false) }
+
+        // One main-thread collector orders the shared effective request: eligibility/cancel, then effect.
+        serviceScope.launch {
+            audioEnhancementsRepository.settings.collect { settings ->
+                applyEffectiveEqualizer(
+                    settings = settings,
+                    previousEnabled = crossfadeEqualizerEnabled,
+                    updateEligibility = { enabled ->
+                        crossfadeEqualizerEnabled = enabled
+                        crossfadeEqualizerKnown = true
+                    },
+                    cancelCrossfade = { recoverCrossfadeFromEqualizerEnabled(crossfadeCancelSink) },
+                    applyEffect = { enhancementController?.onSettingsChanged(it) },
+                )
+            }
+        }
 
         // Keep ExoPlayer's noisy-audio handling in sync with the user's preference.
         // Default is true (matches the builder value above), so there is no gap on

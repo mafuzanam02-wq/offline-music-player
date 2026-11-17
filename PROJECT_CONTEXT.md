@@ -1,5 +1,12 @@
 # StereoSine - Project Context
 
+Manual Output Profiles now reuse the existing Equalizer: explicit Global/default, Speaker, Wired and
+Bluetooth selection, independent local configurations, no route switching or system-volume change.
+Existing Global behavior remains until explicit selection; first category selection copies current Global
+settings to all categories. The service orders effective EQ/crossfade eligibility before effect application.
+EQ/profile settings remain outside explicit backups. See docs/ARCHITECTURE.md for ownership and limitations.
+
+
 Concise handoff/state document. For technical depth see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); for
 decisions and backlog see [ENGINEERING_BACKLOG_AND_DECISIONS.md](ENGINEERING_BACKLOG_AND_DECISIONS.md).
 

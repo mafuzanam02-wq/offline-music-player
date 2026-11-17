@@ -1,5 +1,10 @@
 # StereoSine Backup Preservation Contract
 
+Manual Output Profiles, their active selection and EQ frequency metadata remain local preferences and
+are not part of the explicit backup/export/restore format. Global EQ settings also remain excluded.
+Runtime effect status, capabilities and audio-session state are never profile backup data.
+
+
 > **Naming note (BRAND-04).** This is a legacy-format contract. The `wavdrop_*` format identifiers, the file name and the
 > terms "Wavdrop backup" / "Wavdrop Desktop" are kept verbatim because existing backups and Desktop exports depend on
 > them. The current app is **StereoSine** and continues to read and (for `wavdrop_backup` v2 inside `wavdrop_wdbk`)

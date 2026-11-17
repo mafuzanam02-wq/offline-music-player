@@ -20,7 +20,9 @@ targetSdk 36 - Room schema 13.
   controls, Bluetooth / LE Audio / wired auto-resume, sleep timer, queue management (Play next, Add to
   queue, reorder, bulk cleanup), shuffle and repeat, cold-start resume, system media browse/resume, and
   a home-screen widget. An Equalizer (device-supported bands, platform and built-in presets) is
-  available in Settings.
+  available in Settings. Manual Output Profiles save independent Global/default, Speaker, Wired and
+  Bluetooth EQ settings; they do not select the phone's output device. EQ/profile settings are not
+  included in explicit backups.
 - **Library**: MediaStore scan (whole device or selected folders), songs / albums / artists / folders,
   global search, alphabet index, 11 computed smart collections, playlists with drag-to-reorder.
 - **Lyrics**: embedded, same-folder `.lrc` (synchronized) and `.txt` sidecars, and editable app-managed

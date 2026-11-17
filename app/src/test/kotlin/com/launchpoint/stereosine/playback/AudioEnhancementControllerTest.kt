@@ -223,4 +223,63 @@ class AudioEnhancementControllerTest {
         assertTrue(shouldCancelCrossfadeForEqualizerChange(false, true))
         assertFalse(shouldCancelCrossfadeForEqualizerChange(true, false))
     }
+    @Test fun activeProfilesApplyThroughTheSameControllerAndSurviveRecreation() = withControllerScope { scope ->
+        val f = Fixture(scope)
+        f.repo.selectProfile(OutputProfile.SPEAKER)
+        f.repo.setEqCustomBandLevels(listOf(200, -100), OutputProfile.SPEAKER, listOf(100, 200))
+        f.repo.setEqEnabled(true)
+        assertEquals(APPLIED, f.state.status)
+        f.repo.selectProfile(OutputProfile.WIRED) // seeded disabled Global, not Speaker's later edit
+        assertEquals(DISABLED, f.state.status); assertNull(f.repo.capabilities.value)
+        f.repo.selectProfile(OutputProfile.SPEAKER)
+        assertEquals(listOf(200, -100), f.state.reportedBandLevels)
+        val requested = f.repo.settings.first()
+        f.controller.release()
+        val recreated = AudioEnhancementController(f.repo, scope) { Effect() }
+        try {
+            recreated.attachSession(11)
+            assertEquals(APPLIED, f.state.status); assertEquals(requested, f.state.requested)
+            assertEquals(OutputProfile.SPEAKER, f.repo.profiles.first().active)
+        } finally { recreated.release() }
+    }
+    @Test fun sameBandCountWithKnownDifferentFrequenciesFallsBackWithoutErasingCurve() = withControllerScope { scope ->
+        val f = Fixture(scope)
+        f.repo.selectProfile(OutputProfile.BLUETOOTH)
+        f.repo.setEqCustomBandLevels(listOf(200, -100), OutputProfile.BLUETOOTH, listOf(200, 2000))
+        f.repo.setEqEnabled(true)
+        assertEquals(APPLIED, f.state.status); assertTrue(FLAT_FALLBACK in f.state.issues)
+        assertEquals(listOf(0, 0), f.state.reportedBandLevels)
+        assertEquals(listOf(200, -100), f.repo.settings.first().eqCustomBandLevels)
+        assertEquals(listOf(200, 2000), f.repo.settings.first().eqCustomBandFrequenciesHz)
+    }
+    @Test fun serviceOwnedObservationNeverRunsAnIndependentSettingsCollector() = withControllerScope { scope ->
+        val repo = AudioEnhancementsRepository(MemoryStore())
+        val controller = AudioEnhancementController(repo, scope) { Effect() }
+        controller.attachSession(7, observeSettings = false)
+        try {
+            repo.selectProfile(OutputProfile.WIRED); repo.setEqEnabled(true)
+            assertEquals(DISABLED, repo.applicationState.value.status) // only the service may deliver the request
+            var eligibility = false
+            applyEffectiveEqualizer(repo.settings.first(), false,
+                updateEligibility = { eligibility = it }, cancelCrossfade = {},
+                applyEffect = { assertTrue(eligibility); controller.onSettingsChanged(it) },
+            )
+            assertEquals(APPLIED, repo.applicationState.value.status)
+        } finally { controller.release() }
+    }
+
+    @Test fun explicitRecoveryReplacesFallbackWithConfirmedCustomReadback() = withControllerScope { scope ->
+        val f = Fixture(scope)
+        f.repo.selectProfile(OutputProfile.SPEAKER)
+        f.repo.setEqCustomBandLevels(listOf(200, -100), OutputProfile.SPEAKER, listOf(200, 2000))
+        f.repo.setEqEnabled(true)
+        assertTrue(FLAT_FALLBACK in f.state.issues)
+        f.repo.resetCustomBandsForDevice(OutputProfile.SPEAKER, f.repo.capabilities.value!!)
+        assertEquals(APPLIED, f.state.status)
+        assertTrue(f.state.requestedConfigurationConfirmed)
+        assertEquals(listOf(0, 0), f.state.reportedBandLevels)
+        assertEquals(listOf(100, 200), f.state.requested!!.eqCustomBandFrequenciesHz)
+        assertTrue(f.state.requested!!.eqEnabled)
+    }
+
 }

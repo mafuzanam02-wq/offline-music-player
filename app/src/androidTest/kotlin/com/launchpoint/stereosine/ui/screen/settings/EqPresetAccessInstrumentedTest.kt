@@ -1,5 +1,14 @@
 package com.launchpoint.stereosine.ui.screen.settings
 
+import android.media.AudioManager
+import android.net.Uri
+import androidx.compose.runtime.*
+import androidx.media3.common.MediaItem
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import com.launchpoint.stereosine.playback.*
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import android.content.Context
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
@@ -65,7 +74,7 @@ class EqPresetAccessInstrumentedTest {
     }
     private fun requested() = runBlocking { repo.settings.first() }
     private fun status(value: EqualizerApplicationStatus) {
-        rule.runOnIdle { repo.updateApplicationState(EqualizerApplicationState(value)) }
+        rule.runOnIdle { repo.updateApplicationState(EqualizerApplicationState(value, requested = requested())) }
     }
     private fun noHardwareEditors() {
         rule.onAllNodes(sliders).assertCountEquals(0)
@@ -124,11 +133,161 @@ class EqPresetAccessInstrumentedTest {
         assertEquals(custom, requested().eqCustomBandLevels)
         assertEquals(EqPresetType.CUSTOM, requested().eqPresetType)
         rule.runOnIdle { repo.updateCapabilities(caps.copy(bandCount = 2, centerFrequenciesHz = listOf(100, 1000))) }
-        rule.onAllNodes(sliders).assertCountEquals(2)
+        rule.onAllNodes(sliders).assertCountEquals(0) // incompatible saved curve is retained, not remapped to invented bands
         rule.onNodeWithText("Preset").performClick()
         rule.onAllNodesWithText("Deep Bass").assertCountEquals(0) // existing known-band compatibility rule
         rule.onNodeWithText("Cancel").performClick()
         assertEquals(custom, requested().eqCustomBandLevels)
+    }
+
+    private val resetAction = "Reset Custom Bands for This Device"
+    private fun openRecovery() {
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(resetAction))
+        rule.onNodeWithText(resetAction).performClick()
+        rule.onNodeWithText("Reset custom bands?").assertIsDisplayed()
+    }
+
+    @Test fun incompatibleRecoveryRequiresConfirmationAndRestoresOnlySelectedSliders() {
+        start()
+        runBlocking { repo.selectProfile(OutputProfile.SPEAKER) }
+        val caps = EqualizerCapabilities(3, -1500, 1500, listOf(100, 1000, 5000), emptyList())
+        rule.runOnIdle { repo.updateCapabilities(caps) }
+        val before = runBlocking { repo.profiles.first() }
+        noHardwareEditors()
+        openRecovery()
+        rule.onNodeWithText("Cancel").performClick()
+        assertEquals(before, runBlocking { repo.profiles.first() })
+        openRecovery()
+        rule.onNodeWithText("Reset Custom Bands").performClick()
+        rule.waitUntil(10_000) { requested().eqCustomBandLevels == listOf(0, 0, 0) }
+        assertEquals(caps.centerFrequenciesHz, requested().eqCustomBandFrequenciesHz)
+        assertTrue(requested().eqEnabled)
+        rule.onAllNodes(sliders).assertCountEquals(3)
+        rule.onAllNodesWithText(resetAction).assertCountEquals(0)
+        val after = runBlocking { repo.profiles.first() }
+        listOf(OutputProfile.GLOBAL, OutputProfile.WIRED, OutputProfile.BLUETOOTH).forEach { assertEquals(before.configurations[it], after.configurations[it]) }
+        assertNotEquals(EqualizerApplicationStatus.APPLIED, repo.applicationState.value.status)
+    }
+
+    @Test fun staleRecoveryAndCapabilityLossPreserveCurvesAndCompatibleCurvesNeedNoReset() {
+        start()
+        runBlocking { repo.selectProfile(OutputProfile.SPEAKER) }
+        val caps = EqualizerCapabilities(2, -1500, 1500, listOf(100, 1000), emptyList())
+        rule.runOnIdle { repo.updateCapabilities(caps) }
+        openRecovery()
+        runBlocking { repo.selectProfile(OutputProfile.WIRED) }
+        val before = runBlocking { repo.profiles.first() }
+        rule.onNodeWithText("Reset Custom Bands").performClick()
+        runBlocking { repo.selectProfile(OutputProfile.WIRED) } // serialized barrier after the queued stale confirmation
+        assertEquals(before, runBlocking { repo.profiles.first() })
+        openRecovery()
+        rule.runOnIdle { repo.updateCapabilities(null) }
+        rule.onAllNodesWithText("Reset custom bands?").assertCountEquals(0)
+        rule.onAllNodesWithText(resetAction).assertCountEquals(0)
+        assertEquals(before, runBlocking { repo.profiles.first() })
+        rule.runOnIdle { repo.updateCapabilities(caps.copy(bandCount = 5, centerFrequenciesHz = listOf(60, 230, 910, 3600, 14000))) }
+        rule.onAllNodes(sliders).assertCountEquals(5)
+        rule.onAllNodesWithText(resetAction).assertCountEquals(0)
+        assertEquals(custom, requested().eqCustomBandLevels)
+    }
+
+    @Test
+    @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
+    fun manualProfileEditsRestoreAndPlaybackAndSystemVolumeStayUnchanged() {
+        start()
+        val vm = viewModel()
+        rule.runOnIdle {
+            rule.activity.setContent {
+                StereoSineTheme {
+                    var edit by remember { mutableStateOf(false) }
+                    if (edit) SettingsEqualizerScreen({ edit = false }, vm)
+                    else SettingsOutputProfilesScreen({}, { edit = true }, vm)
+                }
+            }
+        }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val volume = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val wav = File(context.cacheDir, "listen-02-${System.nanoTime()}.wav").also(files::add)
+        val size = 120 * 16_000 * 2
+        val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
+            .put("RIFF".toByteArray()).putInt(36 + size).put("WAVEfmt ".toByteArray())
+            .putInt(16).putShort(1).putShort(1).putInt(16_000).putInt(32_000)
+            .putShort(2).putShort(16).put("data".toByteArray()).putInt(size).array()
+        wav.outputStream().use { out -> out.write(header); repeat(120) { out.write(ByteArray(32_000)) } }
+        lateinit var assembly: PlaybackAssembly
+        lateinit var controller: AudioEnhancementController
+        val playbackScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).also(scopes::add)
+        var known = false
+        var enabled = false
+        rule.runOnIdle {
+            assembly = assemblePlayback(context, true, AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build())
+            controller = AudioEnhancementController(repo, playbackScope).also { it.attach(assembly.currentPlayer, observeSettings = false) }
+            playbackScope.launch {
+                repo.settings.collect { request ->
+                    applyEffectiveEqualizer(request, enabled,
+                        updateEligibility = { known = true; enabled = it }, cancelCrossfade = {},
+                        applyEffect = { controller.onSettingsChanged(it) },
+                    )
+                }
+            }
+            assembly.logicalPlayer.setMediaItem(MediaItem.fromUri(Uri.fromFile(wav)))
+            assembly.logicalPlayer.prepare(); assembly.logicalPlayer.play()
+        }
+        fun select(profile: OutputProfile) {
+            rule.onNode(hasText(profile.displayName) and hasClickAction()).performClick()
+            rule.waitUntil(10_000) { runBlocking { repo.profiles.first().active } == profile }
+            rule.onNode(hasText(profile.displayName) and hasClickAction()).assertIsSelected()
+            rule.runOnIdle { assertTrue(assembly.currentPlayer.isPlaying); assertTrue(known); assertEquals(requested().eqEnabled, enabled) }
+        }
+        fun edit() {
+            rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Edit Equalizer"))
+            rule.onNodeWithText("Edit Equalizer").performClick()
+        }
+        try {
+            rule.waitUntil(20_000) {
+                rule.runOnIdle { assembly.currentPlayer.isPlaying } && repo.applicationState.value.status == EqualizerApplicationStatus.APPLIED
+            }
+            val initialPosition = rule.runOnIdle { assembly.currentPlayer.currentPosition }
+            select(OutputProfile.SPEAKER)
+            edit()
+            rule.onNodeWithText("Preset").performClick()
+            rule.onNodeWithText("Deep Bass").performScrollTo().performClick()
+            rule.waitUntil(10_000) { requested().eqStereoSinePresetId == "deep-bass" }
+            rule.onNodeWithContentDescription("Back").performClick()
+            select(OutputProfile.WIRED)
+            assertEquals(EqPresetType.CUSTOM, requested().eqPresetType)
+            edit()
+            rule.onNode(hasText("Equalizer") and hasClickAction()).performClick()
+            rule.waitUntil(10_000) { !requested().eqEnabled }
+            rule.onNodeWithContentDescription("Back").performClick()
+            select(OutputProfile.SPEAKER)
+            assertTrue(requested().eqEnabled)
+            assertEquals("deep-bass", requested().eqStereoSinePresetId)
+            rule.waitUntil(10_000) { repo.applicationState.value.requested == requested() && repo.applicationState.value.status == EqualizerApplicationStatus.APPLIED }
+            // A saved curve from another device must require an explicit reset, even at the same band count.
+            val runtimeFrequencies = repo.capabilities.value!!.centerFrequenciesHz
+            runBlocking { repo.setEqCustomBandLevels(custom, OutputProfile.SPEAKER, listOf(1, 2, 3, 4, 5)) }
+            edit()
+            openRecovery()
+            rule.onNodeWithText("Reset Custom Bands").performClick()
+            rule.waitUntil(10_000) { requested().eqCustomBandLevels == List(5) { 0 } }
+            assertEquals(runtimeFrequencies, requested().eqCustomBandFrequenciesHz)
+            rule.waitUntil(10_000) { repo.applicationState.value.requested == requested() && repo.applicationState.value.requestedConfigurationConfirmed }
+            rule.onAllNodes(sliders).assertCountEquals(5)
+            rule.onNodeWithContentDescription("Back").performClick()
+            select(OutputProfile.BLUETOOTH)
+            select(OutputProfile.GLOBAL)
+            assertEquals(custom, requested().eqCustomBandLevels)
+            rule.runOnIdle {
+                assertTrue(assembly.currentPlayer.isPlaying)
+                assertEquals(1, assembly.currentPlayer.mediaItemCount)
+                assertTrue(assembly.currentPlayer.currentPosition >= initialPosition)
+            }
+            assertEquals(volume, audio.getStreamVolume(AudioManager.STREAM_MUSIC))
+        } finally {
+            rule.runOnIdle { playbackScope.cancel(); controller.release(); assembly.engine!!.release() }
+        }
     }
 
     @After fun cleanup() {

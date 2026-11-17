@@ -21,3 +21,11 @@ data class EqualizerApplicationState(
     val requestedConfigurationConfirmed: Boolean
         get() = status == EqualizerApplicationStatus.APPLIED && issues.isEmpty()
 }
+
+/** Presentation never attributes an old request's API confirmation to a newer saved configuration. */
+fun EqualizerApplicationState.forRequest(settings: AudioEnhancementSettings): EqualizerApplicationState =
+    if (requested == settings) this else EqualizerApplicationState(
+        if (!settings.eqEnabled && status == EqualizerApplicationStatus.DISABLED)
+            EqualizerApplicationStatus.DISABLED else EqualizerApplicationStatus.PENDING,
+        requested = settings,
+    )

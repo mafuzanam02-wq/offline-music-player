@@ -75,8 +75,8 @@ Queue Sheet header menu -> "Save queue as playlist" saves the current logical qu
 - Scrobbling / last.fm integration.
 - Android Auto support.
 - Lock-screen widgets / additional widget surfaces (a home-screen widget already ships).
-- Equalizer expansion beyond the shipped device Equalizer (portable/custom curves; Output Profiles,
-  Headphones, and Loudness Protection placeholders in Settings are "Coming later").
+- Equalizer expansion beyond the shipped device Equalizer (portable/custom curves; automatic profile selection,
+  Headphones and Loudness Protection remain deferred; manual Output Profiles are implemented).
 - Metadata / ID3 tag editing.
 - In-app reset / clear-data (if ever added it must require an export-before-reset prompt).
 

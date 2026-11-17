@@ -22,23 +22,27 @@ internal class AudioEnhancementController(
     private var currentSessionId = 0
     private var isReleased = false
     private var observation: Job? = null
+    private var attached = false
     private var cachedSettings = AudioEnhancementSettings()
     private var lastAttempt: AudioEnhancementSettings? = null
     private var capabilities: EqualizerCapabilities? = null
 
     @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
-    fun attach(player: ExoPlayer) = attachSession(player.audioSessionId)
+    fun attach(player: ExoPlayer, observeSettings: Boolean = true) = attachSession(player.audioSessionId, observeSettings)
 
     /** Same lifecycle seam used by attach; no playback commands or player ownership. */
-    internal fun attachSession(sessionId: Int) {
-        if (isReleased || observation != null) return
+    internal fun attachSession(sessionId: Int, observeSettings: Boolean = true) {
+        if (isReleased || attached) return
+        attached = true
         currentSessionId = sessionId
-        observation = scope.launch {
-            repository.settings.collect {
-                cachedSettings = it
-                applySettings(it)
-            }
-        }
+        if (observeSettings) observation = scope.launch { repository.settings.collect(::onSettingsChanged) }
+    }
+
+    /** Production service supplies the same snapshot to crossfade eligibility before this call. */
+    internal fun onSettingsChanged(settings: AudioEnhancementSettings) {
+        if (isReleased) return
+        cachedSettings = settings
+        applySettings(settings)
     }
 
     fun onAudioSessionIdChanged(newSessionId: Int) {
@@ -116,7 +120,7 @@ internal class AudioEnhancementController(
                     if (levels?.size == caps.bandCount) write(levels) else flatFallback()
                 }
                 EqPresetType.CUSTOM -> {
-                    if (settings.eqCustomBandLevels.size == caps.bandCount) write(settings.eqCustomBandLevels)
+                    if (customEqMatchesCapabilities(settings, caps)) write(settings.eqCustomBandLevels)
                     else flatFallback()
                 }
                 EqPresetType.PLATFORM -> {

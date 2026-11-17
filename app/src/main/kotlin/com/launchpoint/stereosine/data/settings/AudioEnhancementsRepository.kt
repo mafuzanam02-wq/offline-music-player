@@ -37,66 +37,104 @@ class AudioEnhancementsRepository @Inject constructor(
         _applicationState.value = state
     }
 
-    val settings: Flow<AudioEnhancementSettings> = dataStore.data
-        .catch { error ->
-            if (error is IOException) emit(emptyPreferences()) else throw error
-        }
-        .map { prefs ->
-            AudioEnhancementSettings(
-                eqEnabled             = prefs[EQ_ENABLED] ?: false,
-                eqPresetType          = parseEqPresetType(prefs[EQ_PRESET_TYPE]),
-                eqPlatformPresetIndex = prefs[EQ_PLATFORM_PRESET_INDEX],
-                eqCustomBandLevels    = parseBandLevels(prefs[EQ_CUSTOM_BAND_LEVELS]),
-                eqStereoSinePresetId     = parseStereoSinePresetId(prefs[EQ_STEREOSINE_PRESET_ID]),
-            )
-        }
+    val profiles: Flow<OutputProfilesState> = dataStore.data
+        .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
+        .map(::resolveProfiles)
         .distinctUntilChanged()
 
-    suspend fun setEqEnabled(enabled: Boolean) {
-        dataStore.edit { prefs -> prefs[EQ_ENABLED] = enabled }
+    /** Sole effective EQ authority for the editor, effects and crossfade. */
+    val settings: Flow<AudioEnhancementSettings> = profiles.map { it.effective }.distinctUntilChanged()
+
+    private fun global(p: Preferences) = AudioEnhancementSettings(
+        eqEnabled = p[EQ_ENABLED] ?: false,
+        eqPresetType = parseEqPresetType(p[EQ_PRESET_TYPE]),
+        eqPlatformPresetIndex = p[EQ_PLATFORM_PRESET_INDEX],
+        eqCustomBandLevels = parseBandLevels(p[EQ_CUSTOM_BAND_LEVELS]),
+        eqStereoSinePresetId = parseStereoSinePresetId(p[EQ_STEREOSINE_PRESET_ID]),
+        eqCustomBandFrequenciesHz = parseBandLevels(p[EQ_CUSTOM_FREQUENCIES]),
+    )
+
+    private fun resolveProfiles(p: Preferences): OutputProfilesState {
+        val raw = p[ACTIVE_PROFILE]
+        val selected = raw?.let { runCatching { OutputProfile.valueOf(it) }.getOrNull() }
+        val configs = mutableMapOf(OutputProfile.GLOBAL to global(p))
+        CATEGORY_KEYS.forEach { (profile, key) -> OutputProfileCodec.decode(p[key])?.let { configs[profile] = it } }
+        return OutputProfilesState(selected ?: OutputProfile.GLOBAL, configs, p[PROFILES_INITIALIZED] ?: false, raw != null && selected == null)
     }
 
-    suspend fun setEqFlatPreset() {
-        dataStore.edit { prefs ->
-            prefs[EQ_PRESET_TYPE] = EqPresetType.FLAT.name
-            prefs.remove(EQ_PLATFORM_PRESET_INDEX)
-            prefs.remove(EQ_STEREOSINE_PRESET_ID)
-            // eqCustomBandLevels intentionally preserved for round-trip back to Custom
-        }
-    }
-
-    suspend fun setEqPlatformPreset(index: Int) {
-        dataStore.edit { prefs ->
-            prefs[EQ_PRESET_TYPE]        = EqPresetType.PLATFORM.name
-            prefs[EQ_PLATFORM_PRESET_INDEX] = index
-            prefs.remove(EQ_STEREOSINE_PRESET_ID)
-            // eqCustomBandLevels intentionally preserved for round-trip back to Custom
-        }
-    }
-
-    // Switches to Custom preset type. If the stored band levels are absent or sized
-    // differently from the current device band count, seeds them with flat zeros so
-    // the controller never hits a size-mismatch fallback on the next apply.
-    suspend fun setEqCustomPreset(bandCount: Int) {
-        dataStore.edit { prefs ->
-            val current = parseBandLevels(prefs[EQ_CUSTOM_BAND_LEVELS])
-            if (current.size != bandCount) {
-                prefs[EQ_CUSTOM_BAND_LEVELS] = List(bandCount) { 0 }.joinToString(",")
+    suspend fun selectProfile(profile: OutputProfile) {
+        dataStore.edit { p ->
+            val state = resolveProfiles(p)
+            if (profile != OutputProfile.GLOBAL && !state.initialized) {
+                // All categories inherit one snapshot. First selection cannot change effective sound.
+                val seed = OutputProfileCodec.encode(state.configurations.getValue(OutputProfile.GLOBAL))
+                CATEGORY_KEYS.values.forEach { key -> if (p[key] == null) p[key] = seed }
+                p[PROFILES_INITIALIZED] = true
             }
-            prefs[EQ_PRESET_TYPE] = EqPresetType.CUSTOM.name
-            prefs.remove(EQ_STEREOSINE_PRESET_ID)
-            prefs.remove(EQ_PLATFORM_PRESET_INDEX)
+            if (p[ACTIVE_PROFILE] != profile.name) p[ACTIVE_PROFILE] = profile.name
         }
     }
 
-    suspend fun setEqCustomBandLevels(levels: List<Int>) {
-        dataStore.edit { prefs ->
-            prefs[EQ_PRESET_TYPE]     = EqPresetType.CUSTOM.name
-            prefs[EQ_CUSTOM_BAND_LEVELS] = levels.joinToString(",")
-            prefs.remove(EQ_STEREOSINE_PRESET_ID)
-            prefs.remove(EQ_PLATFORM_PRESET_INDEX)
+    private suspend fun editActive(expected: OutputProfile?, transform: (AudioEnhancementSettings) -> AudioEnhancementSettings) {
+        dataStore.edit { p ->
+            val state = resolveProfiles(p)
+            if (expected != null && expected != state.active) return@edit // stale UI action
+            if (state.usingGlobalFallback) return@edit // retain corrupt/missing raw profile data
+            val updated = transform(state.effective)
+            if (updated == state.effective) return@edit
+            if (state.active == OutputProfile.GLOBAL) {
+                p[EQ_ENABLED] = updated.eqEnabled
+                p[EQ_PRESET_TYPE] = updated.eqPresetType.name
+                p[EQ_CUSTOM_BAND_LEVELS] = updated.eqCustomBandLevels.joinToString(",")
+                p[EQ_CUSTOM_FREQUENCIES] = updated.eqCustomBandFrequenciesHz.joinToString(",")
+                updated.eqPlatformPresetIndex?.let { p[EQ_PLATFORM_PRESET_INDEX] = it } ?: p.remove(EQ_PLATFORM_PRESET_INDEX)
+                updated.eqStereoSinePresetId?.let { p[EQ_STEREOSINE_PRESET_ID] = it } ?: p.remove(EQ_STEREOSINE_PRESET_ID)
+            } else p[CATEGORY_KEYS.getValue(state.active)] = OutputProfileCodec.encode(updated)
         }
     }
+
+    suspend fun setEqEnabled(enabled: Boolean, expected: OutputProfile? = null) =
+        editActive(expected) { it.copy(eqEnabled = enabled) }
+
+    suspend fun setEqFlatPreset(expected: OutputProfile? = null) =
+        editActive(expected) { it.copy(eqPresetType = EqPresetType.FLAT, eqPlatformPresetIndex = null, eqStereoSinePresetId = null) }
+
+    suspend fun setEqPlatformPreset(index: Int, expected: OutputProfile? = null) =
+        editActive(expected) { it.copy(eqPresetType = EqPresetType.PLATFORM, eqPlatformPresetIndex = index, eqStereoSinePresetId = null) }
+
+    suspend fun setEqCustomPreset(bandCount: Int, expected: OutputProfile? = null, frequenciesHz: List<Int> = emptyList()) =
+        editActive(expected) {
+            if (bandCount !in 1..128) return@editActive it
+            // An existing incompatible curve stays saved/read-only; only an empty curve is initialized.
+            val empty = it.eqCustomBandLevels.isEmpty()
+            it.copy(eqPresetType = EqPresetType.CUSTOM, eqPlatformPresetIndex = null, eqStereoSinePresetId = null,
+                eqCustomBandLevels = if (empty) List(bandCount.coerceIn(0, 128)) { 0 } else it.eqCustomBandLevels,
+                eqCustomBandFrequenciesHz = if (empty) validFrequencies(frequenciesHz, bandCount) else it.eqCustomBandFrequenciesHz)
+        }
+
+    suspend fun setEqCustomBandLevels(levels: List<Int>, expected: OutputProfile? = null, frequenciesHz: List<Int> = emptyList()) =
+        editActive(expected) {
+            if (levels.size > 128) return@editActive it
+            it.copy(eqPresetType = EqPresetType.CUSTOM, eqCustomBandLevels = levels.toList(),
+                eqCustomBandFrequenciesHz = validFrequencies(frequenciesHz, levels.size), eqPlatformPresetIndex = null, eqStereoSinePresetId = null)
+        }
+
+    /** Explicit destructive recovery only. Selection and capability checks occur in the serialized edit. */
+    suspend fun resetCustomBandsForDevice(expected: OutputProfile, confirmedCapabilities: EqualizerCapabilities) =
+        editActive(expected) { saved ->
+            val current = capabilities.value ?: return@editActive saved
+            if (current != confirmedCapabilities || !customEqRecoveryAvailable(saved, current)) return@editActive saved
+            saved.copy(
+                eqPresetType = EqPresetType.CUSTOM,
+                eqCustomBandLevels = List(current.bandCount) { 0 },
+                eqCustomBandFrequenciesHz = current.centerFrequenciesHz.toList(),
+                eqPlatformPresetIndex = null,
+                eqStereoSinePresetId = null,
+            )
+        }
+
+    private fun validFrequencies(values: List<Int>, size: Int): List<Int> =
+        values.takeIf { it.size == size && it.all { hz -> hz > 0 } }?.toList() ?: emptyList()
 
     // One-time startup cleanup: removes stale EQ keys left by earlier builds.
     // Idempotent after the first run — guarded by EQ_PRESET_STATE_NORMALIZED_V1.
@@ -149,18 +187,18 @@ class AudioEnhancementsRepository @Inject constructor(
         }
     }
 
-    // Switches to a StereoSine-owned preset. Custom band levels are intentionally
-    // preserved so they survive a round-trip through any preset type.
-    suspend fun setEqStereoSinePreset(id: String) {
-        dataStore.edit { prefs ->
-            prefs[EQ_PRESET_TYPE]       = EqPresetType.WAVDROP_PRESET.name
-            prefs[EQ_STEREOSINE_PRESET_ID] = id
-            prefs.remove(EQ_PLATFORM_PRESET_INDEX)
-            // eqCustomBandLevels intentionally preserved for round-trip back to Custom
-        }
-    }
+    suspend fun setEqStereoSinePreset(id: String, expected: OutputProfile? = null) =
+        editActive(expected) { it.copy(eqPresetType = EqPresetType.WAVDROP_PRESET, eqStereoSinePresetId = id, eqPlatformPresetIndex = null) }
 
     companion object {
+        private val ACTIVE_PROFILE = stringPreferencesKey("eq_active_output_profile")
+        private val PROFILES_INITIALIZED = booleanPreferencesKey("eq_output_profiles_initialized_v1")
+        private val CATEGORY_KEYS = mapOf(
+            OutputProfile.SPEAKER to stringPreferencesKey("eq_profile_speaker_v1"),
+            OutputProfile.WIRED to stringPreferencesKey("eq_profile_wired_v1"),
+            OutputProfile.BLUETOOTH to stringPreferencesKey("eq_profile_bluetooth_v1"),
+        )
+        private val EQ_CUSTOM_FREQUENCIES = stringPreferencesKey("eq_custom_band_frequencies_hz")
         private val EQ_ENABLED                    = booleanPreferencesKey("eq_enabled")
         private val EQ_PRESET_TYPE                = stringPreferencesKey("eq_preset_type")
         private val EQ_PLATFORM_PRESET_INDEX      = intPreferencesKey("eq_platform_preset_index")

@@ -382,6 +382,14 @@ that contains the song and an album queue).
 
 ## 28. Equalizer
 
+Manual Output Profiles: select Speaker/Wired/Bluetooth explicitly; first category selection must retain
+Global sound settings and initialize all three categories from that snapshot. Edit each via the existing
+Equalizer, switch away/back, and restart: selection and independent requested configurations must survive.
+Global must remain unchanged. Profile selection must not route audio or change system volume, playback,
+queue or position. Saved selection and API application status must remain distinct; EQ on still blocks
+crossfade. Stale editor actions must not alter a newly selected profile. No EQ/profile backup support is claimed.
+
+
 | Check | Expected result | Pass / Fail / Notes |
 |---|---|---|
 | Open Settings -> Equalizer. | Screen shows device-supported bands and presets, or a clear unsupported state. | |
@@ -389,6 +397,8 @@ that contains the song and an album queue).
 | Restart the app and the process. | Equalizer settings persist and apply to the next track. | |
 | Switch output (speaker / Bluetooth / wired) with the Equalizer on. | No crash; the effect stays applied or re-attaches. | |
 | With EQ enabled and no live effect capabilities, select Flat and a StereoSine preset; later restore capabilities. | Preset selector stays accessible without claiming application; no invented band editor/system presets; saved custom values survive and runtime-supported editing returns. | |
+| With an incompatible Custom curve and confirmed live capabilities, choose Reset Custom Bands for This Device. | Confirmation is required; Cancel preserves data. Confirm creates flat bands with current frequencies only in the selected profile, restores sliders, and preserves other profiles/Global and playback. | |
+| Switch profiles or withdraw/change capabilities before confirming a custom-band reset. | Stale reset is rejected; missing/incomplete capabilities and compatible curves do not offer recovery. No automatic reset on startup, selection, discovery or restart. | |
 | Observe EQ status after enable, disable, failed/unsupported effect and session recreation. | Status distinguishes API-confirmed application from pending, unavailable and failed; no claim of measured audible processing. | |
 | Lose effect control or disable it externally, then release/recreate the session. | Confirmation invalidates without transport changes; released capabilities disappear and stale callbacks cannot restore them. | |
 | Use custom levels outside the device range or a saved preset incompatible with current capabilities. | Clamping/flat fallback is explicit; saved requested levels/preset remain unchanged. Platform preset indices survive missing name lookups. | |

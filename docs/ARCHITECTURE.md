@@ -345,8 +345,42 @@ invalidate confirmation when control is lost or the effect is externally disable
 
 Crossfade remains unavailable while the persisted EQ-enabled request is on (also while its initial state
 is unknown), even if runtime application fails. Application reporting does not introduce another playback
-policy or claim simultaneous EQ/crossfade support. A shared effective configuration for future manual
-profiles is a separate integration slice; no new processing, output routing or volume ownership is added.
+policy or claim simultaneous EQ/crossfade support. Manual profiles resolve one effective configuration
+and the service orders eligibility before effect application; no new processing, output routing or
+volume ownership is added.
+
+### Manual Output Profiles
+
+`AudioEnhancementsRepository.profiles` resolves Global/default, Speaker, Wired and Bluetooth plus the
+explicit active selection from one DataStore snapshot. `settings` remains the only effective EQ flow:
+active valid category configuration, otherwise Global with a visible fallback warning. No route/device
+lookup or output command participates. Before any manual category selection, legacy Global keys remain
+in use. The first category selection atomically seeds every absent category from the current Global
+configuration and saves the selection, so it does not change requested sound. Global remains independent.
+New category blobs are local, versioned and strictly decoded; missing/corrupt/unknown-version data is not
+overwritten on read. An unavailable selected category is read-only until the user selects Global/another
+valid category; there is no automatic repair that destroys raw preferences.
+
+All edits transact with selection. The editor supplies its visible profile as an expected token; a stale
+callback is discarded if selection has changed before the transaction. The editor reads a single profile
+snapshot rather than combining independent settings fields. New custom edits retain runtime center
+frequencies; known mismatches (including equal-count/different-frequency curves) are preserved but fall
+back at runtime and cannot be edited as if mapped to new bands. Legacy curves with unknown frequencies
+retain their previous count-based compatibility; this is not evidence of equivalent frequency responses.
+An incompatible requested Custom curve offers "Reset Custom Bands for This Device" only with complete
+live band/frequency metadata and a range supporting zero gain. Explicit destructive confirmation replaces
+only that active profile's curve with flat bands and current frequencies. The serialized edit checks the
+expected profile, revalidates the capability snapshot and requires the curve still be incompatible.
+Cancel, stale profile/capability confirmations, absent metadata and already-compatible curves do not reset.
+Capability loss dismisses an open recovery dialog. No startup, selection or discovery path resets bands.
+
+The service uses one main-thread collector: update EQ/crossfade eligibility, cancel on OFF-to-ON, then pass
+the same immutable configuration to the existing effect controller. That controller does not run an
+independent repository collector in production. Session/control callbacks reapply its last delivered
+configuration. The engine/gain composer and existing EQ/crossfade incompatibility are unchanged. Runtime
+application status is attributed only to a matching requested configuration; selection alone is never
+labelled audible application. Global/profile settings, metadata and active selection are NOT included
+in the explicit backup format. No detected routes, session IDs, capabilities or application status persist.
 
 ---
 

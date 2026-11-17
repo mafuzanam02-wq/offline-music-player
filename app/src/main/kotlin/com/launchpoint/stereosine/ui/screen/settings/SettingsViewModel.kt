@@ -169,6 +169,14 @@ class SettingsViewModel @Inject constructor(
             initialValue = ResumeBehaviorSettings(),
         )
 
+    val outputProfiles = audioEnhancementsRepository.profiles.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5_000), com.launchpoint.stereosine.data.settings.OutputProfilesState(),
+    )
+
+    fun selectOutputProfile(profile: com.launchpoint.stereosine.data.settings.OutputProfile) {
+        viewModelScope.launch { audioEnhancementsRepository.selectProfile(profile) }
+    }
+
     val eqEnabled: StateFlow<Boolean> =
         audioEnhancementsRepository.settings
             .map { it.eqEnabled }
@@ -486,28 +494,32 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { resumeBehaviorRepository.setRestoreQueue(enabled) }
     }
 
-    fun setEqualizerEnabled(enabled: Boolean) {
-        viewModelScope.launch { audioEnhancementsRepository.setEqEnabled(enabled) }
+    fun setEqualizerEnabled(enabled: Boolean, expected: com.launchpoint.stereosine.data.settings.OutputProfile? = null) {
+        viewModelScope.launch { audioEnhancementsRepository.setEqEnabled(enabled, expected) }
     }
 
-    fun setEqFlat() {
-        viewModelScope.launch { audioEnhancementsRepository.setEqFlatPreset() }
+    fun setEqFlat(expected: com.launchpoint.stereosine.data.settings.OutputProfile? = null) {
+        viewModelScope.launch { audioEnhancementsRepository.setEqFlatPreset(expected) }
     }
 
-    fun setEqCustomPreset(bandCount: Int) {
-        viewModelScope.launch { audioEnhancementsRepository.setEqCustomPreset(bandCount) }
+    fun setEqCustomPreset(bandCount: Int, expected: com.launchpoint.stereosine.data.settings.OutputProfile? = null, frequencies: List<Int> = emptyList()) {
+        viewModelScope.launch { audioEnhancementsRepository.setEqCustomPreset(bandCount, expected, frequencies) }
     }
 
-    fun setEqPlatformPreset(index: Int) {
-        viewModelScope.launch { audioEnhancementsRepository.setEqPlatformPreset(index) }
+    fun resetCustomBandsForDevice(expected: com.launchpoint.stereosine.data.settings.OutputProfile, capabilities: EqualizerCapabilities) {
+        viewModelScope.launch { audioEnhancementsRepository.resetCustomBandsForDevice(expected, capabilities) }
     }
 
-    fun setEqCustomBandLevels(levels: List<Int>) {
-        viewModelScope.launch { audioEnhancementsRepository.setEqCustomBandLevels(levels) }
+    fun setEqPlatformPreset(index: Int, expected: com.launchpoint.stereosine.data.settings.OutputProfile? = null) {
+        viewModelScope.launch { audioEnhancementsRepository.setEqPlatformPreset(index, expected) }
     }
 
-    fun setEqStereoSinePreset(id: String) {
-        viewModelScope.launch { audioEnhancementsRepository.setEqStereoSinePreset(id) }
+    fun setEqCustomBandLevels(levels: List<Int>, expected: com.launchpoint.stereosine.data.settings.OutputProfile? = null, frequencies: List<Int> = emptyList()) {
+        viewModelScope.launch { audioEnhancementsRepository.setEqCustomBandLevels(levels, expected, frequencies) }
+    }
+
+    fun setEqStereoSinePreset(id: String, expected: com.launchpoint.stereosine.data.settings.OutputProfile? = null) {
+        viewModelScope.launch { audioEnhancementsRepository.setEqStereoSinePreset(id, expected) }
     }
 
     fun setSleepTimer(option: SleepTimerOption, finishCurrentTrack: Boolean = false) {
