@@ -383,6 +383,15 @@ encryption/signing is a separate future feature.
   Both paths reopen and verify the final document before reporting success. A write failure can leave
   the selected manual document incomplete. A failed or interrupted folder overwrite can damage the
   previous file (BACKUP-01 F3). Provider readback confirms the saved bytes at verification time.
+- **Internal generation discovery (BACKUP-03B).** Reserved `stereosine-backup-g1-*` names encode an opaque
+  installation token, mode/date, ordinal and backup UUID. SAF inspection qualifies the provider authority,
+  document ID and direct-child listing. A filename alone establishes no ownership or deletion authority.
+  The read-only selector checks Android backup integrity with the production reader and keeps coverage
+  separate. It prefers verified payloads, uses a qualified ordinal within a lineage and compares embedded
+  export time across lineages. A positive provider modification time is the fallback for missing export time.
+  It returns an incomplete search above 256 direct children or 16 recognized candidates.
+  The selector is internal pending provider latency and UI activation review. Folder publication and retirement
+  are still pending, and BACKUP-01 F3 remains open.
 - **Partially implemented:** "Last verified backup" status exists; persisted receipts with counts and
   fingerprint do not.
 - **Deferred:** append-N-verified-snapshots retention (default 7). Current file modes are `DATED` and
