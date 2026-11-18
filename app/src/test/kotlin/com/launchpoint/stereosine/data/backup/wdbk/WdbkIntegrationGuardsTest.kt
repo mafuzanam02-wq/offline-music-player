@@ -66,11 +66,11 @@ class WdbkIntegrationGuardsTest {
         assertFalse("displayName" in vm)
     }
 
-    @Test fun `restore copy no longer says JSON-only and fixed-name copy says wdbk`() {
+    @Test fun `restore copy is format neutral and folder mode copy describes distinct files`() {
         assertEquals("Choose a StereoSine backup file.", ImportFileValidation.STEREOSINE_WRONG_FILE_MESSAGE)
         val s = src("ui/screen/settings/SettingsBackupScreen.kt")
-        assertTrue("Always saves as stereosine-backup.wdbk" in s)
-        assertFalse("Always saves as wavdrop-backup.wdbk" in s)
+        assertTrue("Each folder backup adds an undated file." in s)
+        assertFalse("Always saves as stereosine-backup.wdbk" in s)
         assertTrue("Choose a StereoSine backup file to preview and restore." in s)
         assertFalse("backup JSON file" in s)
     }
@@ -83,12 +83,13 @@ class WdbkIntegrationGuardsTest {
 
     @Test fun `automatic backup names and flow`() {
         val s = src("data/backup/AutoBackupRepository.kt")
-        assertTrue("BackupFileNames.datedName(LocalDate.now())" in s)
-        assertTrue("BackupFileNames.fixedName()" in s)
-        assertFalse("wavdrop-backup" in s)
-        assertTrue("saveToFolderAndVerify" in s)
-        assertTrue("buildWdbkExportSnapshot()" in s)
-        assertFalse("buildBackupJson" in code("data/backup/AutoBackupRepository.kt"))
+        val publisher = code("data/backup/FolderBackupPublisher.kt")
+        assertTrue("FolderBackupPublisher" in s)
+        assertTrue("ManagedBackupGeneration.next" in publisher)
+        assertTrue("saveFreshAndVerify" in publisher)
+        assertTrue("buildWdbkExportSnapshot()" in publisher)
+        assertFalse("saveToFolderAndVerify" in s)
+        assertFalse("buildBackupJson" in publisher)
     }
 
     // ── Architecture boundary ─────────────────────────────────────────────────

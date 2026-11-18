@@ -270,6 +270,7 @@ fun SettingsBackupScreen(
                 ExportUiState.Idle      -> Unit
                 ExportUiState.Exporting -> item { ExportStatusRow("Creating backup…") }
                 ExportUiState.Success   -> item { ExportStatusRow("Backup saved to selected folder.") }
+                is ExportUiState.Advisory -> item { ExportStatusRow(state.message) }
                 is ExportUiState.Error  -> item { ExportStatusRow(state.message, isError = true) }
             }
             item { SectionDivider() }
@@ -325,17 +326,20 @@ fun SettingsBackupScreen(
             // ── Backup File ────────────────────────────────────────────────────
             item { SectionHeader("Backup File") }
             item {
+                ExportStatusRow("Folder backups retain earlier files and use more storage over time. Move or remove old files yourself. A full or unreadable folder can block new backups.")
+            }
+            item {
                 ScanModeRow(
-                    title    = "Dated file",
-                    subtitle = "Each backup uses today's date in the filename, updating the same file if it already exists.",
+                    title    = "Dated generations",
+                    subtitle = "Each folder backup adds a dated file, including repeats on the same day.",
                     selected = backupFileMode == BackupFileMode.DATED,
                     onClick  = { viewModel.setBackupFileMode(BackupFileMode.DATED) },
                 )
             }
             item {
                 ScanModeRow(
-                    title    = "Fixed filename",
-                    subtitle = "Always saves as stereosine-backup.wdbk, replacing the previous StereoSine backup. Older Wavdrop backups in the folder are kept and still recognised.",
+                    title    = "Undated generations",
+                    subtitle = "Each folder backup adds an undated file. Earlier verified files remain in the folder.",
                     selected = backupFileMode == BackupFileMode.REPLACE_PREVIOUS,
                     onClick  = { viewModel.setBackupFileMode(BackupFileMode.REPLACE_PREVIOUS) },
                 )
@@ -356,6 +360,7 @@ fun SettingsBackupScreen(
                 ExportUiState.Idle      -> Unit
                 ExportUiState.Exporting -> item { ExportStatusRow("Saving backup…") }
                 ExportUiState.Success   -> item { ExportStatusRow("Backup saved.") }
+                is ExportUiState.Advisory -> item { ExportStatusRow(state.message) }
                 is ExportUiState.Error  -> item {
                     ExportStatusRow("Save failed: ${state.message}", isError = true)
                 }
@@ -594,6 +599,10 @@ internal fun AutoBackupCheckResult.toAutoBackupStatusText(): String = when (this
     AutoBackupCheckResult.NO_FOLDER_SELECTED -> "Choose backup folder"
     AutoBackupCheckResult.NOT_DUE            -> "Not due yet"
     AutoBackupCheckResult.SUCCESS            -> "Backup saved"
+    AutoBackupCheckResult.SUCCESS_NEAR_CAPACITY ->
+        "Backup saved. The folder is nearing StereoSine’s file limit. Move old files or choose another folder."
+    AutoBackupCheckResult.FOLDER_AT_CAPACITY ->
+        "Backup folder reached StereoSine’s file limit. Move old files or choose another folder."
     AutoBackupCheckResult.FOLDER_UNAVAILABLE -> "Folder unavailable"
     AutoBackupCheckResult.FAILURE            -> "Failed"
 }

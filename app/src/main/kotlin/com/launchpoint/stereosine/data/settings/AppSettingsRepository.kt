@@ -16,6 +16,7 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 
@@ -195,6 +196,16 @@ class AppSettingsRepository @Inject constructor(
     }
 
     // Persisted SAF tree URI for auto-backup. Null means no folder has been selected yet.
+    internal suspend fun folderCreateReservation(treeKey: String): String? =
+        dataStore.data.first()[stringPreferencesKey("backup_create_reservation_$treeKey")]
+
+    internal suspend fun setFolderCreateReservation(treeKey: String, reservation: String?) {
+        val key = stringPreferencesKey("backup_create_reservation_$treeKey")
+        dataStore.edit { prefs ->
+            if (reservation == null) prefs.remove(key) else prefs[key] = reservation
+        }
+    }
+
     val autoBackupFolderUri: Flow<String?> = dataStore.data
         .catch { error ->
             if (error is IOException) emit(emptyPreferences()) else throw error

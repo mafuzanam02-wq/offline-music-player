@@ -60,6 +60,7 @@ sealed interface ExportUiState {
     data object Idle : ExportUiState
     data object Exporting : ExportUiState
     data object Success : ExportUiState
+    data class Advisory(val message: String) : ExportUiState
     data class Error(val message: String) : ExportUiState
 }
 
@@ -428,6 +429,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _folderBackupUiState.value = when (val result = autoBackupRepository.runNow()) {
                 is AutoBackupRepository.Result.Success          -> ExportUiState.Success
+                AutoBackupRepository.Result.SuccessNearCapacity ->
+                    ExportUiState.Advisory(AutoBackupCheckResult.SUCCESS_NEAR_CAPACITY.toAutoBackupStatusText())
+                AutoBackupRepository.Result.FolderAtCapacity ->
+                    ExportUiState.Error(AutoBackupCheckResult.FOLDER_AT_CAPACITY.toAutoBackupStatusText())
                 is AutoBackupRepository.Result.NoFolderSelected -> ExportUiState.Error("No backup folder selected.")
                 is AutoBackupRepository.Result.FolderUnavailable -> ExportUiState.Error(result.message)
                 is AutoBackupRepository.Result.Failure          -> ExportUiState.Error(result.message)

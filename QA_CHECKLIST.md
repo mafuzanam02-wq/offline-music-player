@@ -670,8 +670,8 @@ Nothing below has been run on a device. Do not tick items until the user has ver
 - [ ] G. Recovery still creates and verifies the app-private safety snapshot (`files/recovery-safety/pre-recovery-latest.json`, legacy JSON by design) BEFORE anything destructive.
 - [ ] H. A legacy v2 `.json` backup still imports (Merge and Recovery).
 - [ ] I. A legacy v1 `.json` backup still imports (Merge only).
-- [ ] J. Automatic / folder backup (Back up now and the scheduled check) creates a `.wdbk` in the chosen folder; no stray `.tmp` remains and Backup Verification never reports a temp file.
-- [ ] K. Dated and fixed filename modes both work; fixed mode replaces the same file without creating " (1)" duplicates.
+- [ ] J. Automatic / folder backup (Back up now and the scheduled check) creates and verifies a new managed `.wdbk` in the chosen folder. An interrupted attempt keeps earlier files byte-identical.
+- [ ] K. Dated and Undated generations retain distinct files. Verify ten consecutive saves per mode and repeated saves on one date. Verified files do not spend either unresolved slot. At 56 children the next verified outcome near capacity warns. At 64 children, or with two unresolved local attempts, another attempt gives an actionable error before create. Include unrelated file children in the capacity count.
 - [ ] L. A corrupt or tampered `.wdbk` (e.g. truncate it, or change bytes with a hex editor) is rejected with a clear error and changes nothing.
 - [ ] M. Renaming a `.json` backup to `.wdbk` (and vice-versa) still imports by content; a non-backup file renamed to `.wdbk` is rejected.
 - [ ] N. Audio files are untouched by backup, verification, Merge and Recovery.

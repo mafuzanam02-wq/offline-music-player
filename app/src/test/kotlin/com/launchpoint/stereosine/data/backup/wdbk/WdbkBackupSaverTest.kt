@@ -2,21 +2,19 @@ package com.launchpoint.stereosine.data.backup.wdbk
 
 import com.launchpoint.stereosine.data.backup.BackupSaveValidator
 import com.launchpoint.stereosine.data.backup.StereoSineBackup
-import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.MemoryFolder
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.MemoryHandle
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.mutateManifest
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkTestSupport.rezip
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
+import java.io.OutputStream
 
 /** Success is reported only after the bytes on disk were re-read through the production reader and matched. */
 class WdbkBackupSaverTest {
@@ -26,9 +24,6 @@ class WdbkBackupSaverTest {
 
     private fun WdbkBackupSaver.saveAndVerify(t: BackupFileHandle, b: StereoSineBackup): WdbkWriteReceipt =
         runBlocking { saveAndVerify(t, WdbkExportSnapshot.fromBackup(b)) }
-
-    private fun WdbkBackupSaver.saveToFolderAndVerify(f: BackupFolder, name: String, b: StereoSineBackup): WdbkWriteReceipt =
-        runBlocking { saveToFolderAndVerify(f, name, WdbkExportSnapshot.fromBackup(b)) }
 
     private fun assertFailsWith(message: String? = null, block: () -> Unit) {
         try {
@@ -108,143 +103,45 @@ class WdbkBackupSaverTest {
 
     // ── Folder (automatic) backup ─────────────────────────────────────────────
 
-    private val fileName = com.launchpoint.stereosine.data.backup.BackupFileNames.fixedName()
+    @Test fun freshFolderWriteClosesExactlyOnceAndNeverReopensAfterFailure() {
+        for (fault in listOf("partial", "close", "cancel")) {
+            var opened = 0
+            var closed = 0
+            var bytes = 0
+            val document = object : BackupFileHandle {
+                override fun openOutput(mode: String): OutputStream {
+                    assertEquals("w", mode)
+                    opened++
+                    return object : OutputStream() {
+                        override fun write(b: Int) {
+                            bytes++
+                            if (bytes == 32 && fault == "partial") throw IOException("partial output")
+                            if (bytes == 32 && fault == "cancel") throw CancellationException("interrupted write")
+                        }
 
-    @Test fun `replace-previous never touches a coexisting legacy wavdrop backup or unrelated file`() {
-        val folder = MemoryFolder()
-        val legacy = MemoryHandle(content = "LEGACY-WAVDROP".toByteArray())
-        val unrelated = MemoryHandle(content = "VACATION-PHOTOS".toByteArray())
-        folder.files["wavdrop-backup.wdbk"] = legacy
-        folder.files["notes.txt"] = unrelated
-        saver.saveToFolderAndVerify(folder, fileName, backup)
-        assertEquals("stereosine-backup.wdbk", fileName)
-        assertArrayEquals("LEGACY-WAVDROP".toByteArray(), legacy.content)
-        assertArrayEquals("VACATION-PHOTOS".toByteArray(), unrelated.content)
-        assertFalse(legacy.deleted)
-        assertFalse(unrelated.deleted)
-        assertTrue(legacy.modes.isEmpty())
-        assertNull(WdbkTestSupport.read(folder.files.getValue(fileName).content!!).error)
-    }
+                        override fun close() {
+                            closed++
+                            if (fault == "close") throw IOException("close failed")
+                        }
+                    }
+                }
 
-    @Test fun `a failed or cancelled write leaves legacy and current files byte-identical`() {
-        val folder = MemoryFolder()
-        val legacy = MemoryHandle(content = "LEGACY".toByteArray())
-        val current = MemoryHandle(content = "CURRENT".toByteArray())
-        folder.files["wavdrop-backup.wdbk"] = legacy
-        folder.files[fileName] = current
-        folder.handleFactory = { name -> if (name.endsWith(".tmp")) MemoryHandle(failWriteAfterBytes = 50) else MemoryHandle() }
-        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
-        assertArrayEquals("LEGACY".toByteArray(), legacy.content)
-        assertArrayEquals("CURRENT".toByteArray(), current.content)
-        assertTrue(legacy.modes.isEmpty())
-        assertTrue(current.modes.isEmpty())
-    }
-
-    @Test fun `folder backup verifies temp then promotes the exact verified bytes then verifies final`() {
-        val folder = MemoryFolder()
-        val receipt = saver.saveToFolderAndVerify(folder, fileName, backup)
-        val finalBytes = folder.files.getValue(fileName).content!!
-        assertEquals(receipt.containerBytes, finalBytes.size.toLong())
-        assertNull(WdbkTestSupport.read(finalBytes).error)
-        // The temp file existed under a non-backup name and was removed.
-        assertTrue(folder.files.getValue("$fileName.tmp").deleted)
-        assertEquals(setOf(fileName, "$fileName.tmp"), folder.files.keys)
-    }
-
-    @Test fun `final bytes are the temp bytes - never regenerated`() {
-        val folder = MemoryFolder()
-        var tempCopy: ByteArray? = null
-        folder.handleFactory = { name ->
-            if (name.endsWith(".tmp")) MemoryHandle(corruptOnRead = { b -> b.also { tempCopy = it.copyOf() } }) else MemoryHandle()
+                override fun openInput() = error("Readback must not follow failed output.")
+                override fun delete() = error("Publication must not delete.")
+            }
+            if (fault == "cancel") {
+                try {
+                    runBlocking { saver.saveFreshAndVerify(document, WdbkExportSnapshot.fromBackup(backup)) }
+                    fail("Expected cancellation")
+                } catch (_: CancellationException) {
+                    // Expected.
+                }
+            } else {
+                assertFailsWith { runBlocking { saver.saveFreshAndVerify(document, WdbkExportSnapshot.fromBackup(backup)) } }
+            }
+            assertEquals(1, opened)
+            assertEquals(1, closed)
         }
-        saver.saveToFolderAndVerify(folder, fileName, backup)
-        assertArrayEquals(tempCopy, folder.files.getValue(fileName).content)
-    }
-
-    @Test fun `existing final file is reused so no duplicate is created`() {
-        val folder = MemoryFolder()
-        val existing = MemoryHandle(content = "OLD".toByteArray())
-        folder.files[fileName] = existing
-        saver.saveToFolderAndVerify(folder, fileName, backup)
-        assertTrue(folder.files.getValue(fileName) === existing)
-        assertEquals(2, folder.files.size)
-        assertNull(WdbkTestSupport.read(existing.content!!).error)
-    }
-
-    @Test fun `a stale temp from a crashed run is removed first`() {
-        val folder = MemoryFolder()
-        val stale = MemoryHandle(content = "garbage".toByteArray())
-        folder.files["$fileName.tmp"] = stale
-        saver.saveToFolderAndVerify(folder, fileName, backup)
-        assertTrue(stale.deleted)
-    }
-
-    @Test fun `a corrupt temp leaves the previous final backup untouched`() {
-        val folder = MemoryFolder()
-        val previous = "PREVIOUS-GOOD-BACKUP".toByteArray()
-        val final = MemoryHandle(content = previous)
-        folder.files[fileName] = final
-        folder.handleFactory = { name -> if (name.endsWith(".tmp")) MemoryHandle(corruptOnRead = { it.copyOf(it.size / 2) }) else MemoryHandle() }
-        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
-        assertArrayEquals(previous, final.content)
-        assertTrue(final.modes.isEmpty()) // final was never even opened for writing
-        assertTrue(folder.files.getValue("$fileName.tmp").deleted)
-    }
-
-    @Test fun `a temp write failure leaves the previous final backup untouched`() {
-        val folder = MemoryFolder()
-        val final = MemoryHandle(content = "PREVIOUS".toByteArray())
-        folder.files[fileName] = final
-        folder.handleFactory = { name -> if (name.endsWith(".tmp")) MemoryHandle(failWriteAfterBytes = 100) else MemoryHandle() }
-        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
-        assertArrayEquals("PREVIOUS".toByteArray(), final.content)
-        assertTrue(final.modes.isEmpty())
-    }
-
-    @Test fun `temp creation failure fails without touching the final backup`() {
-        val folder = MemoryFolder()
-        val final = MemoryHandle(content = "PREVIOUS".toByteArray())
-        folder.files[fileName] = final
-        folder.failCreate = { it.endsWith(".tmp") }
-        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
-        assertArrayEquals("PREVIOUS".toByteArray(), final.content)
-    }
-
-    @Test fun `final file creation failure is reported and the temp is cleaned up`() {
-        val folder = MemoryFolder()
-        folder.failCreate = { !it.endsWith(".tmp") }
-        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
-        assertTrue(folder.files.getValue("$fileName.tmp").deleted)
-    }
-
-    @Test fun `final write failure is not reported as success`() {
-        val folder = MemoryFolder()
-        folder.files[fileName] = MemoryHandle(content = "PREVIOUS".toByteArray(), failWriteAfterBytes = 200)
-        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
-        assertTrue(folder.files.getValue("$fileName.tmp").deleted)
-    }
-
-    @Test fun `final output that cannot be opened is not reported as success`() {
-        val folder = MemoryFolder()
-        folder.files[fileName] = MemoryHandle(content = "PREVIOUS".toByteArray(), failOpenOutput = true)
-        assertFailsWith { saver.saveToFolderAndVerify(folder, fileName, backup) }
-    }
-
-    @Test fun `a corrupt final file is not reported as success`() {
-        val folder = MemoryFolder()
-        folder.files[fileName] = MemoryHandle(corruptOnRead = { it.copyOf(it.size - 40) })
-        assertFailsWith(BackupSaveValidator.VALIDATION_FAILED_MESSAGE) { saver.saveToFolderAndVerify(folder, fileName, backup) }
-        assertTrue(folder.files.getValue("$fileName.tmp").deleted)
-    }
-
-    @Test fun `temp file names never look like a backup to discovery`() {
-        val folder = MemoryFolder()
-        saver.saveToFolderAndVerify(folder, "stereosine-backup-2026-10-07.wdbk", backup)
-        val tempName = folder.files.keys.single { it.endsWith(".tmp") }
-        assertEquals("stereosine-backup-2026-10-07.wdbk.tmp", tempName)
-        assertFalse(com.launchpoint.stereosine.data.backup.BackupVerificationRepository.isBackupFileName(tempName))
-        assertTrue(com.launchpoint.stereosine.data.backup.BackupVerificationRepository.isBackupFileName("stereosine-backup-2026-10-07.wdbk"))
-        assertFalse(com.launchpoint.stereosine.data.backup.BackupVerificationRepository.isBackupFileName("wavdrop-backup-2026-10-07.wdbk.tmp"))
     }
 
     @Test fun `receipt manifest matches what a real container contains`() {

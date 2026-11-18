@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.launchpoint.stereosine.data.backup.AutoBackupRepository
 import com.launchpoint.stereosine.data.backup.BackupVerificationRepository
 import com.launchpoint.stereosine.data.backup.BackupVerificationResult
+import com.launchpoint.stereosine.data.settings.AutoBackupCheckResult
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -56,6 +57,10 @@ class BackupVerificationViewModel @Inject constructor(
         viewModelScope.launch {
             _backupNowState.value = when (val result = autoBackupRepository.runNow()) {
                 is AutoBackupRepository.Result.Success           -> ExportUiState.Success
+                AutoBackupRepository.Result.SuccessNearCapacity ->
+                    ExportUiState.Advisory(AutoBackupCheckResult.SUCCESS_NEAR_CAPACITY.toAutoBackupStatusText())
+                AutoBackupRepository.Result.FolderAtCapacity ->
+                    ExportUiState.Error(AutoBackupCheckResult.FOLDER_AT_CAPACITY.toAutoBackupStatusText())
                 is AutoBackupRepository.Result.NoFolderSelected  -> ExportUiState.Error("No backup folder selected.")
                 is AutoBackupRepository.Result.FolderUnavailable -> ExportUiState.Error(result.message)
                 is AutoBackupRepository.Result.Failure           -> ExportUiState.Error(result.message)

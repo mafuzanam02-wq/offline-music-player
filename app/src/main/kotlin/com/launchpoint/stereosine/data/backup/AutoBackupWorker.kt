@@ -24,6 +24,8 @@ internal fun AutoBackupRepository.Result.toWorkerResult(): ListenableWorker.Resu
     AutoBackupRepository.Result.NoFolderSelected,
     AutoBackupRepository.Result.NotDue,
     AutoBackupRepository.Result.Success,
+    AutoBackupRepository.Result.SuccessNearCapacity,
+    AutoBackupRepository.Result.FolderAtCapacity,
     is AutoBackupRepository.Result.FolderUnavailable -> ListenableWorker.Result.success()
     is AutoBackupRepository.Result.Failure           -> ListenableWorker.Result.retry()
 }

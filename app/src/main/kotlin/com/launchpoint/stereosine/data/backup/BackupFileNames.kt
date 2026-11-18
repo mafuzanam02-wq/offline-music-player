@@ -10,9 +10,9 @@ import java.time.LocalDate
  * The file name only selects CANDIDATES: restore/verification decide by CONTENT ([StereoSineBackupDocumentReader]), and the
  * container/format identifiers (`wavdrop_wdbk`, `wavdrop_backup`) inside the file are unchanged.
  *
- * Replace-previous writes the exact [fixedName] in the chosen folder. A legacy `wavdrop-backup.wdbk` in the same folder is a
- * different file and is left untouched; when both exist, [preferNewer] picks the most recently modified one (ties go to the
- * StereoSine name) so verification is deterministic.
+ * Fixed and dated names are suggested by the manual document picker. Folder publication uses
+ * [ManagedBackupGeneration]. The existing Backup Verification UI ranks legacy and managed
+ * candidates by modification time, with a StereoSine tie-breaker.
  */
 internal object BackupFileNames {
     const val CURRENT_PREFIX = "stereosine-backup"
@@ -30,7 +30,7 @@ internal object BackupFileNames {
 
     /**
      * True for backup candidates of either brand: `.wdbk` or legacy `.json`, never a `.tmp` leftover
-     * (auto-backup writes `<name>.tmp` beside the real file).
+     * from historical folder backup attempts.
      */
     fun isBackupFileName(name: String?): Boolean {
         val lower = name?.lowercase() ?: return false

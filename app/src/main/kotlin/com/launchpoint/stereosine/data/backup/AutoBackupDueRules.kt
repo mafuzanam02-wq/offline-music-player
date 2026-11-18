@@ -15,5 +15,8 @@ internal object AutoBackupDueRules {
         result: AutoBackupRepository.Result,
         nowMillis: Long,
     ): Long? =
-        if (result is AutoBackupRepository.Result.Success) nowMillis else null
+        when (result) {
+            AutoBackupRepository.Result.Success, AutoBackupRepository.Result.SuccessNearCapacity -> nowMillis
+            else -> null
+        }
 }

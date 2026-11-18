@@ -530,9 +530,12 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
 - **Reliability**: exports are read back and verified before success is reported (WDBK: re-decoded by the same
   `WdbkReader` real imports use; the internal JSON snapshot uses `BackupSaveValidator`). Manual SAF, folder
   and automatic backup share `BackupExecutionSerializer` with Recovery. Manual export holds it from model
-  capture through verification of the selected URI. Folder backup verifies a temporary file before the final
-  overwrite, which can still damage the previous file if interrupted. See the preservation contract for
-  Recovery's lock order and export consistency and durability limits.
+  capture through verification of the selected URI. Folder backup creates and verifies a distinct SAF
+  document before reporting success. Admission counts up to two unresolved local attempts, including
+  the in-flight attempt. Verified generations use folder space independently of that budget. A durable
+  per-tree reservation covers ambiguous create results. Publication warns at 56 direct children and
+  stops at 64. No files are automatically retired. See the preservation contract for provider and
+  discovery limits.
 - **WDBK container v1** (`data/backup/wdbk/`, WDBK-1, implemented; physical QA pending): ZIP/DEFLATE + compact
   UTF-8 JSON sections + chunked listening history, wrapping the unchanged **v2 logical model**. The container version
   (`containerMajor 1 / containerMinor 0`) is independent of the logical version; there is no "Backup V3".
@@ -591,8 +594,8 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
     snapshot. Retained for history export: one page plus one chunk, the cursor and the previous event, plus the small sections and the
     song map. SQLite sorts each page inside the query (it may use its own temp storage). Honest limits: the DECODE side (and therefore Merge/Recovery, which need a `StereoSineBackup`) still materializes the complete
     event list. Legacy v2 JSON export (`buildBackupJson`, used by the Recovery safety snapshot) keeps its full-history read.
-    Folder/automatic backup: temp file -> verify -> stream-copy the SAME verified bytes to the final file -> verify final; the
-    previous file is untouched until the verified copy starts (SAF still has no atomic replace; that risk is unchanged).
+    Folder and automatic backup create one qualified managed document, stream once, then reopen and
+    verify it in place. A final listing confirms the document remains discoverable.
   - **Merge and Recovery are container-unaware**: decode happens before restore semantics, and everything downstream
     receives the same `StereoSineBackup`. For a WDBK, Recovery re-validates by re-reading the selected document and
     requiring the same semantic fingerprint as the preview (legacy JSON still re-parses its original text).
@@ -602,7 +605,7 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
   - Evidence and the chunk-size rationale: [architecture/WDBK_BENCHMARKS.md](architecture/WDBK_BENCHMARKS.md).
 - **Automatic backup**: `AutoBackupWorkScheduler` enqueues a unique 24-hour periodic WorkManager check
   (storage-not-low constraint); `AutoBackupWorker` calls `AutoBackupRepository.runIfDue()`, which owns the
-  interval due check and the folder write (a `.wdbk` file: `stereosine-backup-YYYY-MM-DD.wdbk` or `stereosine-backup.wdbk`); earlier `wavdrop-backup*` files in the folder are still recognised by Backup Verification and are never replaced, renamed or deleted. Scheduling is best-effort under Android's constraints.
+  interval due check and creates a distinct managed `.wdbk` generation. Historical StereoSine and Wavdrop files remain discoverable and are kept in place. Scheduling is best-effort under Android's constraints.
   `StereoSineApp` reconciles the schedule at startup and when the interval setting changes.
 - **TrackIdentity is not exported** and there is no rematching engine. Restore has explicit Merge and Recovery modes;
   Recovery requires the verified pre-Recovery safety snapshot. See `docs/BACKUP_PRESERVATION_CONTRACT.md` for the

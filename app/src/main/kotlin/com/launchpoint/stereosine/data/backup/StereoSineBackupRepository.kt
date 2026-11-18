@@ -83,7 +83,7 @@ class StereoSineBackupRepository @Inject constructor(
      * Returns the stable per-installation UUID, creating and persisting it on first call.
      * Never overwritten from an imported backup.
      */
-    private suspend fun getOrCreateInstallationId(): String {
+    internal suspend fun getOrCreateInstallationId(): String {
         // Fast path: already created — read without a write on every subsequent export.
         dataStore.data.first()[installationIdKey]?.let { return it }
         // First-ever call: create atomically. DataStore serialises edit transactions per

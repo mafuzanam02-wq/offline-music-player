@@ -181,6 +181,7 @@ private fun VerificationContent(
             ExportUiState.Idle      -> Unit
             ExportUiState.Exporting -> item { ExportStatusRow("Creating backup…") }
             ExportUiState.Success   -> item { ExportStatusRow("Backup saved to selected folder.") }
+            is ExportUiState.Advisory -> item { ExportStatusRow(state.message) }
             is ExportUiState.Error  -> item { ExportStatusRow(state.message, isError = true) }
         }
         item {

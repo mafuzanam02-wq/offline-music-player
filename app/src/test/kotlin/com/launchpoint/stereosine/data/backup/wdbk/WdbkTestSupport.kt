@@ -206,19 +206,4 @@ internal object WdbkTestSupport {
             return true
         }
     }
-
-    class MemoryFolder : BackupFolder {
-        val files = LinkedHashMap<String, MemoryHandle>()
-        var failCreate: ((String) -> Boolean)? = null
-        var handleFactory: ((String) -> MemoryHandle)? = null
-
-        override fun findChild(name: String): BackupFileHandle? = files[name]?.takeIf { !it.deleted }
-
-        override fun createFile(mimeType: String, name: String): BackupFileHandle? {
-            if (failCreate?.invoke(name) == true) return null
-            val h = handleFactory?.invoke(name) ?: MemoryHandle()
-            files[name] = h
-            return h
-        }
-    }
 }

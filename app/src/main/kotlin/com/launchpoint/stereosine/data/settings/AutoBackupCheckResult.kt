@@ -7,4 +7,6 @@ enum class AutoBackupCheckResult {
     SUCCESS,
     FOLDER_UNAVAILABLE,
     FAILURE,
+    SUCCESS_NEAR_CAPACITY,
+    FOLDER_AT_CAPACITY,
 }

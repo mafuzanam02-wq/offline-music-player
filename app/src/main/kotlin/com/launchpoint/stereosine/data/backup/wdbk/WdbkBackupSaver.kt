@@ -6,6 +6,8 @@ import com.launchpoint.stereosine.data.backup.StereoSineBackupIntegrityV2
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * A writable/readable backup destination. The Android implementations wrap a SAF Uri or a [DocumentFile];
@@ -19,12 +21,6 @@ interface BackupFileHandle {
     fun openInput(): InputStream?
 
     fun delete(): Boolean
-}
-
-/** A folder holding backups. Lookup is by exact display name over the directory LISTING (see AutoBackupRepository). */
-interface BackupFolder {
-    fun findChild(name: String): BackupFileHandle?
-    fun createFile(mimeType: String, name: String): BackupFileHandle?
 }
 
 /**
@@ -45,40 +41,15 @@ class WdbkBackupSaver(
         return receipt
     }
 
-    /**
-     * Folder backup (temp → verify → final → verify). The previous final file is not touched until the temp copy
-     * is fully written AND verified. The exact verified temp bytes are then stream-copied into the final file
-     * (never regenerated: a rebuild could mint a different backupId/timestamp or observe changed database state),
-     * and the final file is verified again. The temp file is always removed. Throws [IOException] on any failure.
-     *
-     * KNOWN RISK (unchanged from the JSON flow): SAF has no portable atomic replace, so the final write is a
-     * truncating overwrite; a crash during that single verified-copy step can still damage the final file.
-     */
-    suspend fun saveToFolderAndVerify(folder: BackupFolder, fileName: String, snapshot: WdbkExportSnapshot): WdbkWriteReceipt {
-        val tempName = "$fileName.tmp"
-        // A temp left by an earlier crashed run is removed before writing a fresh one.
-        folder.findChild(tempName)?.let { stale -> runCatching { stale.delete() } }
-
-        // Step 1: temp, with a provider-neutral MIME so no extension is appended (it must never look like a backup).
-        val temp = folder.createFile(OCTET_STREAM, tempName)
-            ?: throw IOException("Could not create a temporary backup file in the selected folder.")
-        try {
-            val receipt = writeStreaming(temp, snapshot)
-            // Step 2: temp must verify BEFORE the previous backup is touched.
-            verify(temp, receipt)
-
-            // Step 3: final file (existing one reused so no " (1)" duplicate appears).
-            val target = folder.findChild(fileName)
-                ?: folder.createFile(OCTET_STREAM, fileName)
-                ?: throw IOException("Could not create the backup file in the selected folder.")
-
-            // Step 4: copy the verified bytes, then verify what is actually on disk.
-            copyVerifiedBytes(temp, target)
-            verify(target, receipt)
-            return receipt
-        } finally {
-            runCatching { temp.delete() }
+    /** Folder publication has already qualified a distinct, empty document. */
+    internal suspend fun saveFreshAndVerify(target: BackupFileHandle, snapshot: WdbkExportSnapshot) {
+        val stream = target.openOutput("w") ?: throw IOException("Could not open the new backup for writing.")
+        val receipt = stream.use {
+            currentCoroutineContext().ensureActive()
+            writer.write(snapshot, it)
         }
+        currentCoroutineContext().ensureActive()
+        verify(target, receipt)
     }
 
     private suspend fun writeStreaming(target: BackupFileHandle, snapshot: WdbkExportSnapshot): WdbkWriteReceipt {
@@ -94,20 +65,6 @@ class WdbkBackupSaver(
             }
         }
         throw IOException("Could not save the backup file. Try a different location.")
-    }
-
-    private fun copyVerifiedBytes(from: BackupFileHandle, to: BackupFileHandle) {
-        for (mode in WRITE_MODES) {
-            val out = to.openOutput(mode) ?: continue
-            try {
-                val input = from.openInput() ?: throw IOException("Could not read the verified temporary backup.")
-                input.use { src -> out.use { dst -> src.copyTo(dst, COPY_BUFFER_BYTES) } }
-                return
-            } catch (_: IOException) {
-                continue
-            }
-        }
-        throw IOException("Could not write the backup file to the selected folder.")
     }
 
     /** Re-opens [target], decodes it with the production reader and requires it to equal what was written. */
@@ -136,7 +93,5 @@ class WdbkBackupSaver(
 
     private companion object {
         val WRITE_MODES = listOf("wt", "w")
-        const val OCTET_STREAM = "application/octet-stream"
-        const val COPY_BUFFER_BYTES = 64 * 1024
     }
 }

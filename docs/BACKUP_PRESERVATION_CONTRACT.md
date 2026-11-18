@@ -378,20 +378,31 @@ encryption/signing is a separate future feature.
 - **Serialization and consistency.** Manual, folder and automatic backups share Recovery's serializer
   (see the Recovery lock order above). Ordinary library mutations may still interleave with separate
   Room and DataStore reads.
-- **Verification and durability.** Save Backup File writes directly to the selected SAF URI. Folder
-  and automatic backups verify a temporary document before copying its bytes to the final document.
-  Both paths reopen and verify the final document before reporting success. A write failure can leave
-  the selected manual document incomplete. A failed or interrupted folder overwrite can damage the
-  previous file (BACKUP-01 F3). Provider readback confirms the saved bytes at verification time.
-- **Internal generation discovery (BACKUP-03B).** Reserved `stereosine-backup-g1-*` names encode an opaque
-  installation token, mode/date, ordinal and backup UUID. SAF inspection qualifies the provider authority,
-  document ID and direct-child listing. A filename alone establishes no ownership or deletion authority.
-  The read-only selector checks Android backup integrity with the production reader and keeps coverage
-  separate. It prefers verified payloads, uses a qualified ordinal within a lineage and compares embedded
-  export time across lineages. A positive provider modification time is the fallback for missing export time.
-  It returns an incomplete search above 256 direct children or 16 recognized candidates.
-  The selector is internal pending provider latency and UI activation review. Folder publication and retirement
-  are still pending, and BACKUP-01 F3 remains open.
+- **Verification and durability.** Save Backup File writes directly to the selected SAF URI. Folder and
+  automatic backups create a distinct, empty managed document, stream once, verify that document using
+  the production reader and confirm it remains discoverable. They never overwrite, rename or retire
+  earlier backups. A write failure can leave a partial document. Provider readback confirms what was
+  readable at verification time.
+- **Publication scope and admission.** Reserved `stereosine-backup-g1-*` names encode an opaque owner,
+  mode/date, ordinal and payload backup UUID. A qualified SAF listing must report a distinct authority
+  and document ID for the new child with the exact requested name. The app admits up to two visible
+  unresolved local attempts, including the in-flight attempt. Preflight independently reads each visible
+  canonical local candidate using the production reader and checks the filename against the payload.
+  Verified generations spend no unresolved slots, including repeated saves on the same date or in the
+  undated group. Historical names and foreign-owner names spend no local slots. Unreadable or mismatched
+  local claims remain unresolved, and ambiguous creation is guarded by a durable per-tree reservation.
+- **Capacity and retention.** Folder publication supports a qualified inventory of up to 64 direct
+  children, including unrelated files. It leaves room for the new child before writing, warns after
+  a verified save at 56 children or more, and refuses to create at 64. The 16-candidate discovery cap
+  is separate. Publication scans local candidates sequentially within the child limit. Provider listings
+  must be accurate and complete. Observable ambiguity, loading and unavailable listings block publication.
+  Each success adds storage. Users can move older files or choose another folder. StereoSine performs
+  no automatic retirement. The portable `REPLACE_PREVIOUS` value is preserved and displayed as
+  **Undated generations**. `DATED` retains repeated successful saves for the same date. Manual picker
+  suggestions and restoration of older settings remain compatible.
+- **Discovery.** The bounded integrity-first selector remains internal. Backup Verification can still
+  select an unreadable newest candidate ahead of a verified file. Manual Restore accepts user-selected
+  documents through independent content validation.
 - **Partially implemented:** "Last verified backup" status exists; persisted receipts with counts and
   fingerprint do not.
 - **Deferred:** append-N-verified-snapshots retention (default 7). Current file modes are `DATED` and
@@ -456,7 +467,7 @@ Current status in brackets:
 - Restore mode is explicit. [met - Merge default, Recovery deliberate; physically validated]
 - Backup integrity status is visible. [met]
 - Backup success requires read-back verification. [met]
-- Previous verified backups survive new-write failure. [open - SAF final overwrite can damage the previous file, BACKUP-01 F3]
+- Previous verified folder backups survive new-write failure on qualified providers. [partial - create-once removes the overwrite path; recovery visibility and safe retirement remain open, BACKUP-01 F3]
 - Recently Played data survives restoration. [met]
 - Playlist order survives recovery restoration. [met]
 - Future-version backups fail safely. [met]
