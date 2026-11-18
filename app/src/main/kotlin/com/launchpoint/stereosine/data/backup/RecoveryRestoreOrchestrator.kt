@@ -127,8 +127,8 @@ sealed interface RecoveryRestoreOutcome {
  * LOCK ORDER (always outermost first, never reversed, never re-entered):
  *   1. [RestoreOperationLock]        — restore ownership, non-queuing (`tryLock`), held for the whole operation;
  *   2. [BackupExecutionSerializer]   — taken by the snapshot creator for the snapshot, RELEASED, then taken again here for
- *                                      steps E–G so "Back up now" / WorkManager auto-backup can never export a half-applied
- *                                      Recovery (database committed, settings not yet applied).
+ *                                      steps E–G, including the interval between the database commit and preference outcome.
+ *                                      Manual, folder and automatic exports wait for this hold to end.
  * The two serializer holds are separate (the Mutex is not re-entrant), so there is no nested acquisition and no deadlock. A
  * backup that runs between the two holds sees the untouched pre-Recovery state.
  */

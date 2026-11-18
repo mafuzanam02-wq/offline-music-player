@@ -528,8 +528,11 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
   (detected by `appName = "wavdrop-desktop-lab"` or `sourcePlatform = "desktop"`); Desktop string ids
   are never written into Android tables.
 - **Reliability**: exports are read back and verified before success is reported (WDBK: re-decoded by the same
-  `WdbkReader` real imports use; the internal JSON snapshot: `BackupSaveValidator`); a failed write never replaces
-  the previous verified file; backups are serialized by `BackupExecutionSerializer`.
+  `WdbkReader` real imports use; the internal JSON snapshot uses `BackupSaveValidator`). Manual SAF, folder
+  and automatic backup share `BackupExecutionSerializer` with Recovery. Manual export holds it from model
+  capture through verification of the selected URI. Folder backup verifies a temporary file before the final
+  overwrite, which can still damage the previous file if interrupted. See the preservation contract for
+  Recovery's lock order and export consistency and durability limits.
 - **WDBK container v1** (`data/backup/wdbk/`, WDBK-1, implemented; physical QA pending): ZIP/DEFLATE + compact
   UTF-8 JSON sections + chunked listening history, wrapping the unchanged **v2 logical model**. The container version
   (`containerMajor 1 / containerMinor 0`) is independent of the logical version; there is no "Backup V3".

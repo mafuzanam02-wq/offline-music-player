@@ -20,6 +20,7 @@ import com.launchpoint.stereosine.data.local.entity.LyricsOverrideEntity
 import com.launchpoint.stereosine.data.local.entity.SongEntity
 import com.launchpoint.stereosine.data.local.entity.TrackListenEventEntity
 import com.launchpoint.stereosine.data.local.entity.TrackStatsEntity
+import com.launchpoint.stereosine.data.backup.wdbk.BackupFileHandle
 import com.launchpoint.stereosine.data.backup.wdbk.UriBackupHandle
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkBackupSaver
 import com.launchpoint.stereosine.data.backup.wdbk.WdbkExportSnapshot
@@ -74,6 +75,7 @@ class StereoSineBackupRepository @Inject constructor(
     private val homeLayoutSettingsRepository: HomeLayoutSettingsRepository,
     private val libraryScanSettingsRepository: LibraryScanSettingsRepository,
     private val resumeBehaviorSettingsRepository: ResumeBehaviorSettingsRepository,
+    private val backupExecutionSerializer: BackupExecutionSerializer,
 ) {
     private val installationIdKey = stringPreferencesKey("source_installation_id")
 
@@ -101,10 +103,14 @@ class StereoSineBackupRepository @Inject constructor(
      * failure throws [IOException]. The logical model is built with bounded event paging — never
      * [TrackListenEventDao.getAllSnapshot] and never one JSON string for the whole backup.
      */
-    suspend fun exportToUri(uri: Uri) = withContext(Dispatchers.IO) {
-        val snapshot = buildWdbkExportSnapshot()
-        WdbkBackupSaver().saveAndVerify(UriBackupHandle(context, uri), snapshot)
-        Unit
+    suspend fun exportToUri(uri: Uri) = exportToHandle(UriBackupHandle(context, uri))
+
+    internal suspend fun exportToHandle(target: BackupFileHandle): Unit = withContext(Dispatchers.IO) {
+        backupExecutionSerializer.withSerializedBackup {
+            val snapshot = buildWdbkExportSnapshot()
+            WdbkBackupSaver().saveAndVerify(target, snapshot)
+            Unit
+        }
     }
 
     /**
@@ -112,7 +118,7 @@ class StereoSineBackupRepository @Inject constructor(
      * collected here. MAX(id) of the event table is captured once as the snapshot boundary; every source the snapshot
      * opens pages by a full-order keyset up to that boundary, already in the canonical fingerprint order ([CanonicalEventStream]),
      * so the writer consumes the history one bounded chunk at a time and rows inserted after the boundary never enter
-     * this backup. Playback is never blocked.
+     * this backup. Playback is never blocked. Backup entry points own serialization through writing and verification.
      */
     suspend fun buildWdbkExportSnapshot(): WdbkExportSnapshot = withContext(Dispatchers.IO) {
         var songMap: Map<Long, SongEntity> = emptyMap()

@@ -282,9 +282,13 @@ RecoveryApplyFailed / PartialRecovery / RestoreInProgress).
 
 **Locks (outermost first, never nested the other way).** `RestoreOperationLock` (non-queuing `tryLock`; one
 restore at a time across Merge, Desktop import and Recovery) -> `BackupExecutionSerializer` for the snapshot,
-released, then again for the apply+preferences window so Back up now / WorkManager auto-backup can never export a
-half-applied Recovery. The two serializer holds are separate (the Mutex is not re-entrant). Known window: an
-event recorded between the snapshot and the transaction is not in the snapshot.
+released, then again for the Recovery plan, Room transaction and preference outcome. Manual Save Backup File,
+Back up now (folder) and WorkManager auto-backup all wait for that protected interval to end. Manual export
+holds the serializer from model capture through event streaming, writing and production-reader verification.
+A preference failure can leave committed database changes and the preferences reached at failure. A waiting
+export reads the resulting state once Recovery releases the serializer. The two Recovery holds are separate
+because the mutex is non-reentrant. An event recorded between the safety snapshot and the transaction can be
+absent from the safety snapshot.
 
 **Data semantics (matched songs take the backup value; nothing is MAX-merged).**
 
@@ -371,9 +375,14 @@ encryption/signing is a separate future feature.
 
 ## 13. Export Reliability Contract
 
-- **Implemented:** consistent snapshot; export-model validation; deterministic serialization; temporary
-  write, read-back parse, and integrity verification before success is reported; a failed write never
-  replaces the previous verified file; backup operations are serialized.
+- **Serialization and consistency.** Manual, folder and automatic backups share Recovery's serializer
+  (see the Recovery lock order above). Ordinary library mutations may still interleave with separate
+  Room and DataStore reads.
+- **Verification and durability.** Save Backup File writes directly to the selected SAF URI. Folder
+  and automatic backups verify a temporary document before copying its bytes to the final document.
+  Both paths reopen and verify the final document before reporting success. A write failure can leave
+  the selected manual document incomplete. A failed or interrupted folder overwrite can damage the
+  previous file (BACKUP-01 F3). Provider readback confirms the saved bytes at verification time.
 - **Partially implemented:** "Last verified backup" status exists; persisted receipts with counts and
   fingerprint do not.
 - **Deferred:** append-N-verified-snapshots retention (default 7). Current file modes are `DATED` and
@@ -438,16 +447,14 @@ Current status in brackets:
 - Restore mode is explicit. [met - Merge default, Recovery deliberate; physically validated]
 - Backup integrity status is visible. [met]
 - Backup success requires read-back verification. [met]
-- Previous verified snapshots survive new-write failure. [met]
+- Previous verified backups survive new-write failure. [open - SAF final overwrite can damage the previous file, BACKUP-01 F3]
 - Recently Played data survives restoration. [met]
 - Playlist order survives recovery restoration. [met]
 - Future-version backups fail safely. [met]
 - Auto-backup wording accurately describes actual behavior. [met]
 
-All currently defined preservation release-gate conditions are met. This is an internal engineering fact, not
-a marketing claim: the project is not required to use the term "preservation-grade", and it must not appear in
-public copy unless a deliberate product/marketing decision chooses it. Snapshot retention/receipts remain
-deferred and are not a gate condition.
+The preservation release gate remains open. Snapshot retention and receipts are deferred separately
+from this gate.
 
 ## 10. WDBK packaging does not change preservation semantics
 

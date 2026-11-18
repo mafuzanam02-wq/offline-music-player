@@ -66,7 +66,7 @@ class OrphanHistoryRoomTest {
             RuntimeEnvironment.getApplication(), store, db.songDao(), db.trackStatsDao(), db.importBaselineDao(), db.lyricsOverrideDao(),
             db.playlistDao(), db.trackListenEventDao(), db.pendingBackupExtensionDao(), db.pendingTrackDao(),
             AppSettingsRepository(store), HomeLayoutSettingsRepository(store), LibraryScanSettingsRepository(store),
-            ResumeBehaviorSettingsRepository(store),
+            ResumeBehaviorSettingsRepository(store), BackupExecutionSerializer(),
         )
         val pending = PendingHistoryStore(db.pendingTrackDao())
 
