@@ -14,6 +14,7 @@ internal data class BackupFolderChild(
     val displayName: String,
     val mimeType: String,
     val modifiedMillis: Long?,
+    val sizeBytes: Long? = null,
 )
 
 internal sealed interface BackupFolderListing {
@@ -27,7 +28,7 @@ internal class SafBackupFolderReader(
     private val resolver: ContentResolver,
     private val treeUri: Uri,
 ) {
-    fun listChildren(): BackupFolderListing {
+    fun listChildren(includeSize: Boolean = false): BackupFolderListing {
         val authority = treeUri.authority
         if (treeUri.scheme != "content" || authority.isNullOrBlank()) {
             return BackupFolderListing.Ambiguous("Invalid backup tree URI.")
@@ -35,7 +36,7 @@ internal class SafBackupFolderReader(
         return try {
             val root = DocumentsContract.getTreeDocumentId(treeUri)
             val queryUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, root)
-            resolver.query(queryUri, PROJECTION, null, null, null)?.use { readChildren(it, authority, root) }
+            resolver.query(queryUri, if (includeSize) SIZE_PROJECTION else PROJECTION, null, null, null)?.use { readChildren(it, authority, root) }
                 ?: BackupFolderListing.Unavailable
         } catch (_: SecurityException) {
             BackupFolderListing.Unavailable
@@ -58,6 +59,8 @@ internal class SafBackupFolderReader(
             Document.COLUMN_LAST_MODIFIED,
         )
 
+        private val SIZE_PROJECTION = PROJECTION + Document.COLUMN_SIZE
+
         internal fun readChildren(cursor: Cursor, authority: String, rootId: String): BackupFolderListing {
             if (cursor.extras.getBoolean(DocumentsContract.EXTRA_LOADING)) {
                 return BackupFolderListing.Ambiguous("The provider is still loading the folder listing.")
@@ -68,6 +71,7 @@ internal class SafBackupFolderReader(
             val name = cursor.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
             val mime = cursor.getColumnIndex(Document.COLUMN_MIME_TYPE)
             val modified = cursor.getColumnIndex(Document.COLUMN_LAST_MODIFIED)
+            val size = cursor.getColumnIndex(Document.COLUMN_SIZE)
             if (id < 0 || name < 0 || mime < 0) {
                 return BackupFolderListing.Ambiguous("The provider omitted required child metadata.")
             }
@@ -89,7 +93,8 @@ internal class SafBackupFolderReader(
                 val modifiedMillis = if (modified >= 0 && !cursor.isNull(modified)) {
                     cursor.getString(modified)?.toLongOrNull()?.takeIf { it > 0 }
                 } else null
-                children += BackupFolderChild(BackupDocumentIdentity(authority, childId), displayName, mimeType, modifiedMillis)
+                val sizeBytes = if (size >= 0) cursor.getString(size)?.toLongOrNull()?.takeIf { it >= 0 } else null
+                children += BackupFolderChild(BackupDocumentIdentity(authority, childId), displayName, mimeType, modifiedMillis, sizeBytes)
             }
             return BackupFolderListing.Safe(children)
         }

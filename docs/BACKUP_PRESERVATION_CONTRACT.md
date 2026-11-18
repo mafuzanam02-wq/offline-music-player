@@ -400,9 +400,17 @@ encryption/signing is a separate future feature.
   no automatic retirement. The portable `REPLACE_PREVIOUS` value is preserved and displayed as
   **Undated generations**. `DATED` retains repeated successful saves for the same date. Manual picker
   suggestions and restoration of older settings remain compatible.
-- **Discovery.** The bounded integrity-first selector remains internal. Backup Verification can still
-  select an unreadable newest candidate ahead of a verified file. Manual Restore accepts user-selected
-  documents through independent content validation.
+- **Discovery.** Backup Verification independently reads recognized Android backups in a qualified
+  folder of up to 64 direct children. It prefers integrity-verified files, using verified ordinal
+  within a managed lineage and embedded export date across lineages with provider file date as a
+  fallback. Invalid, unsupported and unreadable candidates cannot hide an older verified backup.
+  Unsigned legacy files are a qualified fallback. Integrity, data coverage and folder search
+  completeness are displayed independently. An unavailable provider, an ambiguous or oversized
+  inventory, or an unreadable candidate cannot establish an exhaustive newest result.
+  Verification retains compact summaries from each candidate’s single decode. Reading large
+  archives sequentially can take time, and cancellation of an in-flight provider call depends on
+  provider cooperation. Real-provider latency and listing behavior still require qualification.
+  Restore continues to validate the user-selected document independently.
 - **Partially implemented:** "Last verified backup" status exists; persisted receipts with counts and
   fingerprint do not.
 - **Deferred:** append-N-verified-snapshots retention (default 7). Current file modes are `DATED` and
@@ -467,7 +475,7 @@ Current status in brackets:
 - Restore mode is explicit. [met - Merge default, Recovery deliberate; physically validated]
 - Backup integrity status is visible. [met]
 - Backup success requires read-back verification. [met]
-- Previous verified folder backups survive new-write failure on qualified providers. [partial - create-once removes the overwrite path; recovery visibility and safe retirement remain open, BACKUP-01 F3]
+- Previous verified folder backups survive new-write failure on qualified providers. [partial - create-once removes the overwrite path and verification can find older usable files; real-provider behavior remains unqualified, BACKUP-01 F3]
 - Recently Played data survives restoration. [met]
 - Playlist order survives recovery restoration. [met]
 - Future-version backups fail safely. [met]

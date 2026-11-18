@@ -12,7 +12,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed interface BackupVerificationUiState {
     data object Loading : BackupVerificationUiState
@@ -34,6 +37,8 @@ class BackupVerificationViewModel @Inject constructor(
     val backupNowState: StateFlow<ExportUiState> = _backupNowState.asStateFlow()
 
     private var started = false
+    private var verificationJob: Job? = null
+    private val verificationLock = Mutex()
 
     /** Runs the first verification when the screen opens; safe across recompositions. */
     fun verifyOnEntry() {
@@ -44,9 +49,12 @@ class BackupVerificationViewModel @Inject constructor(
 
     fun verifyAgain() {
         _uiState.value = BackupVerificationUiState.Loading
-        viewModelScope.launch {
-            _uiState.value =
-                BackupVerificationUiState.Ready(verificationRepository.verifyLatestBackup())
+        verificationJob?.cancel()
+        verificationJob = viewModelScope.launch {
+            verificationLock.withLock {
+                val result = verificationRepository.verifyLatestBackup()
+                _uiState.value = BackupVerificationUiState.Ready(result)
+            }
         }
     }
 

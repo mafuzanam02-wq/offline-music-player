@@ -41,6 +41,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.launchpoint.stereosine.data.backup.VerificationSearchStatus
+import com.launchpoint.stereosine.data.backup.BackupIntegrityStatus
 import com.launchpoint.stereosine.data.backup.BackupFileNames
 import com.launchpoint.stereosine.data.backup.BackupVerificationResult
 import com.launchpoint.stereosine.data.backup.VerificationStatus
@@ -405,23 +407,29 @@ private fun backupHealthIndicatorText(
     result: BackupVerificationResult,
     folderSelected: Boolean,
     folderPermissionValid: Boolean,
-): String = when (result.status) {
-    VerificationStatus.VERIFIED -> {
-        val timestamp = result.backupTimestampMillis
-        if (timestamp != null && System.currentTimeMillis() - timestamp > BACKUP_STALE_AFTER_MS) {
-            "Backup older than 7 days"
-        } else {
-            "Verified backup"
+): String {
+    if (result.searchStatus == VerificationSearchStatus.INCOMPLETE ||
+        result.searchStatus == VerificationSearchStatus.UNAVAILABLE ||
+        result.integrityStatus == BackupIntegrityStatus.UNVERIFIED_LEGACY
+    ) return result.verificationTitle()
+    return when (result.status) {
+        VerificationStatus.VERIFIED -> {
+            val timestamp = result.backupTimestampMillis
+            if (timestamp != null && System.currentTimeMillis() - timestamp > BACKUP_STALE_AFTER_MS) {
+                "Backup older than 7 days"
+            } else {
+                "Verified backup"
+            }
         }
+        VerificationStatus.PARTIAL  -> "Backup needs attention"
+        VerificationStatus.FAILED   -> "Backup verification failed"
+        VerificationStatus.NO_BACKUP_FOUND ->
+            if (folderSelected && !folderPermissionValid) {
+                "Backup folder unavailable"
+            } else {
+                "No verified backup found"
+            }
     }
-    VerificationStatus.PARTIAL  -> "Backup needs attention"
-    VerificationStatus.FAILED   -> "Backup verification failed"
-    VerificationStatus.NO_BACKUP_FOUND ->
-        if (folderSelected && !folderPermissionValid) {
-            "Backup folder unavailable"
-        } else {
-            "No verified backup found"
-        }
 }
 
 // ── Folder permission validation ────────────────────────────────────────────

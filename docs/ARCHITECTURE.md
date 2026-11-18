@@ -536,6 +536,12 @@ format), [BACKUP_PRESERVATION_CONTRACT.md](BACKUP_PRESERVATION_CONTRACT.md) (sem
   per-tree reservation covers ambiguous create results. Publication warns at 56 direct children and
   stops at 64. No files are automatically retired. See the preservation contract for provider and
   discovery limits.
+- **Backup Verification** uses a single qualified folder listing and sequential production decoding
+  up to the 64-child policy. It retains compact summaries for lineage ordering and displays the winner
+  without reopening it. Integrity, coverage and search completeness have separate states. Corrupt and
+  unsupported newer-looking candidates cannot mask an older verified candidate. Unavailable and
+  partial provider results remain explicit. Large archives and blocked provider calls can affect
+  latency. Real provider performance and cancellation are release-validation work.
 - **WDBK container v1** (`data/backup/wdbk/`, WDBK-1, implemented; physical QA pending): ZIP/DEFLATE + compact
   UTF-8 JSON sections + chunked listening history, wrapping the unchanged **v2 logical model**. The container version
   (`containerMajor 1 / containerMinor 0`) is independent of the logical version; there is no "Backup V3".

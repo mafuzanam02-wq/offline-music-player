@@ -663,7 +663,7 @@ Nothing below has been run on a device. Do not tick items until the user has ver
 
 - [ ] A. Manual backup (Settings -> Backup -> Save backup file) suggests and creates `stereosine-backup-YYYY-MM-DD.wdbk` (or `stereosine-backup.wdbk` in fixed-name mode); the provider does not append `.zip`/`.json`.
 - [ ] B. For a history-containing backup the `.wdbk` is materially smaller than the same state exported as legacy JSON (no fixed ratio is promised).
-- [ ] C. Backup Verification recognises the `.wdbk` in the backup folder and reports VERIFIED with the expected counts (tracks, playlists, favourites, stats, events, lyrics, preferences).
+- [ ] C. With fixture files, Backup Verification finds an older verified backup after a newer-looking corrupt, empty, unreadable or unsupported file. Check the actual selected filename, provider date fallback, skipped-file warning and expected counts. A verified file can still show partial coverage. A legacy unsigned fallback is labelled unverified. Check a qualified 64-child folder and an oversized or loading listing. Only a completed qualified search reports the newest verified result. Confirm responsiveness and cancellation on representative SAF providers using disposable data.
 - [ ] D. Restore -> pick the `.wdbk`: the preview shows the same counts; Merge is selected by default.
 - [ ] E. Merge Restore from the `.wdbk` works and keeps newer local history (unchanged Merge behaviour).
 - [ ] F. Recovery Restore from the `.wdbk` works (warning + confirmation as before; backup-authoritative result).

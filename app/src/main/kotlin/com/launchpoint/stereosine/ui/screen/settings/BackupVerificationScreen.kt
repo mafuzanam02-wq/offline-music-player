@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.launchpoint.stereosine.data.backup.BackupVerificationResult
+import com.launchpoint.stereosine.data.backup.BackupIntegrityStatus
+import com.launchpoint.stereosine.data.backup.VerificationSearchStatus
 import com.launchpoint.stereosine.data.backup.VerificationStatus
 import java.time.Instant
 import java.time.ZoneId
@@ -165,7 +167,7 @@ private fun VerificationContent(
         item {
             ClickableSettingsRow(
                 title    = "Verify again",
-                subtitle = "Check the latest backup file again.",
+                subtitle = "Check backup files in the selected folder.",
                 onClick  = onVerifyAgain,
             )
         }
@@ -199,29 +201,25 @@ private fun VerificationContent(
 
 @Composable
 private fun VerificationStatusCard(result: BackupVerificationResult) {
-    val (title, message) = when (result.status) {
-        VerificationStatus.VERIFIED ->
-            "Backup verified" to "Your latest backup looks healthy and can be restored."
-        VerificationStatus.PARTIAL ->
-            "Backup needs attention" to "Your backup can be restored, but some data is missing. See warnings below."
-        VerificationStatus.FAILED ->
-            "Backup verification failed" to (result.errors.firstOrNull()
-                ?: "The backup file could not be verified.")
-        VerificationStatus.NO_BACKUP_FOUND ->
-            "No verified backup found" to (result.warnings.firstOrNull()
-                ?: "No backup was found. Create one to protect your data.")
+    val title = result.verificationTitle()
+    val message = when {
+        result.errors.isNotEmpty() -> result.errors.joinToString("\n")
+        result.status == VerificationStatus.NO_BACKUP_FOUND -> result.warnings.firstOrNull()
+        else -> null
     }
-    val healthy = result.status == VerificationStatus.VERIFIED
+    val healthy = result.status == VerificationStatus.VERIFIED &&
+        result.integrityStatus == BackupIntegrityStatus.VERIFIED &&
+        result.searchStatus == VerificationSearchStatus.COMPLETE
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = when (result.status) {
-                VerificationStatus.VERIFIED ->
+            containerColor = when {
+                healthy ->
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-                VerificationStatus.FAILED ->
+                result.status == VerificationStatus.FAILED ->
                     MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
                 else ->
                     MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
@@ -234,30 +232,53 @@ private fun VerificationStatusCard(result: BackupVerificationResult) {
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text  = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-            )
+            if (message != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                )
+            }
+            result.verificationSearchLabel()?.let { StatusDetailLine("Folder search", it) }
+            result.verificationIntegrityLabel()?.let { StatusDetailLine("Integrity", it) }
+            if (result.fileName != null) {
+                StatusDetailLine("Data coverage", if (result.status == VerificationStatus.PARTIAL) "Partial" else "Core data present")
+            }
             if (result.fileName != null || result.backupTimestampMillis != null) {
                 Spacer(Modifier.height(10.dp))
                 result.backupTimestampMillis?.let {
-                    StatusDetailLine(if (result.timestampIsFileTime) "Last backup (file date)" else "Last backup", formatVerificationTime(it))
+                    StatusDetailLine(if (result.timestampIsFileTime) "Provider file date" else "Backup export date", formatVerificationTime(it))
                 }
                 result.fileName?.let { StatusDetailLine("Backup file", it) }
                 result.fileSizeBytes?.let { StatusDetailLine("Size", formatFileSize(it)) }
             }
-            if (healthy) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text  = "If this backup file is saved somewhere safe, your stats, playlists, and settings can be restored on another install or device.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                )
-            }
         }
     }
+}
+
+internal fun BackupVerificationResult.verificationTitle(): String = when {
+    searchStatus == VerificationSearchStatus.UNAVAILABLE -> "Backup folder unavailable"
+    searchStatus == VerificationSearchStatus.INCOMPLETE -> "Backup search incomplete"
+    status == VerificationStatus.FAILED -> "Backup verification failed"
+    status == VerificationStatus.NO_BACKUP_FOUND -> "No backup files found"
+    integrityStatus == BackupIntegrityStatus.UNVERIFIED_LEGACY -> "Older backup found"
+    status == VerificationStatus.PARTIAL -> "Newest verified backup has partial data"
+    else -> "Newest verified backup"
+}
+
+internal fun BackupVerificationResult.verificationSearchLabel(): String? = when (searchStatus) {
+    VerificationSearchStatus.COMPLETE -> "Complete"
+    VerificationSearchStatus.INCOMPLETE -> "Incomplete. Other backups may be newer."
+    VerificationSearchStatus.UNAVAILABLE -> "Folder unavailable"
+    VerificationSearchStatus.FAILED -> "Check failed"
+    VerificationSearchStatus.NOT_RUN -> null
+}
+
+internal fun BackupVerificationResult.verificationIntegrityLabel(): String? = when (integrityStatus) {
+    BackupIntegrityStatus.VERIFIED -> "Verified"
+    BackupIntegrityStatus.UNVERIFIED_LEGACY -> "Older format, unverified"
+    else -> null
 }
 
 @Composable

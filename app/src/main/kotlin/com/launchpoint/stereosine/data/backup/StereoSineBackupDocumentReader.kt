@@ -7,6 +7,7 @@ import com.launchpoint.stereosine.data.backup.wdbk.WdbkReader
 import java.io.IOException
 import java.io.InputStream
 import java.io.PushbackInputStream
+import kotlinx.coroutines.CancellationException
 
 /** Physical packaging a decoded backup arrived in. */
 enum class BackupContainerKind { LEGACY_JSON, WDBK }
@@ -46,13 +47,15 @@ sealed interface BackupDocumentReadResult {
  */
 object StereoSineBackupDocumentReader {
 
-    /** Reads [uri] with the provider-declared-size fast reject and the bounded input cap. Never throws. */
+    /** Reads [uri] with the provider-declared-size fast reject and the bounded input cap. Propagates cancellation. */
     fun readUri(context: Context, uri: Uri): BackupDocumentReadResult {
         if (BackupInputReader.declaredSizeExceedsLimit(BackupInputReader.declaredSize(context, uri))) {
             return BackupDocumentReadResult.Rejected(BackupRejectReason.TOO_LARGE)
         }
         val stream = try {
             context.contentResolver.openInputStream(uri)
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         } ?: return BackupDocumentReadResult.Rejected(BackupRejectReason.UNREADABLE)

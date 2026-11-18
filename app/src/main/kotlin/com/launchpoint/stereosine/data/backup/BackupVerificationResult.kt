@@ -7,9 +7,11 @@ enum class VerificationStatus {
     PARTIAL,
     /** A backup file exists but is unreadable, corrupt, or not a StereoSine backup. */
     FAILED,
-    /** No backup folder is selected, the folder is unavailable, or it contains no backup file. */
+    /** No backup folder is selected or the qualified search found no candidates. */
     NO_BACKUP_FOUND,
 }
+
+enum class VerificationSearchStatus { NOT_RUN, COMPLETE, INCOMPLETE, UNAVAILABLE, FAILED }
 
 data class BackupVerificationResult(
     val status: VerificationStatus,
@@ -28,4 +30,6 @@ data class BackupVerificationResult(
     val hasPreferences: Boolean = false,
     val warnings: List<String> = emptyList(),
     val errors: List<String> = emptyList(),
+    val integrityStatus: BackupIntegrityStatus? = null,
+    val searchStatus: VerificationSearchStatus = VerificationSearchStatus.NOT_RUN,
 )

@@ -9,17 +9,18 @@ import com.launchpoint.stereosine.data.backup.wdbk.SafBackupFolderReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 
-/** Internal discovery for a selected SAF folder. Keeps only metadata from each decoded backup. */
+/** Internal discovery for a selected SAF folder. Keeps only compact coverage summaries and metadata from each decoded backup. */
 internal object FolderBackupDiscovery {
-    const val MAX_CANDIDATES = 16
+    const val MAX_CANDIDATES = 64
 
     data class Candidate(
         val child: BackupFolderChild,
         val integrity: BackupIntegrityStatus,
         val exportedMillis: Long?,
-        val warnings: List<String>,
+        val summary: BackupVerificationResult,
     )
 
     sealed interface Result {
@@ -27,6 +28,8 @@ internal object FolderBackupDiscovery {
             val selected: Candidate?,
             val candidateCount: Int,
             val warnings: List<String>,
+            val unreadableCount: Int,
+            val rejection: String?,
         ) : Result
 
         data class Incomplete(val reason: String) : Result
@@ -35,25 +38,26 @@ internal object FolderBackupDiscovery {
 
     suspend fun discover(context: Context, treeUri: Uri): Result = withContext(Dispatchers.IO) {
         val folder = SafBackupFolderReader(context.contentResolver, treeUri)
-        select(folder.listChildren()) { child ->
-            StereoSineBackupDocumentReader.readUri(context, folder.uriFor(child))
+        val listing = runInterruptible { folder.listChildren(includeSize = true) }
+        select(listing) { child ->
+            runInterruptible { StereoSineBackupDocumentReader.readUri(context, folder.uriFor(child)) }
         }
     }
 
     internal suspend fun select(
         listing: BackupFolderListing,
-        read: (BackupFolderChild) -> BackupDocumentReadResult,
+        read: suspend (BackupFolderChild) -> BackupDocumentReadResult,
     ): Result {
         val children = when (listing) {
             is BackupFolderListing.Safe -> listing.children
             is BackupFolderListing.Ambiguous -> return Result.Incomplete(listing.reason)
             BackupFolderListing.Unavailable -> return Result.Unavailable
         }
+        if (children.size > MAX_CANDIDATES) {
+            return Result.Incomplete("The folder contains more than 64 items. Move older files or choose a smaller folder, then verify again.")
+        }
         val candidates = children.filter {
             it.mimeType != Document.MIME_TYPE_DIR && BackupFileNames.isBackupFileName(it.displayName)
-        }
-        if (candidates.size > MAX_CANDIDATES) {
-            return Result.Incomplete("The folder exceeds the backup verification search limit.")
         }
         val claimed = candidates.mapNotNull { ManagedBackupGeneration.parse(it.displayName) }
         val collisions = claimed.groupBy { it.lineage }.filterValues { group ->
@@ -64,17 +68,23 @@ internal object FolderBackupDiscovery {
         val byLineage = mutableMapOf<ManagedBackupGeneration.Lineage, Pair<Long, Candidate>>()
         val independent = mutableListOf<Candidate>()
         var rejected = 0
+        var unreadable = 0
+        var rejection: String? = null
         var unqualifiedNames = 0
         for (child in candidates) {
             currentCoroutineContext().ensureActive()
-            val raw = read(child) as? BackupDocumentReadResult.StereoSine
+            val document = read(child)
+            val raw = document as? BackupDocumentReadResult.StereoSine
             val backup = raw?.result?.backup
             if (raw == null || backup == null || raw.result.integrityStatus == BackupIntegrityStatus.INVALID) {
                 rejected++
+                if (document == BackupDocumentReadResult.Rejected(BackupRejectReason.UNREADABLE)) unreadable++
+                if (rejection == null) rejection = verificationRejection(document)
                 continue
             }
             val candidate = Candidate(
-                child, raw.result.integrityStatus, BackupPresentation.exportTimestampMillis(backup), raw.result.warnings,
+                child, raw.result.integrityStatus, BackupPresentation.exportTimestampMillis(backup),
+                summariseVerification(backup, child, raw.result.integrityStatus, raw.result.warnings),
             )
             val name = ManagedBackupGeneration.parse(child.displayName)
             if (name != null && name.lineage !in collisions && raw.container == BackupContainerKind.WDBK &&
@@ -108,8 +118,7 @@ internal object FolderBackupDiscovery {
             if (selected != null && selected.exportedMillis == null) {
                 add("The selected backup has no usable embedded export date.")
             }
-            if (selected != null) addAll(selected.warnings)
         }
-        return Result.Complete(selected, candidates.size, warnings)
+        return Result.Complete(selected, candidates.size, warnings, unreadable, rejection)
     }
 }
