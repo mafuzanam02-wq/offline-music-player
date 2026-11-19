@@ -122,8 +122,11 @@ Migration tests and exported schemas must be updated with every schema bump.
   in "Statistics write path" below, not continuously.
 - Smart collections: 11 read-only computed types (`SmartCollectionType`), ranked over the full eligible
   set before capping so eligible counts are exact.
-- Search: `LibrarySearchIndex` caches normalized fields; Home and global search filter off the main
-  thread (`Dispatchers.Default`) with a 200 ms debounce.
+- Search: Home, Songs, Library, Albums, Artists, Folders, Playlists, Playlist Details, and Insights
+  open the same Global Search destination. The back stack retains the launching screen. Search keeps
+  its query in the destination's saved state and uses `LibrarySearchIndex` to filter grouped results
+  off the main thread with a 200 ms debounce. The shared `SearchHistoryRepository` records committed
+  queries in a local DataStore and supplies the recent-search panel when the query is blank.
 
 ### Statistics write path (P5-STATS-19)
 

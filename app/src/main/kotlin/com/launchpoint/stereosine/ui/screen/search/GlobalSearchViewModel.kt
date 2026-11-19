@@ -1,9 +1,9 @@
 package com.launchpoint.stereosine.ui.screen.search
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.launchpoint.stereosine.data.model.PlaylistSummary
-import com.launchpoint.stereosine.data.model.SmartCollection
 import com.launchpoint.stereosine.data.model.Song
 import com.launchpoint.stereosine.data.repository.PlaylistRepository
 import com.launchpoint.stereosine.data.repository.SmartCollectionRepository
@@ -23,10 +23,8 @@ import com.launchpoint.stereosine.ui.components.groupedSearchResults
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
@@ -39,7 +37,8 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class GlobalSearchViewModel @Inject constructor(
-    private val songRepository: SongRepository,
+    private val savedStateHandle: SavedStateHandle,
+    songRepository: SongRepository,
     private val playerController: PlayerController,
     private val statsRepository: StatsRepository,
     private val appSettingsRepository: AppSettingsRepository,
@@ -48,10 +47,9 @@ class GlobalSearchViewModel @Inject constructor(
     private val searchHistoryRepository: SearchHistoryRepository,
 ) : ViewModel() {
 
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    val searchQuery: StateFlow<String> = savedStateHandle.getStateFlow("searchQuery", "")
 
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSearchQuery(query: String) { savedStateHandle["searchQuery"] = query }
 
     /** SEARCH-01: recent committed searches, newest first. Separate from listening history and playback statistics. */
     val recentSearches: StateFlow<List<SearchHistoryEntry>> = searchHistoryRepository.entries
@@ -63,7 +61,7 @@ class GlobalSearchViewModel @Inject constructor(
 
     /** Records a COMMITTED search (keyboard Search, a tapped result, a tapped recent entry). Typing alone never calls this. */
     fun commitSearch(query: String) {
-        // Not viewModelScope: a result tap pops this destination at once, which cancels viewModelScope before the write lands.
+        // The search destination can be popped before a pending history write finishes.
         // The repository performs the write in its own singleton-owned scope (non-blocking, atomic).
         searchHistoryRepository.commit(query)
     }
@@ -76,20 +74,12 @@ class GlobalSearchViewModel @Inject constructor(
         searchHistoryRepository.clear()
     }
 
-    val allSongs: StateFlow<List<Song>> = songRepository.songs
+    private val allSongs: StateFlow<List<Song>> = songRepository.songs
         .stateIn(
             scope        = viewModelScope,
             started      = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList(),
         )
-
-    val smartCollections: StateFlow<List<SmartCollection>> =
-        smartCollectionRepository.observeSmartCollections()
-            .stateIn(
-                scope        = viewModelScope,
-                started      = SharingStarted.WhileSubscribed(5_000),
-                initialValue = emptyList(),
-            )
 
     val playlists: StateFlow<List<PlaylistSummary>> = playlistRepository.observePlaylists()
         .stateIn(
@@ -103,9 +93,9 @@ class GlobalSearchViewModel @Inject constructor(
     // if the library changes again mid-build (e.g. during a rescan).
     private val searchIndex =
         combine(
-            songRepository.songs,
+            allSongs,
             smartCollectionRepository.observeSmartCollections(),
-            playlistRepository.observePlaylists(),
+            playlists,
         ) { songs, collections, lists -> Triple(songs, lists, collections) }
             .mapLatest { (songs, lists, collections) ->
                 LibrarySearchIndex.from(songs = songs, playlists = lists, smartCollections = collections)
@@ -115,18 +105,13 @@ class GlobalSearchViewModel @Inject constructor(
     // Per-keystroke work is now only cheap substring matching against the precomputed index.
     // mapLatest supersedes an in-flight search when a newer query (or index) arrives, so stale
     // filter jobs do not stack. Debounce (200 ms) and result semantics/ordering are unchanged.
-    val filteredResults: StateFlow<GroupedSearchResults> =
-        combine(searchIndex, _searchQuery.debounce(200)) { index, query -> index to query }
-            .mapLatest { (index, query) -> groupedSearchResults(index = index, query = query) }
+    val filteredResults: StateFlow<SearchResultsForQuery?> =
+        combine(searchIndex, searchQuery.debounce(200), ::Pair)
+            .mapLatest { (index, query) ->
+                SearchResultsForQuery(query, groupedSearchResults(index = index, query = query))
+            }
             .flowOn(Dispatchers.Default)
-            .stateIn(
-                scope        = viewModelScope,
-                started      = SharingStarted.WhileSubscribed(5_000),
-                initialValue = GroupedSearchResults(
-                    songs  = emptyList(), artists = emptyList(), albums  = emptyList(),
-                    playlists = emptyList(), smartCollections = emptyList(), folders = emptyList(),
-                ),
-            )
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val nowPlayingState: StateFlow<NowPlayingState> = playerController.nowPlayingState
 
@@ -158,8 +143,9 @@ class GlobalSearchViewModel @Inject constructor(
 
     fun addToQueue(song: Song): QueueActionResult = playerController.addToQueue(song)
 
-    fun toggleFavorite(songId: Long) {
-        val song = allSongs.value.firstOrNull { it.id == songId } ?: return
-        viewModelScope.launch { statsRepository.toggleFavorite(songId, song.uri) }
+    fun toggleFavorite(song: Song) {
+        viewModelScope.launch { statsRepository.toggleFavorite(song.id, song.uri) }
     }
 }
+
+data class SearchResultsForQuery(val query: String, val results: GroupedSearchResults)

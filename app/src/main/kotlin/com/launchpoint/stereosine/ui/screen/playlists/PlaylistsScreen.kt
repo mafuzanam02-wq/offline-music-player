@@ -1,6 +1,5 @@
 package com.launchpoint.stereosine.ui.screen.playlists
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +56,6 @@ import com.launchpoint.stereosine.ui.components.LoadingStateContent
 import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.PlaylistArtworkCollage
-import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -66,6 +64,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistsScreen(
+    onSearchClick: () -> Unit,
     onNavigateBack: () -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onNowPlayingClick: () -> Unit = {},
@@ -79,80 +78,62 @@ fun PlaylistsScreen(
     var renameTarget     by remember { mutableStateOf<PlaylistListItem?>(null) }
     var deleteTarget     by remember { mutableStateOf<PlaylistListItem?>(null) }
     var errorMessage     by remember { mutableStateOf<String?>(null) }
-    var isSearchActive   by remember { mutableStateOf(false) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
-
-    BackHandler(enabled = isSearchActive) {
-        isSearchActive = false
-        viewModel.setSearchQuery("")
-    }
 
     Scaffold(
         topBar = {
-            if (isSearchActive) {
-                SearchTopAppBar(
-                    query = state.searchQuery,
-                    onQueryChange = viewModel::setSearchQuery,
-                    onClose = {
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                    },
-                    placeholder = "Search playlists…",
-                )
-            } else {
-                TopAppBar(
-                    title = { Text("Playlists") },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+            TopAppBar(
+                title = { Text("Playlists") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                        )
+                    }
+                    Box {
+                        IconButton(onClick = { sortMenuExpanded = true }) {
                             Icon(
-                                imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort",
                             )
                         }
-                    },
-                    actions = {
-                        IconButton(onClick = { isSearchActive = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                            )
-                        }
-                        Box {
-                            IconButton(onClick = { sortMenuExpanded = true }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                                    contentDescription = "Sort",
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false },
+                        ) {
+                            PlaylistSortMode.entries.forEach { mode ->
+                                DropdownMenuItem(
+                                    text = { Text(mode.label) },
+                                    trailingIcon = if (state.sortMode == mode) ({
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }) else null,
+                                    onClick = {
+                                        viewModel.setSortMode(mode)
+                                        sortMenuExpanded = false
+                                    },
                                 )
                             }
-                            DropdownMenu(
-                                expanded = sortMenuExpanded,
-                                onDismissRequest = { sortMenuExpanded = false },
-                            ) {
-                                PlaylistSortMode.entries.forEach { mode ->
-                                    DropdownMenuItem(
-                                        text = { Text(mode.label) },
-                                        trailingIcon = if (state.sortMode == mode) ({
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }) else null,
-                                        onClick = {
-                                            viewModel.setSortMode(mode)
-                                            sortMenuExpanded = false
-                                        },
-                                    )
-                                }
-                            }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor    = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-            }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {

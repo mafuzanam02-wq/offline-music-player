@@ -19,7 +19,7 @@ class SearchHistoryWiringTest {
 
     @Test fun `typing only updates the query and never commits history`() {
         val typing = route.lineSequence().single { it.trimStart().startsWith("onQueryChange =") }
-        assertTrue(typing.contains("viewModel.setSearchQuery(it)"))
+        assertTrue(typing.contains("viewModel::setSearchQuery"))
         assertFalse("typing must not write history: $typing", typing.contains("commitSearch"))
         assertFalse("setSearchQuery must not write history", vm.substringAfter("fun setSearchQuery").substringBefore("\n").contains("record"))
     }
@@ -53,6 +53,25 @@ class SearchHistoryWiringTest {
             assertTrue("missing: $call", route.contains(call))
         }
         assertTrue(route.contains("viewModel.commitSearch(localQuery); viewModel.playSearchResult(song)"))
+    }
+
+    @Test fun `every music-library search launcher opens the same single-top destination`() {
+        val graph = File("$dir/ui/navigation/StereoSineNavGraph.kt").readText()
+        for (screen in listOf("Home", "Library", "Songs", "Albums", "Artists", "Folders", "Playlists", "PlaylistDetails", "SettingsStatistics")) {
+            val call = graph.substringAfter("${screen}Screen(", "").substringBefore("\n            )")
+            assertTrue(screen, Regex("on(?:Global)?SearchClick\\s*=\\s*openSearch").containsMatchIn(call))
+        }
+        assertEquals(1, Regex("""composable\(Screen.GlobalSearch.route\)""").findAll(graph).count())
+        assertTrue(graph.contains("navigate(Screen.GlobalSearch.route) { launchSingleTop = true }"))
+    }
+
+    @Test fun `destination state restores query and excludes results for earlier input`() {
+        assertTrue(vm.contains("""savedStateHandle.getStateFlow("searchQuery", "")"""))
+        assertTrue(vm.contains("""savedStateHandle["searchQuery"] = query"""))
+        assertTrue(vm.contains("searchQuery.debounce(200)"))
+        assertTrue(vm.contains(".mapLatest"))
+        assertTrue(route.contains("filteredResults?.takeIf { it.query == localQuery }"))
+        assertTrue(route.contains("viewModel.searchQuery.collectAsStateWithLifecycle()"))
     }
 
     @Test fun `history writes are not launched in the ViewModel scope`() {

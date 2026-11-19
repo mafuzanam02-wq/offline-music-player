@@ -1,6 +1,8 @@
 package com.launchpoint.stereosine.ui.components
 
 import com.launchpoint.stereosine.data.model.PlaylistSummary
+import com.launchpoint.stereosine.data.model.SmartCollection
+import com.launchpoint.stereosine.data.model.SmartCollectionType
 import com.launchpoint.stereosine.data.model.Song
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -101,6 +103,38 @@ class GroupedLibrarySearchTest {
         )
 
         assertFalse(results.isEmpty)
+    }
+
+    @Test
+    fun `nonblank search on an empty library returns no result groups`() {
+        assertTrue(buildGroupedSearchResults(songs = emptyList(), query = "missing").isEmpty)
+    }
+
+    @Test
+    fun `the same query returns all searchable categories`() {
+        val track = song(1, "Focus Track", artist = "Focus Artist", album = "Focus Album")
+            .copy(folderPath = "/music/focus", folderName = "Focus Folder")
+        val collection = SmartCollection(
+            id = "focus",
+            title = "Focus Collection",
+            description = "",
+            type = SmartCollectionType.FAVORITES,
+            songCount = 1,
+        )
+
+        val results = buildGroupedSearchResults(
+            songs = listOf(track),
+            query = "focus",
+            playlists = listOf(playlist(2, "Focus Playlist")),
+            smartCollections = listOf(collection),
+        )
+
+        assertEquals(listOf(track), results.songs)
+        assertEquals(listOf("Focus Artist"), results.artists.map { it.artistKey })
+        assertEquals(listOf("Focus Album"), results.albums.map { it.albumKey })
+        assertEquals(listOf(2L), results.playlists.map { it.id })
+        assertEquals(listOf(collection), results.smartCollections)
+        assertEquals(listOf("Focus Folder"), results.folders.map { it.displayName })
     }
 
     private fun playlist(id: Long, name: String) = PlaylistSummary(

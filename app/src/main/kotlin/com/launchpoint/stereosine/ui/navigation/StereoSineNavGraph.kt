@@ -181,6 +181,10 @@ fun StereoSineNavGraph(
         LocalShowQueueCount           provides showQueueCount,
         LocalNowPlayingTimeDisplayMode provides nowPlayingTimeDisplayMode,
     ) {
+        val openSearch: () -> Unit = {
+            navController.navigate(Screen.GlobalSearch.route) { launchSingleTop = true }
+        }
+
         NavHost(
             navController    = navController,
             startDestination = resolvedStartRoute,
@@ -215,7 +219,7 @@ fun StereoSineNavGraph(
                 onWrappedClick           = { navController.navigate(Screen.Wrapped.route) },
                 onAlbumClick             = { albumKey -> navController.navigate(Screen.AlbumDetails.createRoute(albumKey)) },
                 onArtistClick            = { artistKey -> navController.navigate(Screen.ArtistDetails.createRoute(artistKey)) },
-                onGlobalSearchClick      = { navController.navigate(Screen.GlobalSearch.route) },
+                onGlobalSearchClick      = openSearch,
                 onHomeCustomizationClick = { navController.navigate(Screen.HomeCustomization.route) },
                 onReportsAndInsightsClick = { navController.navigatePrimary(Screen.SettingsStatistics.route) },
                 onLibrarySettingsClick   = { navController.navigate(Screen.SettingsLibrary.route) },
@@ -234,12 +238,13 @@ fun StereoSineNavGraph(
                 onHomeClick             = { navController.navigatePrimary(Screen.Home.route) },
                 onNowPlayingClick       = { navController.navigateNowPlaying() },
                 onInsightsClick         = { navController.navigatePrimary(Screen.SettingsStatistics.route) },
-                onSearchClick           = { navController.navigate(Screen.GlobalSearch.route) },
+                onSearchClick           = openSearch,
                 onLibrarySettingsClick  = { navController.navigate(Screen.SettingsLibrary.route) },
             )
         }
         composable(Screen.Songs.route) {
             SongsScreen(
+                onSearchClick      = openSearch,
                 onSongsClick          = { navController.navigatePrimary(Screen.Songs.route) },
                 onNavigateBack         = { navController.popBackStack() },
                 onHomeClick            = { navController.navigatePrimary(Screen.Home.route) },
@@ -304,6 +309,7 @@ fun StereoSineNavGraph(
         }
         composable(Screen.Albums.route) {
             AlbumsScreen(
+                onSearchClick      = openSearch,
                 onNavigateBack    = { navController.popBackStack() },
                 onAlbumClick      = { albumKey -> navController.navigate(Screen.AlbumDetails.createRoute(albumKey)) },
                 onNowPlayingClick = { navController.navigateNowPlaying() },
@@ -324,6 +330,7 @@ fun StereoSineNavGraph(
         }
         composable(Screen.Artists.route) {
             ArtistsScreen(
+                onSearchClick      = openSearch,
                 onNavigateBack    = { navController.popBackStack() },
                 onArtistClick     = { artistKey -> navController.navigate(Screen.ArtistDetails.createRoute(artistKey)) },
                 onNowPlayingClick = { navController.navigateNowPlaying() },
@@ -344,6 +351,7 @@ fun StereoSineNavGraph(
         }
         composable(Screen.Folders.route) {
             FoldersScreen(
+                onSearchClick      = openSearch,
                 onNavigateBack    = { navController.popBackStack() },
                 onFolderClick     = { folderKey -> navController.navigate(Screen.FolderDetails.createRoute(folderKey)) },
                 onNowPlayingClick = { navController.navigateNowPlaying() },
@@ -383,6 +391,7 @@ fun StereoSineNavGraph(
         }
         composable(Screen.Playlists.route) {
             PlaylistsScreen(
+                onSearchClick      = openSearch,
                 onNavigateBack    = { navController.popBackStack() },
                 onPlaylistClick   = { playlistId -> navController.navigate(Screen.PlaylistDetails.createRoute(playlistId)) },
                 onNowPlayingClick = { navController.navigateNowPlaying() },
@@ -420,6 +429,7 @@ fun StereoSineNavGraph(
                 .getStateFlow<String?>("add_songs_result", null)
                 .collectAsStateWithLifecycle()
             PlaylistDetailsScreen(
+                onSearchClick      = openSearch,
                 onNavigateBack      = { navController.popBackStack() },
                 onAddSongsClick     = { navController.navigate(Screen.AddSongsToPlaylist.createRoute(playlistId)) },
                 onTrackDetailsClick = { songId -> navController.navigate(Screen.TrackDetails.createRoute(songId)) },
@@ -467,7 +477,16 @@ fun StereoSineNavGraph(
                 onAlbumClick               = { albumKey -> navController.navigate(Screen.AlbumDetails.createRoute(albumKey)) },
                 onArtistClick              = { artistKey -> navController.navigate(Screen.ArtistDetails.createRoute(artistKey)) },
                 onFolderClick              = { folderKey -> navController.navigate(Screen.FolderDetails.createRoute(folderKey)) },
-                onPlaylistClick            = { playlistId -> navController.navigate(Screen.PlaylistDetails.createRoute(playlistId)) },
+                onPlaylistClick            = { playlistId ->
+                    val origin = navController.previousBackStackEntry
+                    if (origin?.destination?.route == Screen.PlaylistDetails.route &&
+                        origin.arguments?.getLong("playlistId") == playlistId
+                    ) {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(Screen.PlaylistDetails.createRoute(playlistId))
+                    }
+                },
                 onSmartCollectionClick     = { type -> navController.navigate(Screen.SmartCollectionDetails.createRoute(type)) },
             )
         }
@@ -556,7 +575,7 @@ fun StereoSineNavGraph(
                 onLibraryClick         = { navController.navigatePrimary(Screen.Library.route) },
                 onInsightsClick        = { navController.navigatePrimary(Screen.SettingsStatistics.route) },
                 onNowPlayingClick      = { navController.navigateNowPlaying() },
-                onSearchClick          = { navController.navigate(Screen.GlobalSearch.route) },
+                onSearchClick          = openSearch,
                 onSettingsClick        = { navController.navigate(Screen.Settings.route) },
             )
         }

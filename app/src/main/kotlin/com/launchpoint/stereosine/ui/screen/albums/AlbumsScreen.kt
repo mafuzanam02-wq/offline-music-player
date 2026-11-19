@@ -1,6 +1,5 @@
 package com.launchpoint.stereosine.ui.screen.albums
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -56,7 +55,6 @@ import com.launchpoint.stereosine.ui.components.ArtworkImage
 import com.launchpoint.stereosine.ui.components.EmptyStateText
 import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
-import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
 import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
 import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
@@ -66,6 +64,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumsScreen(
+    onSearchClick: () -> Unit,
     onNavigateBack: () -> Unit,
     onAlbumClick: (String) -> Unit,
     onNowPlayingClick: () -> Unit = {},
@@ -73,85 +72,66 @@ fun AlbumsScreen(
     playbackVm: PlaybackControlsViewModel = hiltViewModel(),
 ) {
     val state       by viewModel.uiState.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val sortMode    by viewModel.sortMode.collectAsStateWithLifecycle()
     val nowPlaying  by playbackVm.nowPlayingState.collectAsStateWithLifecycle()
-    var isSearchActive by remember { mutableStateOf(false) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
-
-    BackHandler(enabled = isSearchActive) {
-        isSearchActive = false
-        viewModel.setSearchQuery("")
-    }
 
     Scaffold(
         topBar = {
-            if (isSearchActive) {
-                SearchTopAppBar(
-                    query         = searchQuery,
-                    onQueryChange = viewModel::setSearchQuery,
-                    onClose       = {
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                    },
-                    placeholder   = "Search albums…",
-                )
-            } else {
-                TopAppBar(
-                    title = { Text("Albums") },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+            TopAppBar(
+                title = { Text("Albums") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector        = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint               = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Box {
+                        IconButton(onClick = { sortMenuExpanded = true }) {
                             Icon(
-                                imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort",
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
-                    },
-                    actions = {
-                        IconButton(onClick = { isSearchActive = true }) {
-                            Icon(
-                                imageVector        = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint               = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        Box {
-                            IconButton(onClick = { sortMenuExpanded = true }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                                    contentDescription = "Sort",
-                                    tint = MaterialTheme.colorScheme.onSurface,
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false },
+                        ) {
+                            AlbumSortMode.entries.forEach { mode ->
+                                DropdownMenuItem(
+                                    text = { Text(mode.label) },
+                                    trailingIcon = if (sortMode == mode) ({
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }) else null,
+                                    onClick = {
+                                        viewModel.setSortMode(mode)
+                                        sortMenuExpanded = false
+                                    },
                                 )
                             }
-                            DropdownMenu(
-                                expanded = sortMenuExpanded,
-                                onDismissRequest = { sortMenuExpanded = false },
-                            ) {
-                                AlbumSortMode.entries.forEach { mode ->
-                                    DropdownMenuItem(
-                                        text = { Text(mode.label) },
-                                        trailingIcon = if (sortMode == mode) ({
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }) else null,
-                                        onClick = {
-                                            viewModel.setSortMode(mode)
-                                            sortMenuExpanded = false
-                                        },
-                                    )
-                                }
-                            }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor    = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-            }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
         },
         bottomBar = {
             MiniPlayer(
@@ -170,7 +150,7 @@ fun AlbumsScreen(
             AlbumsUiState.Empty    -> EmptyContent(Modifier.padding(innerPadding))
             is AlbumsUiState.Ready -> AlbumListContent(
                 albums            = s.albums,
-                showAlphabetIndex = !isSearchActive && sortMode.usesAlphabetIndex,
+                showAlphabetIndex = sortMode.usesAlphabetIndex,
                 onAlbumClick      = onAlbumClick,
                 modifier          = Modifier.padding(innerPadding),
             )

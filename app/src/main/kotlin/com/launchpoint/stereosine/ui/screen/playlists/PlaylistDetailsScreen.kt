@@ -1,6 +1,5 @@
 package com.launchpoint.stereosine.ui.screen.playlists
 
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -95,7 +94,6 @@ import com.launchpoint.stereosine.ui.components.LoadingStateContent
 import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.PlaylistArtworkCollage
-import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.components.metadataNavigationKey
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
 import com.launchpoint.stereosine.ui.viewmodel.PlaylistActionsViewModel
@@ -111,6 +109,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistDetailsScreen(
+    onSearchClick: () -> Unit,
     onNavigateBack: () -> Unit,
     onAddSongsClick: () -> Unit,
     onTrackDetailsClick: (Long) -> Unit,
@@ -131,17 +130,11 @@ fun PlaylistDetailsScreen(
     var showDelete        by remember { mutableStateOf(false) }
     var menuExpanded      by remember { mutableStateOf(false) }
     var renameError       by remember { mutableStateOf<String?>(null) }
-    var searchMode        by remember { mutableStateOf(false) }
     var addToPlaylistSong by remember { mutableStateOf<Song?>(null) }
     val snackbarHostState  = remember { SnackbarHostState() }
     val coroutineScope     = rememberCoroutineScope()
     val autoScrollScope    = rememberCoroutineScope()
     val context            = LocalContext.current
-
-    BackHandler(enabled = searchMode) {
-        searchMode = false
-        viewModel.clearSearch()
-    }
 
     LaunchedEffect(pendingMessage) {
         if (pendingMessage != null) {
@@ -250,88 +243,76 @@ fun PlaylistDetailsScreen(
 
     Scaffold(
         topBar = {
-            if (searchMode) {
-                SearchTopAppBar(
-                    query         = state.searchQuery,
-                    onQueryChange = viewModel::updateSearchQuery,
-                    onClose       = {
-                        searchMode = false
-                        viewModel.clearSearch()
-                    },
-                    placeholder   = "Search songs in this playlist…",
-                )
-            } else {
-                TopAppBar(
-                    title = {
-                        Column {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text     = playlistName.ifBlank { "Playlist" },
+                            style    = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (songCount > 0) {
                             Text(
-                                text     = playlistName.ifBlank { "Playlist" },
-                                style    = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (songCount > 0) {
-                                Text(
-                                    text  = CountLabels.songs(songCount),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                )
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                text  = CountLabels.songs(songCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             )
                         }
-                    },
-                    actions = {
-                        IconButton(onClick = { searchMode = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search playlist")
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
+                    }
+                    IconButton(onClick = onAddSongsClick) {
+                        Icon(Icons.Default.Add, contentDescription = "Add songs")
+                    }
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
                         }
-                        IconButton(onClick = onAddSongsClick) {
-                            Icon(Icons.Default.Add, contentDescription = "Add songs")
+                        DropdownMenu(
+                            expanded         = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text        = { Text("Rename") },
+                                leadingIcon = { Icon(Icons.Default.DriveFileRenameOutline, null) },
+                                onClick     = { menuExpanded = false; showRename = true },
+                            )
+                            DropdownMenuItem(
+                                text        = { Text("Export as M3U8") },
+                                leadingIcon = { Icon(Icons.Default.FileUpload, null) },
+                                onClick     = { menuExpanded = false; viewModel.startExport() },
+                            )
+                            DropdownMenuItem(
+                                text        = { Text("Delete playlist", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                onClick     = { menuExpanded = false; showDelete = true },
+                            )
                         }
-                        Box {
-                            IconButton(onClick = { menuExpanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                            }
-                            DropdownMenu(
-                                expanded         = menuExpanded,
-                                onDismissRequest = { menuExpanded = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text        = { Text("Rename") },
-                                    leadingIcon = { Icon(Icons.Default.DriveFileRenameOutline, null) },
-                                    onClick     = { menuExpanded = false; showRename = true },
-                                )
-                                DropdownMenuItem(
-                                    text        = { Text("Export as M3U8") },
-                                    leadingIcon = { Icon(Icons.Default.FileUpload, null) },
-                                    onClick     = { menuExpanded = false; viewModel.startExport() },
-                                )
-                                DropdownMenuItem(
-                                    text        = { Text("Delete playlist", color = MaterialTheme.colorScheme.error) },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            null,
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    onClick     = { menuExpanded = false; showDelete = true },
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor    = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-            }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {

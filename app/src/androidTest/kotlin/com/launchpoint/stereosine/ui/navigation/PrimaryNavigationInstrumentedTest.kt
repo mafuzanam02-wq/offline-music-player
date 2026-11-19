@@ -109,19 +109,6 @@ class PrimaryNavigationInstrumentedTest {
                 assertEquals(before, events.get())
             }
         }
-        click("Songs")
-        rule.onNodeWithContentDescription("Search").performClick()
-        rule.onNode(hasSetTextAction()).performTextInput("nav-fixture")
-        rule.activity.runOnUiThread {
-            (rule.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
-                .hideSoftInputFromWindow(rule.activity.window.decorView.windowToken, 0)
-        }
-        rule.waitForIdle()
-        val entry = nav.currentBackStackEntry
-        repeat(4) { tab("Songs").performClick() }
-        rule.onNodeWithText("nav-fixture").assertIsDisplayed()
-        assertSame(entry, nav.currentBackStackEntry)
-        rule.onNodeWithContentDescription("Close search").performClick()
         repeat(3) {
             for (label in tabs.keys) {
                 click(label)
@@ -129,6 +116,110 @@ class PrimaryNavigationInstrumentedTest {
                 assertEquals(stack.distinct(), stack)
                 assertTrue(stack.size <= 2)
             }
+        }
+    }
+
+    private fun openSearch(label: String = "Search") {
+        rule.onNodeWithContentDescription(label).performClick()
+        waitRoute(Screen.GlobalSearch.route)
+    }
+
+    private fun closeSearch() {
+        rule.onNodeWithContentDescription("Close search").performClick()
+    }
+
+    @Test fun allLibrarySearchButtonsReturnToTheirOriginalBackStackEntry() {
+        launch()
+        val origins = listOf(
+            Screen.Home, Screen.Songs, Screen.Library, Screen.Albums, Screen.Artists,
+            Screen.Folders, Screen.Playlists, Screen.SettingsStatistics, Screen.PlaylistDetails,
+        )
+        for (origin in origins) {
+            if (nav.currentDestination?.route != origin.route) {
+                rule.runOnIdle {
+                    nav.navigate(if (origin == Screen.PlaylistDetails) Screen.PlaylistDetails.createRoute(Long.MAX_VALUE) else origin.route)
+                }
+            }
+            waitRoute(origin.route)
+            val originEntry = nav.currentBackStackEntry
+            val originStack = routes()
+            openSearch(if (origin == Screen.Library) "Search library" else "Search")
+            rule.onNode(hasSetTextAction()).performTextInput("uncommitted")
+            rule.onNodeWithContentDescription("Clear search").performClick()
+            rule.onNodeWithText("uncommitted").assertDoesNotExist()
+            rule.runOnIdle { rule.activity.onBackPressedDispatcher.onBackPressed() }
+            waitRoute(origin.route)
+            assertSame(originEntry, nav.currentBackStackEntry)
+            assertEquals(originStack, routes())
+        }
+    }
+
+    @Test fun resultNavigationCommitsAcrossOriginsAndReusesTheLaunchingPlaylist() {
+        launch()
+        val title = "Search fixture ${System.nanoTime()}"
+        rule.runOnIdle { nav.navigate(Screen.Playlists.route) }
+        waitRoute(Screen.Playlists.route)
+        rule.onNodeWithContentDescription("Create playlist").performClick()
+        rule.onNode(hasSetTextAction()).performTextInput(title)
+        rule.onNodeWithText("Create").performClick()
+        rule.waitUntil(10_000) { rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText(title).performClick()
+        waitRoute(Screen.PlaylistDetails.route)
+        val id = checkNotNull(nav.currentBackStackEntry?.arguments?.getLong("playlistId"))
+        try {
+            rule.runOnIdle { nav.popBackStack(Screen.Home.route, inclusive = false) }
+            waitRoute(Screen.Home.route)
+            click("Songs")
+            val songsEntry = nav.currentBackStackEntry
+            openSearch()
+            val searchEntry = nav.currentBackStackEntry
+            rule.onNode(hasSetTextAction()).performTextInput(title)
+            rule.onNodeWithContentDescription("Clear search").performClick()
+            rule.onNodeWithText(title).assertDoesNotExist()
+            rule.onNode(hasSetTextAction()).performTextInput("unrelated text")
+            rule.onNode(hasSetTextAction()).performTextReplacement(title)
+            val result = hasText(title) and hasClickAction() and !hasSetTextAction()
+            rule.waitUntil(10_000) { rule.onAllNodes(result).fetchSemanticsNodes().size == 1 }
+            rule.onNode(result).performClick()
+            waitRoute(Screen.PlaylistDetails.route)
+            val playlistEntry = nav.currentBackStackEntry
+            assertEquals(id, playlistEntry?.arguments?.getLong("playlistId"))
+            rule.runOnIdle { nav.popBackStack() }
+            waitRoute(Screen.GlobalSearch.route)
+            assertSame(searchEntry, nav.currentBackStackEntry)
+            rule.onNode(hasSetTextAction()).assertTextContains(title)
+            closeSearch()
+            waitRoute(Screen.Songs.route)
+            assertSame(songsEntry, nav.currentBackStackEntry)
+
+            rule.runOnIdle { nav.navigate(Screen.PlaylistDetails.createRoute(id)) }
+            waitRoute(Screen.PlaylistDetails.route)
+            val existingPlaylistEntry = nav.currentBackStackEntry
+            openSearch()
+            rule.waitUntil(10_000) { rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+            rule.onNodeWithText(title).performClick()
+            rule.waitUntil(10_000) { rule.onAllNodes(result).fetchSemanticsNodes().size == 1 }
+            rule.onNode(result).performClick()
+            waitRoute(Screen.PlaylistDetails.route)
+            assertSame(existingPlaylistEntry, nav.currentBackStackEntry)
+
+            openSearch()
+            val remove = hasContentDescription("Remove $title from recent searches")
+            rule.waitUntil(10_000) { rule.onAllNodes(remove).fetchSemanticsNodes().size == 1 }
+            rule.onNode(remove).performClick()
+            rule.waitUntil(10_000) { rule.onAllNodes(remove).fetchSemanticsNodes().isEmpty() }
+            closeSearch()
+            waitRoute(Screen.PlaylistDetails.route)
+            rule.runOnIdle { nav.popBackStack() }
+            waitRoute(Screen.Songs.route)
+            openSearch()
+            rule.onNodeWithText(title).assertDoesNotExist()
+        } finally {
+            rule.runOnIdle { nav.navigate(Screen.PlaylistDetails.createRoute(id)) }
+            waitRoute(Screen.PlaylistDetails.route)
+            rule.onNodeWithContentDescription("More options").performClick()
+            rule.onNodeWithText("Delete playlist").performClick()
+            rule.onNodeWithText("Delete playlist").performClick()
         }
     }
 
@@ -205,6 +296,14 @@ class PrimaryNavigationInstrumentedTest {
                 assertTrue(player.nowPlayingState.value.isPlaying)
                 assertEquals(queue, player.nowPlayingState.value.queue)
             }
+            click("Songs")
+            openSearch()
+            rule.onNode(hasSetTextAction()).performTextInput("playback-navigation-fixture")
+            closeSearch()
+            waitRoute(Screen.Songs.route)
+            assertTrue(player.nowPlayingState.value.isPlaying)
+            assertEquals(queue, player.nowPlayingState.value.queue)
+
             rule.runOnIdle { nav.navigate("now_playing") }
             waitRoute("now_playing")
             click("Library")

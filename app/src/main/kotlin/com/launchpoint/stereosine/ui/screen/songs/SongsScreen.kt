@@ -1,6 +1,5 @@
 package com.launchpoint.stereosine.ui.screen.songs
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,8 +67,6 @@ import com.launchpoint.stereosine.data.model.Song
 import com.launchpoint.stereosine.data.search.AlphabetIndex
 import com.launchpoint.stereosine.data.settings.SongSortMode
 import com.launchpoint.stereosine.ui.components.AddToPlaylistDialog
-import com.launchpoint.stereosine.ui.components.GroupedSearchContent
-import com.launchpoint.stereosine.ui.components.SongSearchActions
 import com.launchpoint.stereosine.ui.components.shareSong
 import com.launchpoint.stereosine.ui.components.announceQueueAction
 import com.launchpoint.stereosine.ui.components.AlphabetSideIndex
@@ -79,7 +76,6 @@ import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.PrimaryDestination
 import com.launchpoint.stereosine.ui.components.PrimaryNavigationBar
-import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.components.SongRowWithOverflow
 import com.launchpoint.stereosine.ui.components.motion.StereoSineFadeThrough
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
@@ -93,6 +89,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongsScreen(
+    onSearchClick: () -> Unit,
     onNavigateBack: () -> Unit,
     onSongsClick: () -> Unit = {},
     onHomeClick: () -> Unit,
@@ -110,58 +107,40 @@ fun SongsScreen(
     val uiState           by viewModel.songsUiState.collectAsStateWithLifecycle()
     val nowPlaying        by viewModel.nowPlayingState.collectAsStateWithLifecycle()
     val favoriteSongIds   by viewModel.favoriteSongIds.collectAsStateWithLifecycle()
-    val songSearchResults by viewModel.songSearchResults.collectAsStateWithLifecycle()
     val scanState         by viewModel.scanState.collectAsStateWithLifecycle()
-    var localQuery        by remember { mutableStateOf("") }
     val songSortMode              by viewModel.songSortMode.collectAsStateWithLifecycle()
     val folderModeNeedsSelection           by viewModel.folderModeNeedsSelection.collectAsStateWithLifecycle()
     val needsFolderReselectionAfterRestore by viewModel.needsFolderReselectionAfterRestore.collectAsStateWithLifecycle()
     val playlists        by playlistVm.playlists.collectAsStateWithLifecycle()
     val allPlaylistSongs by playlistVm.allPlaylistSongs.collectAsStateWithLifecycle()
-    var isSearchActive   by remember { mutableStateOf(false) }
     var addToPlaylistSong by remember { mutableStateOf<Song?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope    = rememberCoroutineScope()
     val context           = LocalContext.current
 
-    BackHandler(enabled = isSearchActive) {
-        isSearchActive = false
-        localQuery = ""
-        viewModel.setSearchQuery("")
-    }
-
     Scaffold(
         topBar = {
-            if (isSearchActive) {
-                SearchTopAppBar(
-                    query         = localQuery,
-                    onQueryChange = { localQuery = it; viewModel.setSearchQuery(it) },
-                    onClose       = { isSearchActive = false; localQuery = ""; viewModel.setSearchQuery("") },
-                    placeholder   = "Search songs, artists, albums, folders…",
-                )
-            } else {
-                TopAppBar(
-                    title = { Text("Songs") },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { isSearchActive = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor    = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-            }
+            TopAppBar(
+                title = { Text("Songs") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -202,7 +181,6 @@ fun SongsScreen(
             PullToRefreshContainer(
                 scanState = scanState,
                 onRefresh = viewModel::rescanLibrary,
-                enabled   = !isSearchActive,
                 modifier  = Modifier.weight(1f).fillMaxWidth(),
             ) {
                 when (val state = uiState) {
@@ -213,13 +191,18 @@ fun SongsScreen(
                         needsFolderReselectionAfterRestore = needsFolderReselectionAfterRestore,
                     )
                     is HomeUiState.Songs -> {
-                        val commonSongActions = SongSearchActions(
-                            currentSongId = nowPlaying.song?.id,
-                            favoriteSongIds = favoriteSongIds,
-                            onSongClick = viewModel::playSearchResult,
-                            onPlayNext = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.playNext(song)) },
-                            onAddToQueue = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.addToQueue(song)) },
-                            onToggleFavorite = { song, wasFavorite ->
+                        SongListContent(
+                            songs             = state.songs,
+                            sortMode          = songSortMode,
+                            onSortModeChange  = viewModel::setSongSortMode,
+                            showAlphabetIndex = songSortMode == SongSortMode.TITLE_ASC,
+                            currentSongId     = nowPlaying.song?.id,
+                            favoriteSongIds   = favoriteSongIds,
+                            onSongClick       = viewModel::playSongFromSongsList,
+                            onShuffleAll      = viewModel::shuffleSongsList,
+                            onPlayNext        = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.playNext(song)) },
+                            onAddToQueue      = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.addToQueue(song)) },
+                            onToggleFavorite  = { song, wasFavorite ->
                                 viewModel.toggleFavorite(song.id)
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
@@ -227,12 +210,12 @@ fun SongsScreen(
                                     )
                                 }
                             },
-                            onAddToPlaylist = { song -> addToPlaylistSong = song },
+                            onAddToPlaylist   = { song -> addToPlaylistSong = song },
+                            onAlbumClick      = onAlbumClick,
+                            onArtistClick     = onArtistClick,
                             onTrackDetailsClick = onTrackDetailsClick,
-                            onAlbumClick = onAlbumClick,
-                            onArtistClick = onArtistClick,
-                            onFolderClick = onFolderClick,
-                            onShare = { song ->
+                            onFolderClick     = onFolderClick,
+                            onShare           = { song ->
                                 shareSong(context, song) {
                                     coroutineScope.launch {
                                         snackbarHostState.showSnackbar("Could not share this track")
@@ -240,49 +223,6 @@ fun SongsScreen(
                                 }
                             },
                         )
-                        if (isSearchActive && localQuery.isNotEmpty()) {
-                            GroupedSearchContent(
-                                results = songSearchResults,
-                                query = localQuery,
-                                songActions = commonSongActions,
-                                onAlbumClick = onAlbumClick,
-                                onArtistClick = onArtistClick,
-                                onFolderClick = onFolderClick,
-                            )
-                        } else {
-                            SongListContent(
-                                songs             = state.songs,
-                                sortMode          = songSortMode,
-                                onSortModeChange  = viewModel::setSongSortMode,
-                                showAlphabetIndex = !isSearchActive && songSortMode == SongSortMode.TITLE_ASC,
-                                currentSongId     = nowPlaying.song?.id,
-                                favoriteSongIds   = favoriteSongIds,
-                                onSongClick       = viewModel::playSongFromSongsList,
-                                onShuffleAll      = viewModel::shuffleSongsList,
-                                onPlayNext        = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.playNext(song)) },
-                                onAddToQueue      = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.addToQueue(song)) },
-                                onToggleFavorite  = { song, wasFavorite ->
-                                    viewModel.toggleFavorite(song.id)
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            if (wasFavorite) "Removed from Favorites" else "Added to Favorites",
-                                        )
-                                    }
-                                },
-                                onAddToPlaylist   = { song -> addToPlaylistSong = song },
-                                onAlbumClick      = onAlbumClick,
-                                onArtistClick     = onArtistClick,
-                                onTrackDetailsClick = onTrackDetailsClick,
-                                onFolderClick     = onFolderClick,
-                                onShare           = { song ->
-                                    shareSong(context, song) {
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Could not share this track")
-                                        }
-                                    }
-                                },
-                            )
-                        }
                     }
                 }
             }

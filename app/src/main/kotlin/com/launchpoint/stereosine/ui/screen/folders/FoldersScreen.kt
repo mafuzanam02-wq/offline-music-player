@@ -1,6 +1,5 @@
 package com.launchpoint.stereosine.ui.screen.folders
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -51,7 +50,6 @@ import com.launchpoint.stereosine.ui.components.AlphabetSideIndex
 import com.launchpoint.stereosine.ui.components.EmptyStateText
 import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
-import com.launchpoint.stereosine.ui.components.SearchTopAppBar
 import com.launchpoint.stereosine.ui.components.motion.rememberReducedMotion
 import com.launchpoint.stereosine.ui.components.motion.stereoSineItemPlacement
 import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
@@ -61,6 +59,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoldersScreen(
+    onSearchClick: () -> Unit,
     onNavigateBack: () -> Unit,
     onFolderClick: (String) -> Unit,
     onNowPlayingClick: () -> Unit = {},
@@ -69,89 +68,70 @@ fun FoldersScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val nowPlaying by playbackVm.nowPlayingState.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
-    var isSearchActive by remember { mutableStateOf(false) }
     var isSortMenuExpanded by remember { mutableStateOf(false) }
-
-    BackHandler(enabled = isSearchActive) {
-        isSearchActive = false
-        viewModel.setSearchQuery("")
-    }
 
     Scaffold(
         topBar = {
-            if (isSearchActive) {
-                SearchTopAppBar(
-                    query = searchQuery,
-                    onQueryChange = viewModel::setSearchQuery,
-                    onClose = {
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                    },
-                    placeholder = "Search folders…",
-                )
-            } else {
-                TopAppBar(
-                    title = { Text("Folders") },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+            TopAppBar(
+                title = { Text("Folders") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Box {
+                        IconButton(onClick = { isSortMenuExpanded = true }) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { isSearchActive = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = "Sort",
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
-                        Box {
-                            IconButton(onClick = { isSortMenuExpanded = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Sort,
-                                    contentDescription = "Sort",
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = isSortMenuExpanded,
-                                onDismissRequest = { isSortMenuExpanded = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Name A–Z") },
-                                    onClick = { viewModel.setSortMode(FolderSortMode.NAME); isSortMenuExpanded = false },
-                                    trailingIcon = if (sortMode == FolderSortMode.NAME) ({
-                                        Icon(Icons.Default.Sort, null, tint = MaterialTheme.colorScheme.primary)
-                                    }) else null,
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Most songs") },
-                                    onClick = { viewModel.setSortMode(FolderSortMode.MOST_SONGS); isSortMenuExpanded = false },
-                                    trailingIcon = if (sortMode == FolderSortMode.MOST_SONGS) ({
-                                        Icon(Icons.Default.Sort, null, tint = MaterialTheme.colorScheme.primary)
-                                    }) else null,
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Longest") },
-                                    onClick = { viewModel.setSortMode(FolderSortMode.LONGEST); isSortMenuExpanded = false },
-                                    trailingIcon = if (sortMode == FolderSortMode.LONGEST) ({
-                                        Icon(Icons.Default.Sort, null, tint = MaterialTheme.colorScheme.primary)
-                                    }) else null,
-                                )
-                            }
+                        DropdownMenu(
+                            expanded = isSortMenuExpanded,
+                            onDismissRequest = { isSortMenuExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Name A–Z") },
+                                onClick = { viewModel.setSortMode(FolderSortMode.NAME); isSortMenuExpanded = false },
+                                trailingIcon = if (sortMode == FolderSortMode.NAME) ({
+                                    Icon(Icons.Default.Sort, null, tint = MaterialTheme.colorScheme.primary)
+                                }) else null,
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Most songs") },
+                                onClick = { viewModel.setSortMode(FolderSortMode.MOST_SONGS); isSortMenuExpanded = false },
+                                trailingIcon = if (sortMode == FolderSortMode.MOST_SONGS) ({
+                                    Icon(Icons.Default.Sort, null, tint = MaterialTheme.colorScheme.primary)
+                                }) else null,
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Longest") },
+                                onClick = { viewModel.setSortMode(FolderSortMode.LONGEST); isSortMenuExpanded = false },
+                                trailingIcon = if (sortMode == FolderSortMode.LONGEST) ({
+                                    Icon(Icons.Default.Sort, null, tint = MaterialTheme.colorScheme.primary)
+                                }) else null,
+                            )
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-            }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
         },
         bottomBar = {
             MiniPlayer(

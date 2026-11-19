@@ -2,7 +2,6 @@ package com.launchpoint.stereosine.ui.screen.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.util.Log
 import com.launchpoint.stereosine.data.model.PlaylistSummary
 import com.launchpoint.stereosine.data.model.SmartCollection
 import com.launchpoint.stereosine.data.model.SmartCollectionType
@@ -19,7 +18,6 @@ import com.launchpoint.stereosine.ui.scan.LibraryScanCoordinator
 import com.launchpoint.stereosine.ui.scan.LibraryScanUiState
 import com.launchpoint.stereosine.data.repository.StatsRepository
 import com.launchpoint.stereosine.data.repository.localDayRefreshFlow
-import com.launchpoint.stereosine.data.search.LibrarySearchIndex
 import com.launchpoint.stereosine.data.search.SongSort
 import com.launchpoint.stereosine.data.settings.AppIconChoice
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
@@ -29,7 +27,6 @@ import com.launchpoint.stereosine.data.settings.HomeSmartCollectionSelection
 import com.launchpoint.stereosine.data.settings.LibraryScanMode
 import com.launchpoint.stereosine.data.settings.LibraryScanSettings
 import com.launchpoint.stereosine.data.settings.LibraryScanSettingsRepository
-import com.launchpoint.stereosine.data.settings.SearchTapBehavior
 import com.launchpoint.stereosine.data.settings.SongSortMode
 import com.launchpoint.stereosine.data.stats.MostPlayedBuilder
 import com.launchpoint.stereosine.data.stats.HomeWrappedPreviewBuilder
@@ -39,24 +36,18 @@ import com.launchpoint.stereosine.playback.PlayerController
 import com.launchpoint.stereosine.playback.SleepTimerOption
 import com.launchpoint.stereosine.playback.SleepTimerState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import com.launchpoint.stereosine.ui.components.GroupedSearchResults
-import com.launchpoint.stereosine.ui.components.groupedSearchResults
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -106,10 +97,6 @@ internal fun homeDashboardFlow(
     )
 }
 
-// Matches the debounce already used by songSearchResults so both Home search pipelines
-// coalesce keystrokes consistently (WC-01).
-private const val SEARCH_DEBOUNCE_MS = 200L
-
 sealed interface HomeUiState {
     data object Loading : HomeUiState
     data object Empty   : HomeUiState
@@ -137,11 +124,6 @@ class HomeViewModel @Inject constructor(
     private val libraryScanSettingsRepository: LibraryScanSettingsRepository,
 ) : ViewModel() {
 
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
-
     fun setSongSortMode(mode: SongSortMode) {
         viewModelScope.launch { appSettingsRepository.setSongSortMode(mode) }
     }
@@ -154,51 +136,20 @@ class HomeViewModel @Inject constructor(
         initialValue = null,
     )
 
-    val librarySongs: StateFlow<List<Song>> = allSongs
-        .map { it.orEmpty() }
-        .stateIn(
-            scope        = viewModelScope,
-            started      = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList(),
-        )
-
-    // WC-01 / Phase 9: filtering runs off the Main thread with a short debounce. The normalized
-    // search index is rebuilt only when the library changes (allSongs emits) — mapLatest cancels a
-    // stale rebuild during a rescan — so a keystroke only runs cheap substring matching, not a
-    // full re-normalization of the library. A null index preserves the Loading state; an empty
-    // library preserves Empty. Search semantics (matched fields, ordering, empty-state) are unchanged.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val librarySongIndex: Flow<LibrarySearchIndex?> = allSongs
-        .mapLatest { songs -> songs?.let { LibrarySearchIndex.from(it) } }
-        .flowOn(Dispatchers.Default)
-
-    val uiState: StateFlow<HomeUiState> = combine(
-        librarySongIndex,
-        _searchQuery.debounce(SEARCH_DEBOUNCE_MS),
-    ) { index, query ->
-        when {
-            index == null -> HomeUiState.Loading
-            index.songs.isEmpty() -> HomeUiState.Empty
-            else            -> HomeUiState.Songs(index.filterSongs(query))
+    val uiState: StateFlow<HomeUiState> = allSongs
+        .map { songs ->
+            when {
+                songs == null -> HomeUiState.Loading
+                songs.isEmpty() -> HomeUiState.Empty
+                else -> HomeUiState.Songs(songs)
+            }
         }
-    }
-        .flowOn(Dispatchers.Default)
-        .stateIn(
-            scope        = viewModelScope,
-            started      = SharingStarted.WhileSubscribed(5_000),
-            initialValue = HomeUiState.Loading,
-        )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState.Loading)
 
     val songSortMode: StateFlow<SongSortMode> = appSettingsRepository.songSortMode.stateIn(
         scope        = viewModelScope,
         started      = SharingStarted.WhileSubscribed(5_000),
         initialValue = SongSortMode.DEFAULT,
-    )
-
-    val searchTapBehavior: StateFlow<SearchTapBehavior> = appSettingsRepository.searchTapBehavior.stateIn(
-        scope        = viewModelScope,
-        started      = SharingStarted.Eagerly,
-        initialValue = SearchTapBehavior.DEFAULT,
     )
 
     // Month key (year*12 + month) that advances at each local month boundary. Driven by the
@@ -238,9 +189,6 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
-    // songsUiState intentionally does NOT combine with _searchQuery so that typing
-    // in the Songs search bar does not trigger a full re-sort of the library on every
-    // keystroke. When search is active, SongsScreen shows songSearchResults instead.
     val songsUiState: StateFlow<HomeUiState> = combine(
         allSongs,
         songSortMode,
@@ -272,28 +220,6 @@ class HomeViewModel @Inject constructor(
         started      = SharingStarted.WhileSubscribed(5_000),
         initialValue = HomeUiState.Loading,
     )
-
-    // Phase 9: the grouped search index is rebuilt only when the library changes (mapLatest cancels
-    // a stale rebuild during a rescan); each keystroke runs only cheap substring matching, and a
-    // newer query supersedes an in-flight search. Debounce (200 ms) and semantics are unchanged.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val songSearchIndex: Flow<LibrarySearchIndex> = librarySongs
-        .mapLatest { songs -> LibrarySearchIndex.from(songs) }
-        .flowOn(Dispatchers.Default)
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val songSearchResults: StateFlow<GroupedSearchResults> =
-        combine(songSearchIndex, _searchQuery.debounce(200)) { index, query -> index to query }
-            .mapLatest { (index, query) -> groupedSearchResults(index = index, query = query) }
-            .flowOn(Dispatchers.Default)
-            .stateIn(
-                scope        = viewModelScope,
-                started      = SharingStarted.WhileSubscribed(5_000),
-                initialValue = GroupedSearchResults(
-                    songs  = emptyList(), artists = emptyList(), albums  = emptyList(),
-                    playlists = emptyList(), smartCollections = emptyList(), folders = emptyList(),
-                ),
-            )
 
     // Shared Home library lookup (WC-11): the O(N) songsById map is built ONCE per song-library emission and reused by the dashboard
     // previews and the Wrapped card; playlist / stats / Smart Collection / Wrapped emissions never rebuild it.
@@ -449,27 +375,6 @@ class HomeViewModel @Inject constructor(
         playerController.playFromQueue(queue = queue, startSong = song)
     }
 
-    fun playSongFromLibraryQueue(song: Song) {
-        val queue = allSongs.value.orEmpty()
-        PlaybackStartupTrace.hintEntry("search_replace_queue")
-        playerController.playFromQueue(queue = queue.ifEmpty { listOf(song) }, startSong = song)
-    }
-
-    fun playSearchResult(song: Song) {
-        PlaybackStartupTrace.hintEntry("search_tap") // starts the tap-to-request clock before the settings read below
-        viewModelScope.launch {
-            val behavior = appSettingsRepository.searchTapBehavior.first()
-            Log.d(SEARCH_TAG, "search result tap behavior=$behavior songId=${song.id}")
-            when (behavior) {
-                SearchTapBehavior.REPLACE_QUEUE -> playSongFromLibraryQueue(song)
-                SearchTapBehavior.PRESERVE_QUEUE -> {
-                    PlaybackStartupTrace.hintEntry("search_preserve_queue")
-                    playerController.playSearchResultPreservingQueue(song)
-                }
-            }
-        }
-    }
-
     fun playSongFromSongsList(song: Song) {
         val queue = (songsUiState.value as? HomeUiState.Songs)?.songs.orEmpty()
         PlaybackStartupTrace.hintEntry("songs_list")
@@ -557,7 +462,6 @@ internal val HOME_SMART_COLLECTION_PRIORITY = listOf(
     SmartCollectionType.SHORT_TRACKS,
 )
 
-private const val SEARCH_TAG = "StereoSineSearchPlayback"
 
 internal data class HomeWrappedYearSelection(
     val year: Int,

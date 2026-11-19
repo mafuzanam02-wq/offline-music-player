@@ -11,7 +11,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,7 +40,7 @@ fun GlobalSearchRoute(
     viewModel: GlobalSearchViewModel = hiltViewModel(),
     playlistVm: PlaylistActionsViewModel = hiltViewModel(),
 ) {
-    var localQuery       by rememberSaveable { mutableStateOf("") }
+    val localQuery       by viewModel.searchQuery.collectAsStateWithLifecycle()
     val filteredResults  by viewModel.filteredResults.collectAsStateWithLifecycle()
     val nowPlaying       by viewModel.nowPlayingState.collectAsStateWithLifecycle()
     val favoriteSongIds  by viewModel.favoriteSongIds.collectAsStateWithLifecycle()
@@ -62,7 +61,7 @@ fun GlobalSearchRoute(
         topBar = {
             SearchTopAppBar(
                 query         = localQuery,
-                onQueryChange = { localQuery = it; viewModel.setSearchQuery(it) },
+                onQueryChange = viewModel::setSearchQuery,
                 onClose       = onNavigateBack,
                 onSearch      = { viewModel.commitSearch(localQuery); keyboard?.hide() },
                 placeholder   = "Search songs, artists, albums, playlists, collections, folders…",
@@ -73,7 +72,6 @@ fun GlobalSearchRoute(
             RecentSearchesPanel(
                 entries    = recentSearches,
                 onSelect   = { query ->
-                    localQuery = query
                     viewModel.setSearchQuery(query)
                     viewModel.commitSearch(query)
                     keyboard?.hide()
@@ -83,8 +81,9 @@ fun GlobalSearchRoute(
                 modifier   = Modifier.padding(innerPadding),
             )
         } else {
+            val currentResults = filteredResults?.takeIf { it.query == localQuery } ?: return@Scaffold
             GroupedSearchContent(
-                results = filteredResults,
+                results = currentResults.results,
                 query   = localQuery,
                 songActions = SongSearchActions(
                     currentSongId    = nowPlaying.song?.id,
@@ -93,7 +92,7 @@ fun GlobalSearchRoute(
                     onPlayNext       = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.playNext(song)) },
                     onAddToQueue     = { song -> coroutineScope.announceQueueAction(snackbarHostState, song, viewModel.addToQueue(song)) },
                     onToggleFavorite = { song, wasFavorite ->
-                        viewModel.toggleFavorite(song.id)
+                        viewModel.toggleFavorite(song)
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
                                 if (wasFavorite) "Removed from Favorites" else "Added to Favorites",
@@ -101,7 +100,7 @@ fun GlobalSearchRoute(
                         }
                     },
                     onAddToPlaylist  = { song -> addToPlaylistSong = song },
-                    onTrackDetailsClick = onTrackDetailsClick,
+                    onTrackDetailsClick = { id -> viewModel.commitSearch(localQuery); onTrackDetailsClick(id) },
                     onAlbumClick     = { key -> viewModel.commitSearch(localQuery); onAlbumClick(key) },
                     onArtistClick    = { key -> viewModel.commitSearch(localQuery); onArtistClick(key) },
                     onFolderClick    = { key -> viewModel.commitSearch(localQuery); onFolderClick(key) },
