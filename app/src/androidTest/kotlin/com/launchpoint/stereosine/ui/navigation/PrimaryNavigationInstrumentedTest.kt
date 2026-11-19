@@ -1,7 +1,10 @@
 package com.launchpoint.stereosine.ui.navigation
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.key
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -18,6 +21,7 @@ import com.launchpoint.stereosine.MainActivity
 import com.launchpoint.stereosine.data.playback.PlaybackSessionRepository
 import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.settings.StartupDestination
+import com.launchpoint.stereosine.ui.permission.hasAudioPermission
 import com.launchpoint.stereosine.ui.theme.StereoSineTheme
 import java.io.File
 import java.nio.ByteBuffer
@@ -29,10 +33,23 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExternalResource
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
 
-/** Actual app graph and screen callbacks; startup preferences use disposable stores, never a data reset. */
+/**
+ * Actual app graph and screen callbacks; startup preferences use disposable stores, never a data reset.
+ *
+ * Library content (and the Songs/Albums/... rows the Back tests navigate through) sits behind [AudioPermissionGate], so the
+ * real gate must be open: [audioPermissionGranted] grants exactly the runtime permission the gate checks for the running API
+ * level, BEFORE [MainActivity] launches, and fails fast if the gate would still be closed. The gate itself is untouched.
+ */
 class PrimaryNavigationInstrumentedTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    private val composeRule = createAndroidComposeRule<MainActivity>()
+    private val rule get() = composeRule
+
+    /** Outermost rule: the permission is in place before the activity (and its first composition) exists. */
+    @get:Rule val ruleOrder: RuleChain = RuleChain.outerRule(audioPermissionGranted()).around(composeRule)
     private lateinit var nav: NavHostController
     private val stores = mutableListOf<ViewModelStore>()
     private val scopes = mutableListOf<CoroutineScope>()
@@ -40,6 +57,25 @@ class PrimaryNavigationInstrumentedTest {
     private lateinit var settings: AppSettingsRepository
     private val tabs = linkedMapOf("Home" to "home", "Songs" to "songs", "Library" to "library", "Insights" to "settings/statistics")
     private val context get() = ApplicationProvider.getApplicationContext<Context>()
+
+    private fun audioPermissionGranted(): TestRule = object : ExternalResource() {
+        override fun before() {
+            // Same API-level split as the production gate: READ_MEDIA_AUDIO on 33+, READ_EXTERNAL_STORAGE (maxSdk 32) below.
+            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Manifest.permission.READ_MEDIA_AUDIO
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            val app = ApplicationProvider.getApplicationContext<Context>()
+            InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(app.packageName, permission)
+            assertEquals(
+                "explicit precondition: $permission must be granted so the real AudioPermissionGate is open",
+                PackageManager.PERMISSION_GRANTED,
+                app.checkSelfPermission(permission),
+            )
+            assertTrue("production gate must also report the permission as held", app.hasAudioPermission())
+        }
+    }
 
     private fun launch(start: StartupDestination = StartupDestination.HOME) {
         val file = File(context.cacheDir, "nav-01-${System.nanoTime()}.preferences_pb").also(files::add)

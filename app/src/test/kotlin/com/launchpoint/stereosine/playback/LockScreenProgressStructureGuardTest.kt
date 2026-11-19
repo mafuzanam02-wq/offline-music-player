@@ -16,24 +16,67 @@ class LockScreenProgressStructureGuardTest {
     private fun src(path: String) = File("src/main/kotlin/com/launchpoint/stereosine/$path").readText()
     private fun code(path: String) = src(path).lines().filterNot { it.trim().startsWith("//") || it.trim().startsWith("*") || it.trim().startsWith("/*") }.joinToString("\n")
 
+    private val positionSetters = listOf("setContentPositionMs(", "setAdPositionMs(", "setContentBufferedPositionMs(", "setAdBufferedPositionMs(", "setTotalBufferedDurationMs(")
+    private val setterCall = Regex("""\.set[A-Za-z]+\(""")
+    private val removedCommand = Regex("""\.remove\((Player\.COMMAND_[A-Z_]+)\)""")
+
+    /** getState() body only: from its declaration up to the next member (comments are already stripped by [code]). */
+    private fun getStateBlock(facade: String) = facade.substringAfter("override fun getState()").substringBefore("private fun withLogicalQueue")
+    private fun positionSettersIn(facade: String) = positionSetters.filter { facade.contains(it) }
+    private fun settersIn(block: String) = setterCall.findAll(block).map { it.value }.toSet()
+    private fun commandsRemovedIn(block: String) = removedCommand.findAll(block).map { it.groupValues[1] }.toSet()
+
+    /**
+     * Exact contract of getState(): the logical play state (play-when-ready + suppression reason), the one-shot auto-transition
+     * discontinuity, and the command-availability filter that hides COMMAND_SET_VOLUME (e0b9544: Media3 shares that command for
+     * volume/mute, and forwarding it would bypass the gain composer). None of these is a position field.
+     */
+    private val getStateSetters = setOf(".setAvailableCommands(", ".setPlayWhenReady(", ".setPlaybackSuppressionReason(", ".setPositionDiscontinuity(")
+
     @Test fun `the facade never rewrites a position field so Media3 live position suppliers are preserved`() {
         val facade = code("playback/SessionFacade.kt")
-        for (forbidden in listOf("setContentPositionMs(", "setAdPositionMs(", "setContentBufferedPositionMs(", "setAdBufferedPositionMs(", "setTotalBufferedDurationMs(")) {
-            assertFalse("SessionFacade must not call $forbidden (it would replace the live supplier)", facade.contains(forbidden))
-        }
-        val getState = facade.substringAfter("override fun getState()").substringBefore("private fun withLogicalQueue")
-        val builderCalls = Regex("""\.set[A-Za-z]+\(""").findAll(getState).map { it.value }.toSet()
+        assertEquals("SessionFacade must not call a position setter (it would replace the live supplier)", emptyList<String>(), positionSettersIn(facade))
+        val getState = getStateBlock(facade)
         assertEquals(
-            "getState overlays exactly the logical play state, the alias playlist and the one-shot discontinuity",
-            setOf(".setPlayWhenReady(", ".setPlaybackSuppressionReason(", ".setPositionDiscontinuity("),
-            builderCalls,
+            "getState overlays exactly the logical play state, the one-shot discontinuity and the command-availability filter",
+            getStateSetters,
+            settersIn(getState),
         )
+        assertEquals(
+            "the command-availability filter hides only COMMAND_SET_VOLUME and grants nothing",
+            setOf("Player.COMMAND_SET_VOLUME"),
+            commandsRemovedIn(getState),
+        )
+        assertFalse("getState must not add commands (only the logical-queue overlay may)", getState.contains(".add(Player.COMMAND") || getState.contains(".addIf("))
         val logical = facade.substringAfter("private fun withLogicalQueue").substringBefore("private fun withStableTimelineIdentity")
         assertEquals(
             "the logical-queue overlay rewrites only queue-shaped fields, never a position field",
             setOf(".setPlaylist(", ".setCurrentMediaItemIndex(", ".setRepeatMode(", ".setShuffleModeEnabled(", ".setAvailableCommands("),
-            Regex("""\.set[A-Za-z]+\(""").findAll(logical).map { it.value }.toSet(),
+            settersIn(logical),
         )
+    }
+
+    // Negative proof: the same checks, run against deliberately tampered copies of the REAL source, must see the tampering.
+    @Test fun `an unauthorised position setter anywhere in the facade is detected`() {
+        val facade = code("playback/SessionFacade.kt")
+        for (setter in positionSetters) {
+            val tampered = facade.replace(".setPlaybackSuppressionReason(", ".$setter 0L).setPlaybackSuppressionReason(")
+            assertEquals(listOf(setter), positionSettersIn(tampered))
+            assertTrue("$setter inside getState also breaks the exact setter set", settersIn(getStateBlock(tampered)) != getStateSetters)
+        }
+        assertTrue(positionSettersIn(facade).isEmpty())
+    }
+
+    @Test fun `any extra getState setter or a missing command filter is detected`() {
+        val facade = code("playback/SessionFacade.kt")
+        val getState = getStateBlock(facade)
+        assertEquals(getStateSetters, settersIn(getState))
+        val extraSetter = getStateBlock(facade.replace(".setPlayWhenReady(", ".setCurrentMediaItemIndex(1).setPlayWhenReady("))
+        assertTrue(settersIn(extraSetter) != getStateSetters)
+        val commandFilterRemoved = getStateBlock(facade.replace(".setAvailableCommands(", ".copyState("))
+        assertTrue(settersIn(commandFilterRemoved) != getStateSetters)
+        val widerFilter = getStateBlock(facade.replace(".remove(Player.COMMAND_SET_VOLUME)", ".remove(Player.COMMAND_SET_VOLUME).remove(Player.COMMAND_GET_CURRENT_MEDIA_ITEM)"))
+        assertTrue(commandsRemovedIn(widerFilter) != setOf("Player.COMMAND_SET_VOLUME"))
     }
 
     @Test fun `the one-shot promotion pin is always cleared and nothing but the logical owner invalidates state`() {
