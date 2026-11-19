@@ -9,7 +9,6 @@ import com.launchpoint.stereosine.data.backup.wdbk.SafBackupFolderReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 
 /** Internal discovery for a selected SAF folder. Keeps only compact coverage summaries and metadata from each decoded backup. */
@@ -38,9 +37,9 @@ internal object FolderBackupDiscovery {
 
     suspend fun discover(context: Context, treeUri: Uri): Result = withContext(Dispatchers.IO) {
         val folder = SafBackupFolderReader(context.contentResolver, treeUri)
-        val listing = runInterruptible { folder.listChildren(includeSize = true) }
+        val listing = withVerificationSignal { folder.listChildren(includeSize = true, signal = it) }
         select(listing) { child ->
-            runInterruptible { StereoSineBackupDocumentReader.readUri(context, folder.uriFor(child)) }
+            withVerificationSignal { readVerificationDocument(context, folder.uriFor(child), it) }
         }
     }
 

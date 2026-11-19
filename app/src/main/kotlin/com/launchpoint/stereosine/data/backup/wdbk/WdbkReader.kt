@@ -28,6 +28,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.zip.ZipException
 import java.util.zip.ZipInputStream
+import kotlinx.coroutines.CancellationException
 
 /**
  * Bounded, fail-closed reader for an UNTRUSTED WDBK container.
@@ -68,6 +69,8 @@ class WdbkReader(private val limits: WdbkLimits = WdbkLimits.DEFAULT) {
         failure(DAMAGED)
     } catch (_: IOException) {
         failure(DAMAGED)
+    } catch (e: CancellationException) {
+        throw e
     } catch (_: RuntimeException) {
         // Malformed entry names / headers rejected by java.util.zip (IllegalArgumentException and friends).
         failure(DAMAGED)

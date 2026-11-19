@@ -39,10 +39,12 @@ class WdbkIntegrationGuardsTest {
 
     @Test fun `verification reads through the unified content-sniffing reader not the extension`() {
         val s = code("data/backup/BackupVerificationRepository.kt")
+        val access = code("data/backup/VerificationSafAccess.kt")
         assertTrue("FolderBackupDiscovery.discover" in s)
-        assertTrue("StereoSineBackupDocumentReader.readUri" in code("data/backup/FolderBackupDiscovery.kt"))
-        assertFalse("readBackupText" in s)
-        assertFalse("ZipInputStream" in s)
+        assertTrue("readVerificationDocument" in code("data/backup/FolderBackupDiscovery.kt"))
+        assertTrue("StereoSineBackupDocumentReader.read(" in access)
+        assertFalse("readBackupText" in s + access)
+        assertFalse("ZipInputStream" in s + access)
     }
 
     // ── Picker and naming policy ──────────────────────────────────────────────

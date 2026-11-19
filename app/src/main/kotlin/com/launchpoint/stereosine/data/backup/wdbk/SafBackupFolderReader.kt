@@ -3,6 +3,7 @@ package com.launchpoint.stereosine.data.backup.wdbk
 import android.content.ContentResolver
 import android.database.Cursor
 import android.net.Uri
+import android.os.CancellationSignal
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import java.io.IOException
@@ -28,7 +29,7 @@ internal class SafBackupFolderReader(
     private val resolver: ContentResolver,
     private val treeUri: Uri,
 ) {
-    fun listChildren(includeSize: Boolean = false): BackupFolderListing {
+    fun listChildren(includeSize: Boolean = false, signal: CancellationSignal? = null): BackupFolderListing {
         val authority = treeUri.authority
         if (treeUri.scheme != "content" || authority.isNullOrBlank()) {
             return BackupFolderListing.Ambiguous("Invalid backup tree URI.")
@@ -36,8 +37,8 @@ internal class SafBackupFolderReader(
         return try {
             val root = DocumentsContract.getTreeDocumentId(treeUri)
             val queryUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, root)
-            resolver.query(queryUri, if (includeSize) SIZE_PROJECTION else PROJECTION, null, null, null)?.use { readChildren(it, authority, root) }
-                ?: BackupFolderListing.Unavailable
+            resolver.query(queryUri, if (includeSize) SIZE_PROJECTION else PROJECTION, null, null, null, signal)
+                ?.use { readChildren(it, authority, root, signal) } ?: BackupFolderListing.Unavailable
         } catch (_: SecurityException) {
             BackupFolderListing.Unavailable
         } catch (_: IOException) {
@@ -61,7 +62,13 @@ internal class SafBackupFolderReader(
 
         private val SIZE_PROJECTION = PROJECTION + Document.COLUMN_SIZE
 
-        internal fun readChildren(cursor: Cursor, authority: String, rootId: String): BackupFolderListing {
+        internal fun readChildren(
+            cursor: Cursor,
+            authority: String,
+            rootId: String,
+            signal: CancellationSignal? = null,
+        ): BackupFolderListing {
+            signal?.throwIfCanceled()
             if (cursor.extras.getBoolean(DocumentsContract.EXTRA_LOADING)) {
                 return BackupFolderListing.Ambiguous("The provider is still loading the folder listing.")
             }
@@ -78,7 +85,10 @@ internal class SafBackupFolderReader(
 
             val children = mutableListOf<BackupFolderChild>()
             val seen = mutableSetOf<String>()
-            while (cursor.moveToNext()) {
+            while (true) {
+                signal?.throwIfCanceled()
+                if (!cursor.moveToNext()) break
+                signal?.throwIfCanceled()
                 if (children.size == MAX_CHILDREN) {
                     return BackupFolderListing.Ambiguous("The folder exceeds the child listing limit.")
                 }

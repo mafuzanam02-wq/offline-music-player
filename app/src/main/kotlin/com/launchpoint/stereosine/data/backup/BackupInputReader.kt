@@ -2,9 +2,12 @@ package com.launchpoint.stereosine.data.backup
 
 import android.content.Context
 import android.net.Uri
+import android.os.CancellationSignal
+import android.os.OperationCanceledException
 import android.provider.OpenableColumns
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import kotlinx.coroutines.CancellationException
 
 /**
  * Whole-file reader for untrusted backup input with a hard size cap (WD-02).
@@ -80,18 +83,22 @@ object BackupInputReader {
      * Declared byte size of [uri] via `OpenableColumns.SIZE`, or `null` when the
      * provider does not report it (unknown size — handled by the bounded read).
      */
-    internal fun declaredSize(context: Context, uri: Uri): Long? = runCatching {
+    internal fun declaredSize(context: Context, uri: Uri, signal: CancellationSignal? = null): Long? = runCatching {
         context.contentResolver.query(
             uri,
             arrayOf(OpenableColumns.SIZE),
             null,
             null,
             null,
+            signal,
         )?.use { cursor ->
+            signal?.throwIfCanceled()
             if (!cursor.moveToFirst()) return@use null
             val index = cursor.getColumnIndex(OpenableColumns.SIZE)
             if (index < 0 || cursor.isNull(index)) null else cursor.getLong(index)
         }
+    }.onFailure {
+        if (signal != null && (it is OperationCanceledException || it is CancellationException)) throw it
     }.getOrNull()
 
     /** True only when a size is known and strictly above the cap. Unknown → false. */

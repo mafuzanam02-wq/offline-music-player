@@ -1,11 +1,16 @@
 package com.launchpoint.stereosine.data.backup
 
 import android.content.ContentProvider
+import android.content.ContentResolver
 import android.content.ContentValues
+import android.content.ContextWrapper
 import android.content.pm.ProviderInfo
+import android.content.res.AssetFileDescriptor
 import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.OperationCanceledException
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
@@ -25,6 +30,7 @@ import com.launchpoint.stereosine.data.settings.HomeLayoutSettingsRepository
 import com.launchpoint.stereosine.data.settings.LibraryScanSettingsRepository
 import com.launchpoint.stereosine.data.settings.ResumeBehaviorSettingsRepository
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.time.LocalDate
@@ -36,6 +42,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -78,6 +85,10 @@ class FolderBackupPublicationTest {
         var creates = 0
         var onOutput = {}
         var onFinalListing: (Int) -> Unit = {}
+        var onAssetOpen: ((String, CancellationSignal?) -> AssetFileDescriptor?)? = null
+        var onQuerySignal: (CancellationSignal?) -> Unit = {}
+        var onCursorMove: (Int) -> Unit = {}
+        var onCursorClose: () -> Unit = {}
         var hidden: String? = null
         var unreadable: String? = null
         private var newest: String? = null
@@ -114,6 +125,18 @@ class FolderBackupPublicationTest {
 
         override fun query(
             uri: Uri, projection: Array<out String>?, selection: String?,
+            selectionArgs: Array<out String>?, sortOrder: String?, cancellationSignal: CancellationSignal?,
+        ): MatrixCursor? {
+            onQuerySignal(cancellationSignal)
+            return query(uri, projection, selection, selectionArgs, sortOrder)
+        }
+
+        override fun query(
+            uri: Uri, projection: Array<out String>?, queryArgs: Bundle?, cancellationSignal: CancellationSignal?,
+        ): MatrixCursor? = query(uri, projection, null, null, null, cancellationSignal)
+
+        override fun query(
+            uri: Uri, projection: Array<out String>?, selection: String?,
             selectionArgs: Array<out String>?, sortOrder: String?,
         ): MatrixCursor? {
             val columns = requireNotNull(projection)
@@ -130,7 +153,17 @@ class FolderBackupPublicationTest {
             }
             val rows = if (isListing) children.filterKeys { it != hidden }
                 else children.filterKeys { it == DocumentsContract.getDocumentId(uri) }
-            return MatrixCursor(columns).apply {
+            return object : MatrixCursor(columns) {
+                override fun onMove(oldPosition: Int, newPosition: Int): Boolean {
+                    if (isListing) onCursorMove(newPosition)
+                    return super.onMove(oldPosition, newPosition)
+                }
+
+                override fun close() {
+                    if (isListing) onCursorClose()
+                    super.close()
+                }
+            }.apply {
                 if (isListing && listingLoading) {
                     extras = Bundle().apply { putBoolean(DocumentsContract.EXTRA_LOADING, true) }
                 }
@@ -145,6 +178,36 @@ class FolderBackupPublicationTest {
                             else -> null
                         }
                     })
+                }
+            }
+        }
+
+        override fun openAssetFile(uri: Uri, mode: String): AssetFileDescriptor? =
+            openAssetFile(uri, mode, null)
+
+        override fun openAssetFile(uri: Uri, mode: String, signal: CancellationSignal?): AssetFileDescriptor? {
+            val supply = onAssetOpen
+            return if (supply != null && mode == "r") supply(DocumentsContract.getDocumentId(uri), signal)
+            else AssetFileDescriptor(openFile(uri, mode), 0, AssetFileDescriptor.UNKNOWN_LENGTH)
+        }
+
+        fun streamAsset(id: String, input: java.io.InputStream): AssetFileDescriptor {
+            val descriptor = ParcelFileDescriptor.open(children.getValue(id).file, ParcelFileDescriptor.MODE_READ_ONLY)
+            return object : AssetFileDescriptor(descriptor, 0, AssetFileDescriptor.UNKNOWN_LENGTH) {
+                override fun createInputStream(): FileInputStream = object : FileInputStream(descriptor.fileDescriptor) {
+                    private var closing = false
+                    override fun read(): Int = input.read()
+                    override fun read(bytes: ByteArray, offset: Int, length: Int): Int = input.read(bytes, offset, length)
+                    override fun close() {
+                        // The JVM calls attached streams back while closing their shared descriptor.
+                        if (closing) return
+                        closing = true
+                        try {
+                            input.use { descriptor.close() }
+                        } finally {
+                            closing = false
+                        }
+                    }
                 }
             }
         }
@@ -248,7 +311,15 @@ class FolderBackupPublicationTest {
         }
 
         fun repository() = AutoBackupRepository(context, settings, manual, serializer)
-        fun verifier() = BackupVerificationRepository(context, settings)
+        fun verifier(): BackupVerificationRepository {
+            // Local wrapping preserves the synthetic asset's stream factory. The Android Binder
+            // fixture separately exercises parcelled descriptors and the real provider transport.
+            val verificationContext = if (provider.onAssetOpen == null) context else object : ContextWrapper(context) {
+                private val resolver = ContentResolver.wrap(provider)
+                override fun getContentResolver(): ContentResolver = resolver
+            }
+            return BackupVerificationRepository(verificationContext, settings)
+        }
 
         fun old() = provider.put("old", "wavdrop-backup.wdbk", oldBytes)
 
@@ -686,24 +757,168 @@ class FolderBackupPublicationTest {
 
         val enteredRead = CompletableDeferred<Unit>()
         val closed = CompletableDeferred<Unit>()
-        val uri = DocumentsContract.buildDocumentUriUsingTree(f.provider.tree, "old")
-        org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication().contentResolver)
-            .registerInputStreamSupplier(uri) {
-                object : java.io.InputStream() {
-                    override fun read(): Int {
-                        enteredRead.complete(Unit)
-                        Thread.sleep(10_000)
-                        return -1
-                    }
-                    override fun close() { closed.complete(Unit) }
+        f.provider.onAssetOpen = { id, _ ->
+            f.provider.streamAsset(id, object : java.io.InputStream() {
+                override fun read(): Int {
+                    enteredRead.complete(Unit)
+                    Thread.sleep(10_000)
+                    return -1
                 }
-            }
+                override fun close() { closed.complete(Unit) }
+            })
+        }
         val reading = async { f.verifier().verifyLatestBackup() }
         enteredRead.await()
         reading.cancelAndJoin()
         assertTrue(reading.isCancelled)
         assertTrue(closed.isCompleted)
         assertTrue(f.provider.outputIds.isEmpty() && f.provider.deleteIds.isEmpty())
+    }
+
+    @Test fun verificationSignalsBlockedQueriesAndAssetOpens() = scenario { f ->
+        f.old()
+        for (query in listOf(true, false)) {
+            val entered = CompletableDeferred<Unit>()
+            val signalled = java.util.concurrent.CountDownLatch(1)
+            fun block(signal: CancellationSignal?) {
+                requireNotNull(signal).setOnCancelListener { signalled.countDown() }
+                entered.complete(Unit)
+                try {
+                    assertTrue(signalled.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                    signal.throwIfCanceled()
+                } finally {
+                    signal.setOnCancelListener(null)
+                }
+            }
+            if (query) f.provider.onQuerySignal = { block(it) }
+            else f.provider.onAssetOpen = { _, signal ->
+                block(signal)
+                error("Cancelled open returned normally")
+            }
+            val pending = async { f.verifier().verifyLatestBackup() }
+            entered.await()
+            pending.cancelAndJoin()
+            assertEquals(0L, signalled.count)
+            assertTrue(pending.isCancelled)
+            assertTrue(f.provider.inputIds.isEmpty())
+            f.provider.onQuerySignal = {}
+        }
+        f.assertOldUnchanged()
+    }
+
+    @Test fun verificationClosesAnAssetAcquiredAfterCancellation() = scenario { f ->
+        f.old()
+        var closed = false
+        f.provider.onAssetOpen = { _, signal ->
+            val descriptor = f.provider.openFile(
+                DocumentsContract.buildDocumentUriUsingTree(f.provider.tree, "old"), "r",
+            )
+            requireNotNull(signal).cancel()
+            object : AssetFileDescriptor(descriptor, 0, AssetFileDescriptor.UNKNOWN_LENGTH) {
+                override fun createInputStream(): FileInputStream = error("Cancelled asset must not be read")
+                override fun close() {
+                    closed = true
+                    super.close()
+                }
+            }
+        }
+        try {
+            f.verifier().verifyLatestBackup()
+            error("Expected cancellation")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            assertTrue(generateSequence<Throwable>(e) { it.cause }.any { it is OperationCanceledException })
+        }
+        assertTrue(closed)
+        f.assertOldUnchanged()
+    }
+
+    @Test fun verificationCancellationDuringCursorTraversalClosesCursorBeforeOpeningCandidates() = scenario { f ->
+        f.old()
+        f.provider.put("second", "stereosine-backup.wdbk", f.oldBytes)
+        var signal: CancellationSignal? = null
+        var closed = false
+        f.provider.onQuerySignal = { signal = it }
+        f.provider.onCursorMove = { if (it == 1) requireNotNull(signal).cancel() }
+        f.provider.onCursorClose = { closed = true }
+        assertTrue(runCatching { f.verifier().verifyLatestBackup() }.exceptionOrNull() is kotlinx.coroutines.CancellationException)
+        assertTrue(closed)
+        assertTrue(f.provider.inputIds.isEmpty())
+        f.assertOldUnchanged()
+    }
+
+    @Test fun verificationChecksCancellationBeforeQueryAndBetweenSizeLookupAndOpen() = scenario { f ->
+        f.old()
+        var entered = false
+        val pending = async {
+            requireNotNull(currentCoroutineContext()[Job]).cancel()
+            withVerificationSignal { entered = true }
+        }
+        pending.join()
+        assertTrue(pending.isCancelled)
+        assertFalse(entered)
+
+        var queries = 0
+        f.provider.onQuerySignal = { signal -> if (++queries == 2) requireNotNull(signal).cancel() }
+        assertTrue(runCatching { f.verifier().verifyLatestBackup() }.exceptionOrNull() is kotlinx.coroutines.CancellationException)
+        assertEquals(2, queries)
+        assertTrue(f.provider.inputIds.isEmpty())
+        f.assertOldUnchanged()
+    }
+
+    @Test fun verificationCancellationDuringZipReadOrStreamCloseDoesNotReturnAResult() = scenario { f ->
+        f.old()
+        for (duringRead in listOf(true, false)) {
+            var closeCount = 0
+            f.provider.onAssetOpen = { id, signal ->
+                f.provider.streamAsset(id, object : java.io.FilterInputStream(f.oldBytes.inputStream()) {
+                    override fun read(bytes: ByteArray, offset: Int, length: Int): Int {
+                        if (duringRead && length > 4) throw OperationCanceledException()
+                        return super.read(bytes, offset, length)
+                    }
+
+                    override fun close() {
+                        closeCount++
+                        if (!duringRead) requireNotNull(signal).cancel()
+                        super.close()
+                    }
+                })
+            }
+            assertTrue(runCatching { f.verifier().verifyLatestBackup() }.exceptionOrNull() is kotlinx.coroutines.CancellationException)
+            assertEquals(1, closeCount)
+        }
+        f.assertOldUnchanged()
+    }
+
+    @Test fun verificationFallsBackWhenTheNewerAssetIsMissingOrCannotClose() = scenario { f ->
+        f.old()
+        f.managedFixture("new", null, 2L)
+        for (missing in listOf(true, false)) {
+            val opened = mutableListOf<String>()
+            var closes = 0
+            f.provider.onAssetOpen = { id, _ ->
+                opened += id
+                when {
+                    id == "old" -> f.provider.streamAsset(id, f.oldBytes.inputStream())
+                    missing -> null
+                    else -> f.provider.streamAsset(id, object : java.io.FilterInputStream(
+                        f.provider.children.getValue(id).file.inputStream(),
+                    ) {
+                        override fun close() {
+                            closes++
+                            super.close()
+                            throw IOException("fixture close failure")
+                        }
+                    })
+                }
+            }
+            val result = f.verifier().verifyLatestBackup()
+            assertEquals("wavdrop-backup.wdbk", result.fileName)
+            assertEquals(BackupIntegrityStatus.VERIFIED, result.integrityStatus)
+            assertEquals(VerificationSearchStatus.INCOMPLETE, result.searchStatus)
+            assertEquals(listOf("old", "new"), opened)
+            assertEquals(if (missing) 0 else 1, closes)
+        }
+        f.assertOldUnchanged()
     }
 
     @Test fun pacedVerificationMeasuresBytesAndKeepsOneOpenPerDocument() = scenario { f ->
@@ -718,26 +933,24 @@ class FolderBackupPublicationTest {
         repeat(4) { index ->
             val id = "slow-$index"
             f.provider.put(id, "stereosine-backup-$index.wdbk", bytes)
-            val uri = DocumentsContract.buildDocumentUriUsingTree(f.provider.tree, id)
-            org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication().contentResolver)
-                .registerInputStreamSupplier(uri) {
-                    inputs += id
-                    Thread.sleep(20) // Controlled simulated provider open delay.
-                    object : java.io.FilterInputStream(bytes.inputStream()) {
-                        private val started = System.nanoTime()
-                        private var consumed = 0L
-                        private fun pace(count: Int) {
-                            if (count <= 0) return
-                            bytesRead += count
-                            consumed += count
-                            val delay = consumed * 1_000_000_000L / (2 * 1024 * 1024) - (System.nanoTime() - started)
-                            if (delay > 0) java.util.concurrent.locks.LockSupport.parkNanos(delay)
-                        }
-                        override fun read(): Int = super.read().also { if (it >= 0) pace(1) }
-                        override fun read(b: ByteArray, off: Int, len: Int): Int =
-                            super.read(b, off, len).also(::pace)
-                    }
+        }
+        f.provider.onAssetOpen = { id, _ ->
+            inputs += id
+            Thread.sleep(20) // Controlled simulated provider open delay.
+            f.provider.streamAsset(id, object : java.io.FilterInputStream(bytes.inputStream()) {
+                private val started = System.nanoTime()
+                private var consumed = 0L
+                private fun pace(count: Int) {
+                    if (count <= 0) return
+                    bytesRead += count
+                    consumed += count
+                    val delay = consumed * 1_000_000_000L / (2 * 1024 * 1024) - (System.nanoTime() - started)
+                    if (delay > 0) java.util.concurrent.locks.LockSupport.parkNanos(delay)
                 }
+                override fun read(): Int = super.read().also { if (it >= 0) pace(1) }
+                override fun read(b: ByteArray, off: Int, len: Int): Int =
+                    super.read(b, off, len).also(::pace)
+            })
         }
         val start = System.nanoTime()
         val result = f.verifier().verifyLatestBackup()
