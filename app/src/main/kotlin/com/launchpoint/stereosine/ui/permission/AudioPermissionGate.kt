@@ -6,7 +6,12 @@ import android.content.ContextWrapper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -108,7 +113,7 @@ fun AudioPermissionGate(
 }
 
 @Composable
-private fun AudioPermissionRevokedContent(
+internal fun AudioPermissionRevokedContent(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -150,7 +155,7 @@ object AudioPermissionCopy {
 }
 
 @Composable
-private fun AllowMusicAccessContent(
+internal fun AllowMusicAccessContent(
     onRequestPermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -183,7 +188,7 @@ private fun AllowMusicAccessContent(
 }
 
 @Composable
-private fun AudioPermissionDeniedContent(
+internal fun AudioPermissionDeniedContent(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -216,7 +221,7 @@ private fun AudioPermissionDeniedContent(
 }
 
 @Composable
-private fun AudioPermissionBlockedContent(
+internal fun AudioPermissionBlockedContent(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -248,17 +253,30 @@ private fun AudioPermissionBlockedContent(
     }
 }
 
+/**
+ * Shared body of the four permission states. The caller's [modifier] already carries the Scaffold content padding (Home, Songs and
+ * Library all pass `Modifier.padding(innerPadding)`), so this viewport ends above the persistent bottom navigation / MiniPlayer.
+ * With spare height the content stays vertically centred (the inner column is at least as tall as the viewport); when it is
+ * taller (large font, short window) it scrolls so the title, explanation and action are always reachable.
+ */
 @Composable
 private fun PermissionCenteredColumn(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        content = { content() },
-    )
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val viewportHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = viewportHeight)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = { content() },
+        )
+    }
 }
 
 private fun Context.shouldShowAudioPermissionRationale(): Boolean =
