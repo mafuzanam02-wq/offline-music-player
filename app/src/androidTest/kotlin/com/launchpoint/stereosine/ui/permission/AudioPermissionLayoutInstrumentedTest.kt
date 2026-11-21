@@ -22,6 +22,7 @@ import com.launchpoint.stereosine.ui.testing.unclippedBounds
 import com.launchpoint.stereosine.ui.testing.visibleBounds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,6 +74,21 @@ class AudioPermissionLayoutInstrumentedTest(
         }
     }
 
+    /**
+     * `Modifier.size` is coerced to the host window, so a fixture taller than the window silently shrinks (320x480 in a 320 dp-high
+     * window becomes 320x320, i.e. 240 dp above the fake bar) and then measures the host, not the layout. A shrunken fixture that still
+     * passes only proves more, so every configuration runs regardless, EXCEPT the one where the 3.0x title alone (252 dp) is taller than
+     * the shrunken 240 dp viewport: that combination cannot exist and is skipped with an explicit reason. Run this class under a window
+     * at least 320x480 dp (e.g. the default 1080x2340 portrait) to exercise it for real.
+     */
+    private fun assumeHostCanHostFixture() {
+        if (fontScale < 3.0f) return
+        val m = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.resources.displayMetrics
+        val hostW = m.widthPixels / m.density
+        val hostH = m.heightPixels / m.density
+        assumeTrue("invalid fixture: ${widthDp}x$heightDp dp does not fit the ${hostW}x$hostH dp host window", hostW >= widthDp && hostH >= heightDp)
+    }
+
     private fun show() = rule.setContent {
         FixedViewport(widthDp, heightDp, fontScale) {
             Column(Modifier.fillMaxSize()) {
@@ -83,6 +99,7 @@ class AudioPermissionLayoutInstrumentedTest(
     }
 
     @Test fun title_body_and_action_are_reachable_clear_of_the_bottom_bar_and_clickable() {
+        assumeHostCanHostFixture()
         show()
         val s = spec
         val viewport = rule.onNodeWithTag("viewport").visibleBounds()
@@ -102,6 +119,7 @@ class AudioPermissionLayoutInstrumentedTest(
     }
 
     @Test fun content_is_centred_when_there_is_spare_height() {
+        assumeHostCanHostFixture()
         show()
         val s = spec
         val viewport = rule.onNodeWithTag("viewport").unclippedBounds()

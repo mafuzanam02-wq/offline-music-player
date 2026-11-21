@@ -19,14 +19,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -432,7 +435,7 @@ fun NowPlayingScreen(
 }
 
 @Composable
-private fun NowPlayingContent(
+internal fun NowPlayingContent(
     state: NowPlayingState,
     onPrevious: () -> Unit,
     onTogglePlayPause: () -> Unit,
@@ -519,6 +522,7 @@ private fun NowPlayingContent(
             upNextLabel = upNextLabel,
             quickActions = quickActions,
             onQuickAction = onQuickAction,
+            shortWindow = isShortNowPlayingWindow(maxWidth, maxHeight),
         )
     }
 }
@@ -685,6 +689,7 @@ private fun FixedBottomNowPlayingLayout(
     upNextLabel: String,
     quickActions: List<NowPlayingQuickAction>,
     onQuickAction: (NowPlayingQuickActionType) -> Unit,
+    shortWindow: Boolean = false,
 ) {
     // The single continuous Media3 progress state. Only the holder is created here (no position read),
     // so this layout does not recompose per frame; the seek track draws from it and the synced
@@ -696,7 +701,18 @@ private fun FixedBottomNowPlayingLayout(
     // The seek control and the lyrics overlay both live in this layout, so the explicit seek signal is shared here.
     val seekSignal = remember { LyricsSeekSignal() }
     CompositionLocalProvider(LocalLyricsSeekSignal provides seekSignal) {
-    Column(
+    if (shortWindow) {
+        ShortWindowNowPlayingLayout(
+            state = state, song = song, queuePosition = queuePosition, lyrics = lyrics, metrics = metrics,
+            showLyricsOverlay = showLyricsOverlay, onToggleLyrics = onToggleLyrics, onEditLyrics = onEditLyrics,
+            onPasteLyrics = onPasteLyrics, onPrevious = onPrevious, onTogglePlayPause = onTogglePlayPause, onNext = onNext,
+            onToggleShuffle = onToggleShuffle, onCycleRepeatMode = onCycleRepeatMode,
+            onSeek = { positionMs -> seekSignal.notifySeek(); onSeek(positionMs) },
+            onOpenTrackDetails = onOpenTrackDetails, onOpenArtist = onOpenArtist, onOpenAlbum = onOpenAlbum,
+            onOpenQueue = onOpenQueue, sleepTimerLabel = sleepTimerLabel, upNextLabel = upNextLabel,
+            quickActions = quickActions, onQuickAction = onQuickAction, trackProgress = trackProgress,
+        )
+    } else Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(
@@ -841,66 +857,14 @@ private fun UpperNowPlayingContent(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            // Metadata fades through on track change (keyed by the displayed text); direct swap
-            // under reduced motion. No large slides, no layout-wide animation.
-            StereoSineFadeThrough(
-                targetState = song.displayTitle,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickableIfNotNull(onOpenTrackDetails),
-            ) { title ->
-                Text(
-                    text = title,
-                    style = metrics.titleStyle,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            StereoSineFadeThrough(
-                targetState = song.displayArtist,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickableIfNotNull(onOpenArtist),
-            ) { artist ->
-                Text(
-                    text = artist,
-                    style = metrics.artistStyle,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            if (metrics.showAlbum && song.album.isNotBlank()) {
-                StereoSineFadeThrough(
-                    targetState = song.album,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickableIfNotNull(onOpenAlbum),
-                ) { album ->
-                    Text(
-                        text = album,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-            if (metrics.showQueuePosition && queuePosition.isNotBlank()) {
-                Text(
-                    text = queuePosition,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
+            TrackTextBlock(
+                song = song,
+                queuePosition = queuePosition,
+                metrics = metrics,
+                onOpenTrackDetails = onOpenTrackDetails,
+                onOpenArtist = onOpenArtist,
+                onOpenAlbum = onOpenAlbum,
+            )
         }
     }
 }
@@ -1622,3 +1586,223 @@ internal fun nowPlayingArtworkUri(background: NowPlayingBackground, albumId: Lon
     if (background == NowPlayingBackground.ARTWORK) ArtworkResolver.albumArtworkUri(albumId) else null
 
 private const val UNAVAILABLE_SONGS_SKIPPED_TEXT = "Some unavailable songs were skipped. Your saved queue is preserved."
+
+/** Title, artist, album and queue position, emitted into the caller's Column so both layouts share identical text rules. */
+@Composable
+private fun ColumnScope.TrackTextBlock(
+    song: Song,
+    queuePosition: String,
+    metrics: NowPlayingLayoutMetrics,
+    onOpenTrackDetails: (() -> Unit)?,
+    onOpenArtist: (() -> Unit)?,
+    onOpenAlbum: (() -> Unit)?,
+) {
+        // Metadata fades through on track change (keyed by the displayed text); direct swap
+        // under reduced motion. No large slides, no layout-wide animation.
+        StereoSineFadeThrough(
+            targetState = song.displayTitle,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickableIfNotNull(onOpenTrackDetails),
+        ) { title ->
+            Text(
+                text = title,
+                style = metrics.titleStyle,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        StereoSineFadeThrough(
+            targetState = song.displayArtist,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickableIfNotNull(onOpenArtist),
+        ) { artist ->
+            Text(
+                text = artist,
+                style = metrics.artistStyle,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (metrics.showAlbum && song.album.isNotBlank()) {
+            StereoSineFadeThrough(
+                targetState = song.album,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickableIfNotNull(onOpenAlbum),
+            ) { album ->
+                Text(
+                    text = album,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+        if (metrics.showQueuePosition && queuePosition.isNotBlank()) {
+            Text(
+                text = queuePosition,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+    }
+}
+
+/**
+ * Below this window height (a phone in landscape, a short split-screen pane) the stacked layout — artwork, text, seek bar,
+ * transport, queue handle — cannot fit, and its fixed bottom panel leaves the scrollable upper area with no height at all.
+ * The window is judged by the content height this screen is actually given, not by a device model.
+ */
+private val SHORT_WINDOW_MAX_HEIGHT = 360.dp
+private val SHORT_WINDOW_MIN_WIDTH = 320.dp
+
+/** Width the scrolling column needs for the five-button transport; the artwork beside it gets whatever is left (at least 96 dp). */
+private val SHORT_WINDOW_DETAILS_MIN_WIDTH = 280.dp
+private val SHORT_WINDOW_MIN_ARTWORK = 96.dp
+private val SHORT_WINDOW_PANE_GAP = 16.dp
+
+private fun isShortNowPlayingWindow(maxWidth: Dp, maxHeight: Dp): Boolean =
+    maxHeight < SHORT_WINDOW_MAX_HEIGHT && maxWidth >= SHORT_WINDOW_MIN_WIDTH
+
+/**
+ * Short-window arrangement: artwork (with its quick actions) on the left; everything else — title, artist, seek, transport and
+ * the queue entry — in one scrolling column on the right, so nothing is trapped outside a viewport. Same components, same
+ * state and callbacks as the stacked layout.
+ */
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
+@Composable
+private fun ShortWindowNowPlayingLayout(
+    state: NowPlayingState,
+    song: Song,
+    queuePosition: String,
+    lyrics: LyricsResult,
+    metrics: NowPlayingLayoutMetrics,
+    showLyricsOverlay: Boolean,
+    onToggleLyrics: () -> Unit,
+    onEditLyrics: () -> Unit,
+    onPasteLyrics: ((String) -> Unit)?,
+    onPrevious: () -> Unit,
+    onTogglePlayPause: () -> Unit,
+    onNext: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeatMode: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onOpenTrackDetails: (() -> Unit)?,
+    onOpenArtist: (() -> Unit)?,
+    onOpenAlbum: (() -> Unit)?,
+    onOpenQueue: () -> Unit,
+    sleepTimerLabel: String?,
+    upNextLabel: String,
+    quickActions: List<NowPlayingQuickAction>,
+    onQuickAction: (NowPlayingQuickActionType) -> Unit,
+    trackProgress: ProgressStateWithTickInterval,
+) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        // The discoverability hint is dropped at large fonts: it would clip under a small artwork and cost height the controls need.
+        val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
+        val showHint = fontScale < 1.3f
+        val hintHeight = if (showHint) 16.dp * fontScale.coerceAtLeast(1f) else 0.dp
+        // Side by side only while the transport column still gets its minimum width; otherwise one scrolling column.
+        val widthLeftForArtwork = maxWidth - SHORT_WINDOW_PANE_GAP - SHORT_WINDOW_DETAILS_MIN_WIDTH
+        val sideBySide = widthLeftForArtwork >= SHORT_WINDOW_MIN_ARTWORK
+        val artworkSize = if (sideBySide) {
+            (maxHeight - hintHeight).coerceIn(SHORT_WINDOW_MIN_ARTWORK, 220.dp).coerceAtMost(widthLeftForArtwork)
+        } else 120.dp
+        val artwork: @Composable () -> Unit = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                ArtworkWithLyricsOverlay(
+                    song = song,
+                    lyrics = lyrics,
+                    showLyricsOverlay = showLyricsOverlay,
+                    onToggleLyrics = onToggleLyrics,
+                    onPrevious = onPrevious,
+                    onNext = onNext,
+                    onEditLyrics = onEditLyrics,
+                    onPasteLyrics = onPasteLyrics,
+                    compactLyricsOverlay = true,
+                    trackProgress = trackProgress,
+                    quickActions = if (showLyricsOverlay) emptyList() else quickActions,
+                    onQuickAction = onQuickAction,
+                    cornerInset = 2.dp,
+                    modifier = Modifier.size(artworkSize),
+                )
+                if (showHint) {
+                    Text(
+                        text = "Double-tap for lyrics",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        modifier = Modifier.width(artworkSize),
+                    )
+                }
+            }
+        }
+        val details: @Composable ColumnScope.() -> Unit = {
+            TrackTextBlock(
+                song = song,
+                queuePosition = queuePosition,
+                metrics = metrics,
+                onOpenTrackDetails = onOpenTrackDetails,
+                onOpenArtist = onOpenArtist,
+                onOpenAlbum = onOpenAlbum,
+            )
+            BottomPlaybackPanel(
+                state = state,
+                metrics = metrics,
+                trackProgress = trackProgress,
+                onToggleShuffle = onToggleShuffle,
+                onPrevious = onPrevious,
+                onTogglePlayPause = onTogglePlayPause,
+                onNext = onNext,
+                onCycleRepeatMode = onCycleRepeatMode,
+                onSeek = onSeek,
+                onOpenQueue = onOpenQueue,
+                sleepTimerLabel = sleepTimerLabel,
+                upNextLabel = upNextLabel,
+            )
+        }
+        if (sideBySide) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                artwork()
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(metrics.bottomPanelSpacing, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    content = details,
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(metrics.bottomPanelSpacing),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                artwork()
+                details()
+            }
+        }
+    }
+}
