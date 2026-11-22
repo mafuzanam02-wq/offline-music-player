@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -337,46 +339,7 @@ private fun ReadyContent(
         SectionDivider()
 
         // ── Playback actions ─────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AssistChip(
-                onClick = onPlayNow,
-                label   = { Text("Play now") },
-                leadingIcon = {
-                    Icon(
-                        imageVector        = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier           = Modifier.size(18.dp),
-                    )
-                },
-            )
-            AssistChip(
-                onClick = onPlayNext,
-                label   = { Text("Play next") },
-                leadingIcon = {
-                    Icon(
-                        imageVector        = Icons.Default.SkipNext,
-                        contentDescription = null,
-                        modifier           = Modifier.size(18.dp),
-                    )
-                },
-            )
-            AssistChip(
-                onClick = onAddToQueue,
-                label   = { Text("Add to queue") },
-                leadingIcon = {
-                    Icon(
-                        imageVector        = Icons.AutoMirrored.Filled.PlaylistAdd,
-                        contentDescription = null,
-                        modifier           = Modifier.size(18.dp),
-                    )
-                },
-            )
-        }
+        TrackPlaybackActions(onPlayNow = onPlayNow, onPlayNext = onPlayNext, onAddToQueue = onAddToQueue)
 
         SectionDivider()
 
@@ -593,6 +556,60 @@ private fun SectionDivider() {
         color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
         thickness = 0.5.dp,
     )
+}
+
+/**
+ * The three playback chips. A chip is never narrowed: when they do not fit one line the next chip moves to a new row, in the same
+ * reading order (F-07: "Play next" was squeezed and clipped at large font). One function so it can be tested with synthetic callbacks.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun TrackPlaybackActions(
+    onPlayNow: () -> Unit,
+    onPlayNext: () -> Unit,
+    onAddToQueue: () -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        AssistChip(
+            onClick = onPlayNow,
+            label   = { Text("Play now") },
+            leadingIcon = {
+                Icon(
+                    imageVector        = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier           = Modifier.size(18.dp),
+                )
+            },
+        )
+        AssistChip(
+            onClick = onPlayNext,
+            label   = { Text("Play next") },
+            leadingIcon = {
+                Icon(
+                    imageVector        = Icons.Default.SkipNext,
+                    contentDescription = null,
+                    modifier           = Modifier.size(18.dp),
+                )
+            },
+        )
+        AssistChip(
+            onClick = onAddToQueue,
+            label   = { Text("Add to queue") },
+            leadingIcon = {
+                Icon(
+                    imageVector        = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    contentDescription = null,
+                    modifier           = Modifier.size(18.dp),
+                )
+            },
+        )
+    }
 }
 
 @Composable

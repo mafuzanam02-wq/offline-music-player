@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -414,23 +416,31 @@ internal fun ExcludedFolderRow(
     }
 }
 
+/**
+ * A label / value row. The label keeps its natural width (it is never squeezed by a long value); the value sits beside it, right
+ * aligned, when it fits, and otherwise drops under the label at the full row width, wrapping there (a package identifier has no
+ * spaces, so it breaks by character). Both texts stay whole and inside the viewport at any font scale.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AboutInfoRow(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier          = modifier
+    FlowRow(
+        modifier              = modifier
             .fillMaxWidth()
             .padding(horizontal = ROW_HORIZONTAL_PADDING, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement   = Arrangement.spacedBy(2.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text     = label,
             style    = MaterialTheme.typography.bodyMedium,
             color    = MaterialTheme.colorScheme.onSurface.copy(alpha = SUBTITLE_ALPHA),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.padding(end = 12.dp),
         )
         Text(
             text  = value,

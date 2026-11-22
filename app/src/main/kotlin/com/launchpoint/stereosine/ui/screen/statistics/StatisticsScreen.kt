@@ -6,6 +6,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import com.launchpoint.stereosine.ui.components.widestWordPx
+import com.launchpoint.stereosine.ui.components.rememberFitMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -195,40 +201,14 @@ private fun OverviewSection(summary: StatsDashboardSummary) {
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OverviewCard(
-                label = "Songs",
-                value = summary.totalSongs.toString(),
-                icon = Icons.Default.MusicNote,
-                modifier = Modifier.weight(1f),
-            )
-            OverviewCard(
-                label = "Played Tracks",
-                value = summary.totalPlayedTracks.toString(),
-                icon = Icons.Default.History,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OverviewCard(
-                label = "Total Plays",
-                value = summary.totalPlayCount.toString(),
-                icon = Icons.Default.MusicNote,
-                modifier = Modifier.weight(1f),
-            )
-            OverviewCard(
-                label = "Total Skips",
-                value = summary.totalSkipCount.toString(),
-                icon = Icons.Default.SkipNext,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        MetricGrid(
+            metrics = listOf(
+                Metric("Songs", summary.totalSongs.toString(), Icons.Default.MusicNote),
+                Metric("Played Tracks", summary.totalPlayedTracks.toString(), Icons.Default.History),
+                Metric("Total Plays", summary.totalPlayCount.toString(), Icons.Default.MusicNote),
+                Metric("Total Skips", summary.totalSkipCount.toString(), Icons.Default.SkipNext),
+            ),
+        )
         OverviewCard(
             label = "Listening Time",
             value = StatisticsFormatters.formatDurationSummary(summary.totalListeningTimeMs),
@@ -244,40 +224,14 @@ private fun InsightsSection(summary: StatsDashboardSummary, insights: Statistics
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OverviewCard(
-                label = "Favorites",
-                value = insights.favoritesCount.toString(),
-                icon = Icons.Default.Favorite,
-                modifier = Modifier.weight(1f),
-            )
-            OverviewCard(
-                label = "Skip Ratio",
-                value = StatisticsFormatters.formatSkipRatio(summary.totalPlayCount, summary.totalSkipCount),
-                icon = Icons.Default.SkipNext,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OverviewCard(
-                label = "Streak",
-                value = StatisticsFormatters.formatStreakDays(insights.currentStreakDays),
-                icon = Icons.Default.Star,
-                modifier = Modifier.weight(1f),
-            )
-            OverviewCard(
-                label = "Active Day",
-                value = StatisticsFormatters.formatDayOfWeekShort(insights.mostActiveDayOfWeek),
-                icon = Icons.Default.DateRange,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        MetricGrid(
+            metrics = listOf(
+                Metric("Favorites", insights.favoritesCount.toString(), Icons.Default.Favorite),
+                Metric("Skip Ratio", StatisticsFormatters.formatSkipRatio(summary.totalPlayCount, summary.totalSkipCount), Icons.Default.SkipNext),
+                Metric("Streak", StatisticsFormatters.formatStreakDays(insights.currentStreakDays), Icons.Default.Star),
+                Metric("Active Day", StatisticsFormatters.formatDayOfWeekShort(insights.mostActiveDayOfWeek), Icons.Default.DateRange),
+            ),
+        )
         Text(
             text = "Streak and active-day insights use recent listening events and may not include imported history.",
             style = MaterialTheme.typography.labelSmall,
@@ -287,8 +241,56 @@ private fun InsightsSection(summary: StatsDashboardSummary, insights: Statistics
     }
 }
 
+internal class Metric(val label: String, val value: String, val icon: ImageVector)
+
+/**
+ * The metric cards of one section. Two columns while EVERY card can show its longest title word and its longest value word at the
+ * user's font scale in half the width; otherwise one full-width card per row (F-08: the parent kept giving "Played Tracks" a
+ * ~76 dp column at 2.0x, so no child layout could keep its words whole). The whole section switches together so the grid stays even.
+ * Card heights are natural; text is never shrunk.
+ */
 @Composable
-private fun OverviewCard(
+internal fun MetricGrid(metrics: List<Metric>, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val measurer = rememberFitMeasurer()
+        val density = LocalDensity.current
+        val labelStyle = overviewLabelStyle()
+        val valueStyle = overviewValueStyle()
+        val columnPx = with(density) { ((maxWidth - METRIC_GRID_GAP) / 2).toPx() }
+        val paddingPx = with(density) { (OVERVIEW_CARD_PADDING * 2).toPx() }
+        val twoColumns = metrics.all {
+            maxOf(measurer.widestWordPx(it.label, labelStyle), measurer.widestWordPx(it.value, valueStyle)) + paddingPx <= columnPx
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(METRIC_GRID_GAP)) {
+            if (twoColumns) {
+                metrics.chunked(2).forEach { pair ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(METRIC_GRID_GAP)) {
+                        pair.forEach { OverviewCard(it.label, it.value, it.icon, Modifier.weight(1f)) }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            } else {
+                metrics.forEach { OverviewCard(it.label, it.value, it.icon, Modifier.fillMaxWidth()) }
+            }
+        }
+    }
+}
+
+private val METRIC_GRID_GAP = 8.dp
+private val OVERVIEW_CARD_PADDING = 14.dp
+
+@Composable private fun overviewLabelStyle(): TextStyle = MaterialTheme.typography.labelMedium
+
+@Composable private fun overviewValueStyle(): TextStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+
+/**
+ * A metric card. Icon and text sit side by side while the text column is wide enough for the title's longest word and the value's
+ * longest word at the user's font scale; otherwise the icon moves above the text so the full card width is used. Decided from
+ * measured widths, not from a device size or a fixed height. Text keeps the requested size: titles break only between words, values
+ * wrap at spaces, nothing is shrunk or ellipsised (the parent [MetricGrid] gives a card enough width for its longest word).
+ */
+@Composable
+internal fun OverviewCard(
     label: String,
     value: String,
     icon: ImageVector,
@@ -301,40 +303,52 @@ private fun OverviewCard(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
         ),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Column {
-                // Fade the value through when a refresh changes it (discrete change only);
-                // direct swap under reduced motion.
-                StereoSineFadeThrough(targetState = value) { shownValue ->
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(OVERVIEW_CARD_PADDING)) {
+            val measurer = rememberFitMeasurer()
+            val density = LocalDensity.current
+            val labelStyle = overviewLabelStyle()
+            val valueStyle = overviewValueStyle()
+            val besidePx = with(density) { (maxWidth - CARD_ICON_SIZE - CARD_ICON_GAP).toPx() }
+            val sideBySide = measurer.widestWordPx(label, labelStyle) <= besidePx && measurer.widestWordPx(value, valueStyle) <= besidePx
+
+            val text: @Composable (Modifier) -> Unit = { textModifier ->
+                Column(modifier = textModifier) {
+                    // Fade the value through when a refresh changes it (discrete change only);
+                    // direct swap under reduced motion.
+                    StereoSineFadeThrough(targetState = value) { shownText ->
+                        Text(
+                            text = shownText,
+                            style = valueStyle,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                     Text(
-                        text = shownValue,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        text = label,
+                        style = labelStyle,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     )
                 }
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                )
+            }
+            if (sideBySide) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CARD_ICON_GAP),
+                ) {
+                    Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    text(Modifier.weight(1f, fill = false))
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    text(Modifier.fillMaxWidth())
+                }
             }
         }
     }
 }
+
+private val CARD_ICON_SIZE = 24.dp
+private val CARD_ICON_GAP = 12.dp
 
 private fun androidx.compose.foundation.lazy.LazyListScope.statsSection(
     title: String,
