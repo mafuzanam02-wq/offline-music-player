@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
@@ -59,6 +60,7 @@ fun SongRowWithOverflow(
     var expanded by remember { mutableStateOf(false) }
     val albumKey = metadataNavigationKey(song.album, "Unknown Album")
     val artistKey = metadataNavigationKey(song.artist, "Unknown Artist")
+    val deleteRequester = LocalSongDeleteRequester.current
 
     Box(modifier = modifier) {
         SongRow(
@@ -73,7 +75,8 @@ fun SongRowWithOverflow(
             modifier           = Modifier.fillMaxWidth(),
             highlightedTitle   = highlightedTitle,
             highlightedArtist  = highlightedArtist,
-        )
+            // The menu is composed inside the three-dot button's own box (see SongRow) so the popup anchors to the button.
+            overflowMenu       = {
         DropdownMenu(
             expanded         = expanded,
             onDismissRequest = { expanded = false },
@@ -151,6 +154,18 @@ fun SongRowWithOverflow(
                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                 )
             }
+            // UI-READABILITY-03D: physical deletion, distinct from "Remove" (which only removes an entry from a list). It runs the
+            // shared confirmation + Android authorization flow installed by SongDeletionHost; absent without a host or when ineligible.
+            if (deleteRequester != null && SongDeletionPolicy.isEligible(song.id)) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text    = { Text("Delete from device", color = MaterialTheme.colorScheme.error) },
+                    onClick = { expanded = false; deleteRequester.requestDelete(song) },
+                    leadingIcon = { Icon(Icons.Default.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                )
+            }
         }
+            },
+        )
     }
 }

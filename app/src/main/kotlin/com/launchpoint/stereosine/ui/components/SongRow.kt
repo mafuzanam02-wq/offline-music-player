@@ -56,8 +56,9 @@ fun SongRow(
     onMoreClick: (() -> Unit)? = null,
     highlightedTitle: AnnotatedString? = null,
     highlightedArtist: AnnotatedString? = null,
+    overflowMenu: (@Composable () -> Unit)? = null,
 ) {
-    val rowColor    = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent
+    val rowColor   = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent
     val accentColor = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent
     val compact          = LocalCompactMode.current
     val showThumbnail    = LocalShowSongThumbnails.current
@@ -168,12 +169,17 @@ fun SongRow(
             }
         }
         if (onMoreClick != null) {
-            IconButton(onClick = onMoreClick) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More actions",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-                )
+            // UI-READABILITY-03D (F-11): a DropdownMenu anchors to its parent layout. Composing it inside this Box makes the button
+            // the anchor, so the popup opens next to the three dots instead of at the row's start edge.
+            Box {
+                IconButton(onClick = onMoreClick) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More actions",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                    )
+                }
+                overflowMenu?.invoke()
             }
         } else if (showFavoriteButton) {
             IconButton(onClick = onToggleFavorite) {

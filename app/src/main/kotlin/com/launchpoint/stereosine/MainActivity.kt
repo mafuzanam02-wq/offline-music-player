@@ -16,6 +16,7 @@ import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import com.launchpoint.stereosine.data.settings.ThemeMode
 import com.launchpoint.stereosine.playback.PlaybackStartupCoordinator
 import com.launchpoint.stereosine.playback.PlayerController
+import com.launchpoint.stereosine.ui.components.SongDeletionHost
 import com.launchpoint.stereosine.ui.navigation.StereoSineNavGraph
 import com.launchpoint.stereosine.ui.components.LocalProgressPlayer
 import com.launchpoint.stereosine.ui.theme.StereoSineTheme
@@ -42,7 +43,8 @@ class MainActivity : ComponentActivity() {
             val progressPlayer by playerController.progressPlayer.collectAsStateWithLifecycle()
             StereoSineTheme(themeMode = themeMode, accentColor = accentColor) {
                 CompositionLocalProvider(LocalProgressPlayer provides progressPlayer) {
-                    StereoSineNavGraph()
+                    // UI-READABILITY-03D: one deletion host for every song row's "Delete from device".
+                    SongDeletionHost { StereoSineNavGraph() }
                 }
             }
         }

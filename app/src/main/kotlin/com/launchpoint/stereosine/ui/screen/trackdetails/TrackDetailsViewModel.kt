@@ -2,9 +2,6 @@ package com.launchpoint.stereosine.ui.screen.trackdetails
 
 import android.content.Context
 import android.content.IntentSender
-import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +17,7 @@ import com.launchpoint.stereosine.data.repository.PlaylistOperationResult
 import com.launchpoint.stereosine.data.repository.SongRepository
 import com.launchpoint.stereosine.data.repository.StatsRepository
 import com.launchpoint.stereosine.playback.PlayerController
+import com.launchpoint.stereosine.ui.components.MediaStoreSongDeleter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
@@ -125,32 +123,25 @@ class TrackDetailsViewModel @Inject constructor(
         playerController.addToQueue(song)
     }
 
+    // UI-READABILITY-03D: the request and the cleanup live in ONE implementation, shared with the song-row overflow menu.
+    private val songDeleter = MediaStoreSongDeleter(
+        context, songRepository, playlistRepository, playerController, lyricsOverrideDao, importBaselineDao,
+    )
+
     fun deleteFromDevice(
         song: Song,
         onDeleteRequested: (IntentSender) -> Unit,
         onFailed: () -> Unit,
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) { onFailed(); return }
-        runCatching {
-            val pendingIntent = MediaStore.createDeleteRequest(
-                context.contentResolver,
-                listOf(Uri.parse(song.uri)),
-            )
-            onDeleteRequested(pendingIntent.intentSender)
-        }.onFailure { onFailed() }
+        val sender = songDeleter.createDeleteRequest(song.uri)
+        if (sender == null) { onFailed(); return }
+        runCatching { onDeleteRequested(sender) }.onFailure { onFailed() }
     }
 
     fun onDeleteApproved(song: Song, onComplete: () -> Unit) {
         viewModelScope.launch {
-            playerController.handleSongDeleted(song.id)
-            runCatching { songRepository.pruneSong(song.id) }
-            runCatching { playlistRepository.removeSongFromAllPlaylists(song.id) }
-            runCatching { lyricsOverrideDao.deleteForSong(song.id, song.uri) }
-            // Import baselines for this song are no longer useful: the file has been
-            // permanently deleted from the device, so it cannot be re-imported. Clearing
-            // them avoids stale deduplication if the user ever imports a similarly-named track.
-            // track_stats and track_listen_events are intentionally kept for historical reports.
-            runCatching { importBaselineDao.deleteBySongId(song.id) }
+            // Per-step failures were always swallowed here and the screen still closed; keep that (the shared cleanup now rethrows).
+            runCatching { songDeleter.cleanUp(song.id, song.uri) }
             onComplete()
         }
     }
