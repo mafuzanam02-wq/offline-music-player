@@ -503,6 +503,7 @@ fun StereoSineNavGraph(
                 onAppearanceClick        = { navController.navigate(Screen.SettingsAppearance.route) },
                 onStatisticsClick        = { navController.navigate(Screen.SettingsStatistics.route) },
                 onAboutClick             = { navController.navigate(Screen.SettingsAbout.route) },
+                onShareAppClick          = com.launchpoint.stereosine.share.rememberShareAppAction(),
             )
         }
         composable(Screen.SettingsHeadphones.route) {

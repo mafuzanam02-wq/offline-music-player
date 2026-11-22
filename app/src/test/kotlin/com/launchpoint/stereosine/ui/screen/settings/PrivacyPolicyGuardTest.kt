@@ -224,7 +224,8 @@ class PrivacyPolicyGuardTest {
 
     @Test fun `every share intent in the app is one of the disclosed user initiated shares`() {
         val senders = mainSources().filter { it.readText().contains("Intent.ACTION_SEND)") }.map { it.name }.sorted()
-        assertEquals(listOf("AudioShareHelper.kt", "WrappedShareHelper.kt", "WrappedVideoShare.kt"), senders)
+        // SHARE-APP-01 adds the user-initiated, offline "Share StereoSine" APK share (no network, chooser only).
+        assertEquals(listOf("AppApkShareAndroid.kt", "AudioShareHelper.kt", "WrappedShareHelper.kt", "WrappedVideoShare.kt"), senders)
         for (name in senders) {
             val text = mainSources().single { it.name == name }.readText()
             assertTrue("$name goes through the system chooser", text.contains("Intent.createChooser"))
@@ -232,7 +233,9 @@ class PrivacyPolicyGuardTest {
         // Wrapped files are created in the app cache and exposed only through the non-exported FileProvider
         val paths = File("src/main/res/xml/file_paths.xml").readText()
         assertTrue(paths.contains("<cache-path name=\"wrapped_share\"") && paths.contains("<cache-path name=\"wrapped_video\""))
-        assertEquals("only cache paths are exposed", 2, Regex("<[a-z-]+-path ").findAll(paths).count())
+        assertTrue(paths.contains("<cache-path name=\"app_share\" path=\"app_share/\""))
+        assertEquals("only cache paths are exposed", 3, Regex("<[a-z-]+-path ").findAll(paths).count())
+        assertEquals("only cache paths are exposed", 3, Regex("<cache-path ").findAll(paths).count())
         assertTrue(manifest.contains("""android:exported="false"""") && manifest.contains("android.support.FILE_PROVIDER_PATHS"))
     }
 

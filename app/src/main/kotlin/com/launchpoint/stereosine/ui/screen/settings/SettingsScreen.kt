@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +39,7 @@ fun SettingsScreen(
     onAboutClick: () -> Unit,
     onOutputProfilesClick: () -> Unit = {},
     onHeadphonesClick: () -> Unit = {},
+    onShareAppClick: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -48,6 +50,14 @@ fun SettingsScreen(
                         Icon(
                             imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onShareAppClick) {
+                        Icon(
+                            imageVector        = Icons.Default.Share,
+                            contentDescription = "Share StereoSine",
                         )
                     }
                 },

@@ -3,4 +3,6 @@
     <cache-path name="wrapped_share" path="wrapped_share/" />
     <!-- P5-WR-VID-02C: finished Wrapped MP4s only. Intermediate slide images are deliberately not mapped. -->
     <cache-path name="wrapped_video" path="wrapped_video_export/" />
+    <!-- SHARE-APP-01: the single temporary copy of the installed APK offered for offline sharing. Nothing else lives here. -->
+    <cache-path name="app_share" path="app_share/" />
 </paths>
