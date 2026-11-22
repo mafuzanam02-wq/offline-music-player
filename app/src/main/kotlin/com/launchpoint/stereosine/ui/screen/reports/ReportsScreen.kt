@@ -185,7 +185,7 @@ private fun ReportsContent(
 }
 
 @Composable
-private fun ListeningOverview(report: ListeningReportSummary) {
+internal fun ListeningOverview(report: ListeningReportSummary) {
     SectionHeader("Listening Overview")
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
@@ -262,15 +262,12 @@ private fun OverviewCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
+            // UI-READABILITY-03C: the label and value wrap at word boundaries instead of being ellipsised; card height is natural.
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }
