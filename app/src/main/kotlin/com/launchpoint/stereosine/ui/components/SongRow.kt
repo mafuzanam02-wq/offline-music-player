@@ -35,6 +35,13 @@ import com.launchpoint.stereosine.data.model.Song
 import com.launchpoint.stereosine.data.settings.ArtworkCornerStyle
 import com.launchpoint.stereosine.ui.components.motion.stereoSinePressFeedback
 
+/**
+ * A title may wrap to two lines (UI-READABILITY-03B, F-09): at larger font scales the ~177 dp text column cannot hold even an
+ * ordinary title on one line. Growth is bounded; beyond two lines the ellipsis is deliberate and the full title stays in the
+ * accessibility text, behind long-press / overflow "Track details", and in Now Playing.
+ */
+internal const val SONG_TITLE_MAX_LINES = 2
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SongRow(
@@ -107,7 +114,7 @@ fun SongRow(
                         style    = MaterialTheme.typography.titleMedium,
                         color    = if (isCurrent) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
+                        maxLines = SONG_TITLE_MAX_LINES,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
@@ -117,7 +124,7 @@ fun SongRow(
                         style    = MaterialTheme.typography.titleMedium,
                         color    = if (isCurrent) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
+                        maxLines = SONG_TITLE_MAX_LINES,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )

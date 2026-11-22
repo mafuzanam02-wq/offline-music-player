@@ -2,6 +2,7 @@ package com.launchpoint.stereosine.ui.screen.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,7 +46,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,6 +58,8 @@ import com.launchpoint.stereosine.data.model.SmartCollectionType
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.PrimaryDestination
 import com.launchpoint.stereosine.ui.components.PrimaryNavigationBar
+import com.launchpoint.stereosine.ui.components.rememberFitMeasurer
+import com.launchpoint.stereosine.ui.components.widestWordPx
 import com.launchpoint.stereosine.ui.screen.settings.InsightsHubUiState.Content
 import com.launchpoint.stereosine.ui.screen.statistics.StatisticsFormatters
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
@@ -187,23 +193,12 @@ fun SettingsStatisticsScreen(
                 item { InsightsSectionHeader("Listening Habits") }
                 item { Spacer(Modifier.height(8.dp)) }
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        InsightsStatCard(
-                            label    = "Top Day",
-                            value    = StatisticsFormatters.formatDayOfWeekShort(content.mostActiveDayOfWeek),
-                            icon     = Icons.Default.DateRange,
-                            modifier = Modifier.weight(1f),
-                        )
-                        InsightsStatCard(
-                            label    = "Top Hour",
-                            value    = formatHour(content.mostActiveHour),
-                            icon     = Icons.Default.Timer,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    InsightsStatGrid(
+                        stats = listOf(
+                            InsightsStat("Top Day", StatisticsFormatters.formatDayOfWeekShort(content.mostActiveDayOfWeek), Icons.Default.DateRange),
+                            InsightsStat("Top Hour", formatHour(content.mostActiveHour), Icons.Default.Timer),
+                        ),
+                    )
                 }
 
                 item { Spacer(Modifier.height(24.dp)) }
@@ -215,47 +210,12 @@ fun SettingsStatisticsScreen(
             item { InsightsSectionHeader("More Insights") }
             item { Spacer(Modifier.height(8.dp)) }
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    InsightsDestinationCard(
-                        title    = "Statistics",
-                        subtitle = "Totals, streaks, and listening history",
-                        icon     = Icons.Default.Insights,
-                        onClick  = onStatisticsClick,
-                        modifier = Modifier.weight(1f),
-                    )
-                    InsightsDestinationCard(
-                        title    = "Reports",
-                        subtitle = "Ranked songs, artists, and albums",
-                        icon     = Icons.Default.History,
-                        onClick  = onReportsClick,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-            item { Spacer(Modifier.height(12.dp)) }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    InsightsDestinationCard(
-                        title    = "Monthly",
-                        subtitle = "Month-by-month listening",
-                        icon     = Icons.Default.DateRange,
-                        onClick  = onMonthlyReportsClick,
-                        modifier = Modifier.weight(1f),
-                    )
-                    InsightsDestinationCard(
-                        title    = "Wrapped",
-                        subtitle = "Monthly and yearly recaps",
-                        icon     = Icons.Default.AutoAwesome,
-                        onClick  = onWrappedClick,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                InsightsDestinationGrid(
+                    onStatisticsClick     = onStatisticsClick,
+                    onReportsClick        = onReportsClick,
+                    onMonthlyReportsClick = onMonthlyReportsClick,
+                    onWrappedClick        = onWrappedClick,
+                )
             }
             item { Spacer(Modifier.height(16.dp)) }
         }
@@ -277,45 +237,93 @@ private fun InsightsSectionHeader(title: String, modifier: Modifier = Modifier) 
 // ── Summary row ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun InsightsHubSummaryRow(
+internal fun InsightsHubSummaryRow(
     hubState: InsightsHubUiState,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        InsightsStatCard(
-            label    = "Total Plays",
-            value    = when (hubState) {
-                is Content                 -> formatPlays(hubState.totalPlayCount)
-                InsightsHubUiState.Empty   -> "0"
-                InsightsHubUiState.Loading -> "—"
-            },
-            icon     = Icons.Default.MusicNote,
-            modifier = Modifier.weight(1f),
-        )
-        InsightsStatCard(
-            label    = "Listening",
-            value    = when (hubState) {
-                is Content                 -> StatisticsFormatters.formatDurationSummary(hubState.totalListeningTimeMs)
-                InsightsHubUiState.Empty   -> "0m"
-                InsightsHubUiState.Loading -> "—"
-            },
-            icon     = Icons.Default.Timer,
-            modifier = Modifier.weight(1f),
-        )
-        InsightsStatCard(
-            label    = "Streak",
-            value    = when (hubState) {
-                is Content                 -> StatisticsFormatters.formatStreakDays(hubState.currentStreakDays)
-                InsightsHubUiState.Empty   -> "—"
-                InsightsHubUiState.Loading -> "—"
-            },
-            icon     = Icons.Default.Star,
-            modifier = Modifier.weight(1f),
-        )
+    InsightsStatGrid(
+        stats = listOf(
+            InsightsStat(
+                label = "Total Plays",
+                value = when (hubState) {
+                    is Content                 -> formatPlays(hubState.totalPlayCount)
+                    InsightsHubUiState.Empty   -> "0"
+                    InsightsHubUiState.Loading -> "—"
+                },
+                icon  = Icons.Default.MusicNote,
+            ),
+            InsightsStat(
+                label = "Listening",
+                value = when (hubState) {
+                    is Content                 -> StatisticsFormatters.formatDurationSummary(hubState.totalListeningTimeMs)
+                    InsightsHubUiState.Empty   -> "0m"
+                    InsightsHubUiState.Loading -> "—"
+                },
+                icon  = Icons.Default.Timer,
+            ),
+            InsightsStat(
+                label = "Streak",
+                value = when (hubState) {
+                    is Content                 -> StatisticsFormatters.formatStreakDays(hubState.currentStreakDays)
+                    InsightsHubUiState.Empty   -> "—"
+                    InsightsHubUiState.Loading -> "—"
+                },
+                icon  = Icons.Default.Star,
+            ),
+        ),
+        modifier = modifier,
+    )
+}
+
+private class InsightsStat(val label: String, val value: String, val icon: ImageVector)
+
+/** One text of a card with the style it is drawn in: what the grid measures to choose a column count. */
+private class FitText(val text: String, val style: TextStyle)
+
+/**
+ * Lays cards out in the most columns (up to [maxColumns]) in which EVERY card still fits its widest word, at the user's font scale,
+ * on one line; otherwise fewer columns, down to one full-width card per row. F-15: three equal ~96 dp columns at 2.0x split
+ * "Listening" and "Statistics" mid-word. The choice is made from measured widths ([horizontalChrome] is the card padding); text
+ * is never shrunk, ellipsised or re-sized, and card heights are natural.
+ */
+@Composable
+private fun InsightsCardGrid(
+    count: Int,
+    gap: Dp,
+    horizontalChrome: Dp,
+    maxColumns: Int,
+    fitTexts: @Composable (Int) -> List<FitText>,
+    modifier: Modifier = Modifier,
+    card: @Composable (Int, Modifier) -> Unit,
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val measurer = rememberFitMeasurer()
+        val density = LocalDensity.current
+        var widest = 0f
+        for (i in 0 until count) for (t in fitTexts(i)) widest = maxOf(widest, measurer.widestWordPx(t.text, t.style))
+        val needPx = widest + with(density) { horizontalChrome.toPx() }
+        val columns = (minOf(maxColumns, count) downTo 1).firstOrNull { n ->
+            needPx <= with(density) { maxWidth.toPx() - gap.toPx() * (n - 1) } / n
+        } ?: 1
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            (0 until count).chunked(columns).forEach { indices ->
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    indices.forEach { card(it, Modifier.weight(1f)) }
+                    repeat(columns - indices.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun InsightsStatGrid(stats: List<InsightsStat>, modifier: Modifier = Modifier) {
+    val valueStyle = MaterialTheme.typography.titleMedium
+    val labelStyle = MaterialTheme.typography.labelSmall
+    InsightsCardGrid(
+        count = stats.size, gap = 8.dp, horizontalChrome = 24.dp, maxColumns = 3, modifier = modifier,
+        fitTexts = { listOf(FitText(stats[it].value, valueStyle), FitText(stats[it].label, labelStyle)) },
+    ) { i, m -> InsightsStatCard(stats[i].label, stats[i].value, stats[i].icon, m) }
 }
 
 @Composable
@@ -349,8 +357,6 @@ private fun InsightsStatCard(
                 text     = value,
                 style    = MaterialTheme.typography.titleMedium,
                 color    = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text  = label,
@@ -558,6 +564,30 @@ private fun InsightsThisMonthCard(
 }
 
 // ── Destination cards ─────────────────────────────────────────────────────────
+
+@Composable
+internal fun InsightsDestinationGrid(
+    onStatisticsClick: () -> Unit,
+    onReportsClick: () -> Unit,
+    onMonthlyReportsClick: () -> Unit,
+    onWrappedClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val destinations = listOf(
+        InsightsDestination("Statistics", "Totals, streaks, and listening history", Icons.Default.Insights, onStatisticsClick),
+        InsightsDestination("Reports", "Ranked songs, artists, and albums", Icons.Default.History, onReportsClick),
+        InsightsDestination("Monthly", "Month-by-month listening", Icons.Default.DateRange, onMonthlyReportsClick),
+        InsightsDestination("Wrapped", "Monthly and yearly recaps", Icons.Default.AutoAwesome, onWrappedClick),
+    )
+    val titleStyle = MaterialTheme.typography.titleMedium
+    val subtitleStyle = MaterialTheme.typography.bodySmall
+    InsightsCardGrid(
+        count = destinations.size, gap = 12.dp, horizontalChrome = 32.dp, maxColumns = 2, modifier = modifier,
+        fitTexts = { listOf(FitText(destinations[it].title, titleStyle), FitText(destinations[it].subtitle, subtitleStyle)) },
+    ) { i, m -> destinations[i].let { InsightsDestinationCard(it.title, it.subtitle, it.icon, it.onClick, m) } }
+}
+
+private class InsightsDestination(val title: String, val subtitle: String, val icon: ImageVector, val onClick: () -> Unit)
 
 @Composable
 private fun InsightsDestinationCard(
