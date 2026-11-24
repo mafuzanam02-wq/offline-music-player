@@ -45,6 +45,7 @@ import com.launchpoint.stereosine.playback.SleepTimerOption
 import com.launchpoint.stereosine.playback.SleepTimerState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -155,8 +156,8 @@ class SettingsViewModel @Inject constructor(
      * Saves a freshly picked backup folder. Clears the post-restore pending flag only when
      * the persistable URI permission was actually granted ([permissionGranted]).
      */
-    fun onBackupFolderPicked(uri: String, permissionGranted: Boolean) {
-        viewModelScope.launch {
+    fun onBackupFolderPicked(uri: String, permissionGranted: Boolean): Job {
+        return viewModelScope.launch {
             appSettingsRepository.setAutoBackupFolderUri(uri)
             if (permissionGranted) {
                 appSettingsRepository.setNeedsAutoBackupFolderSelectionAfterRestore(false)
@@ -439,10 +440,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun backupNowToFolder() {
-        if (_folderBackupUiState.value == ExportUiState.Exporting) return
+    /** Returns the running job so the caller can re-verify after it finishes (BACKUP-06B). */
+    fun backupNowToFolder(): Job? {
+        if (_folderBackupUiState.value == ExportUiState.Exporting) return null
         _folderBackupUiState.value = ExportUiState.Exporting
-        viewModelScope.launch {
+        return viewModelScope.launch {
             _folderBackupUiState.value = when (val result = autoBackupRepository.runNow()) {
                 is AutoBackupRepository.Result.Success          -> ExportUiState.Success
                 AutoBackupRepository.Result.SuccessNearCapacity ->

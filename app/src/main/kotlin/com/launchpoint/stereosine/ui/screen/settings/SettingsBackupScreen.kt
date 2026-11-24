@@ -124,7 +124,9 @@ fun SettingsBackupScreen(
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                 )
             }.isSuccess
-            viewModel.onBackupFolderPicked(uri.toString(), permissionGranted)
+            // BACKUP-06B: hide the old folder's result now; verify the new folder once the preference update has finished
+            // (also when the same folder is chosen again).
+            verificationViewModel.verifyAfter(viewModel.onBackupFolderPicked(uri.toString(), permissionGranted))
         }
     }
 
@@ -234,14 +236,11 @@ fun SettingsBackupScreen(
             // ── Backup Verification ────────────────────────────────────────────
             item { SectionHeader("Backup Verification") }
             item {
-                val subtitle = when (val state = verificationState) {
-                    BackupVerificationUiState.Loading -> "Tap to check backup health."
-                    is BackupVerificationUiState.Ready -> backupHealthIndicatorText(
-                        result               = state.result,
-                        folderSelected       = autoBackupFolderUri != null,
-                        folderPermissionValid = folderPermissionValid,
-                    )
-                }
+                val subtitle = verificationRowSubtitle(
+                    state                 = verificationState,
+                    currentFolderUri      = autoBackupFolderUri,
+                    folderPermissionValid = folderPermissionValid,
+                )
                 ClickableSettingsRow(
                     title    = "Backup Verification",
                     subtitle = subtitle,
@@ -282,7 +281,9 @@ fun SettingsBackupScreen(
                         if (autoBackupFolderUri == null) {
                             folderPickerLauncher.launch(null)
                         } else {
-                            viewModel.backupNowToFolder()
+                            // BACKUP-06B: any earlier verification stops being shown immediately; re-verify when the backup
+                            // attempt finishes, whether it saved or failed.
+                            viewModel.backupNowToFolder()?.let { verificationViewModel.verifyAfter(it) }
                         }
                     },
                 )
@@ -414,6 +415,27 @@ fun SettingsBackupScreen(
     }
 }
 
+/**
+ * BACKUP-06B. The Backup Verification row shows a result only while it belongs to the folder that is selected now; anything else
+ * (still running, invalidated by a backup or folder change, or produced for another folder) reads as "checking".
+ */
+internal fun verificationRowSubtitle(
+    state: BackupVerificationUiState,
+    currentFolderUri: String?,
+    folderPermissionValid: Boolean,
+): String = when (state) {
+    BackupVerificationUiState.Loading -> VERIFICATION_CHECKING
+    is BackupVerificationUiState.Ready ->
+        if (state.folderUri != currentFolderUri) VERIFICATION_CHECKING
+        else backupHealthIndicatorText(
+            result                = state.result,
+            folderSelected        = currentFolderUri != null,
+            folderPermissionValid = folderPermissionValid,
+        )
+}
+
+internal const val VERIFICATION_CHECKING = "Checking backup folder…"
+
 // ── Backup health indicator ──────────────────────────────────────────────────
 
 private const val BACKUP_STALE_AFTER_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
@@ -422,7 +444,7 @@ private const val BACKUP_STALE_AFTER_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
  * Compact, user-facing one-liner for the Backup Verification entry row. The dedicated
  * verification screen carries the details; this only signals whether attention is needed.
  */
-private fun backupHealthIndicatorText(
+internal fun backupHealthIndicatorText(
     result: BackupVerificationResult,
     folderSelected: Boolean,
     folderPermissionValid: Boolean,

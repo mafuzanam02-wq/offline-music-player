@@ -10,17 +10,16 @@ import com.launchpoint.stereosine.data.settings.AppSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 sealed interface BackupVerificationUiState {
     data object Loading : BackupVerificationUiState
-    data class Ready(val result: BackupVerificationResult) : BackupVerificationUiState
+    /** [folderUri] is the folder this result was produced for; the UI shows it only while that is still the selected folder. */
+    data class Ready(val result: BackupVerificationResult, val folderUri: String? = null) : BackupVerificationUiState
 }
 
 @HiltViewModel
@@ -30,40 +29,43 @@ class BackupVerificationViewModel @Inject constructor(
     private val appSettingsRepository: AppSettingsRepository,
 ) : ViewModel() {
 
-    private val _uiState =
-        MutableStateFlow<BackupVerificationUiState>(BackupVerificationUiState.Loading)
-    val uiState: StateFlow<BackupVerificationUiState> = _uiState.asStateFlow()
+    private val coordinator = BackupVerificationCoordinator(viewModelScope) {
+        // The folder is read before verifying so the result is labelled with the folder it was requested for.
+        val folder = appSettingsRepository.autoBackupFolderUri.first()
+        BackupVerificationUiState.Ready(verificationRepository.verifyLatestBackup(), folder)
+    }
+    val uiState: StateFlow<BackupVerificationUiState> = coordinator.state
+
+    init {
+        // A different folder, or any newly saved backup (including a background automatic one while the screen is open),
+        // makes the displayed result obsolete.
+        coordinator.requestOnChange(appSettingsRepository.autoBackupFolderUri)
+        coordinator.requestOnChange(appSettingsRepository.lastAutoBackupAtMillis)
+    }
 
     private val _backupNowState = MutableStateFlow<ExportUiState>(ExportUiState.Idle)
     val backupNowState: StateFlow<ExportUiState> = _backupNowState.asStateFlow()
 
-    private var started = false
-    private var verificationJob: Job? = null
-    private val verificationLock = Mutex()
 
     /** Runs the first verification when the screen opens; safe across recompositions. */
     fun verifyOnEntry() {
-        if (started) return
-        started = true
-        verifyAgain()
+        coordinator.requestOnce()
     }
 
     fun verifyAgain() {
-        _uiState.value = BackupVerificationUiState.Loading
-        verificationJob?.cancel()
-        verificationJob = viewModelScope.launch {
-            verificationLock.withLock {
-                val result = verificationRepository.verifyLatestBackup()
-                ensureActive()
-                _uiState.value = BackupVerificationUiState.Ready(result)
-            }
-        }
+        coordinator.request()
+    }
+
+    /** BACKUP-06B: hides any current result now and verifies again once [operation] has finished, success or failure. */
+    fun verifyAfter(operation: Job) {
+        coordinator.requestAfter(operation)
     }
 
     /** Creates a backup via the existing backup path, then re-verifies. */
     fun createBackupNow() {
         if (_backupNowState.value == ExportUiState.Exporting) return
         _backupNowState.value = ExportUiState.Exporting
+        coordinator.invalidate()
         viewModelScope.launch {
             _backupNowState.value = when (val result = autoBackupRepository.runNow()) {
                 is AutoBackupRepository.Result.Success           -> ExportUiState.Success
@@ -82,6 +84,7 @@ class BackupVerificationViewModel @Inject constructor(
 
     /** Saves a freshly picked backup folder (same semantics as Backup & Migration), then re-verifies. */
     fun onBackupFolderPicked(uri: String, permissionGranted: Boolean) {
+        coordinator.invalidate()
         viewModelScope.launch {
             appSettingsRepository.setAutoBackupFolderUri(uri)
             if (permissionGranted) {
