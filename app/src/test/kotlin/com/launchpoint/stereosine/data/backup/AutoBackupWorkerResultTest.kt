@@ -20,6 +20,14 @@ class AutoBackupWorkerResultTest {
         }
     }
 
+    // BACKUP-06A: permanent errors complete without a WorkManager retry storm because runIfDue has already persisted
+    // the outcome (lastAutoBackupResult/CheckAt), which is what the status card reads.
+    @Test
+    fun `capacity is permanent and completes without retry`() {
+        assertTrue(AutoBackupRepository.Result.FolderAtCapacity.toWorkerResult() is ListenableWorker.Result.Success)
+        assertTrue(AutoBackupRepository.Result.SuccessNearCapacity.toWorkerResult() is ListenableWorker.Result.Success)
+    }
+
     @Test
     fun `generic backup failures are retryable`() {
         assertTrue(

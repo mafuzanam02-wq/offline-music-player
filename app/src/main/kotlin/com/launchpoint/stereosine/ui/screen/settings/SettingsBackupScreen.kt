@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.launchpoint.stereosine.data.backup.VerificationSearchStatus
 import com.launchpoint.stereosine.data.backup.BackupIntegrityStatus
 import com.launchpoint.stereosine.data.backup.BackupFileNames
+import com.launchpoint.stereosine.data.backup.BackupHealthRules
 import com.launchpoint.stereosine.data.backup.BackupVerificationResult
 import com.launchpoint.stereosine.data.backup.VerificationStatus
 import com.launchpoint.stereosine.data.settings.AutoBackupCheckResult
@@ -77,6 +78,9 @@ fun SettingsBackupScreen(
     val lastBackupAtMillis  by viewModel.lastBackupAtMillis.collectAsStateWithLifecycle()
     val lastAutoBackupCheckAtMillis by viewModel.lastAutoBackupCheckAtMillis.collectAsStateWithLifecycle()
     val lastAutoBackupResult by viewModel.lastAutoBackupResult.collectAsStateWithLifecycle()
+    val lastManualAttemptAtMillis by viewModel.lastManualBackupAttemptAtMillis.collectAsStateWithLifecycle()
+    val lastManualResult by viewModel.lastManualBackupResult.collectAsStateWithLifecycle()
+    val folderChangedAtMillis by viewModel.autoBackupFolderChangedAtMillis.collectAsStateWithLifecycle()
     val needsFolderAfterRestore by viewModel.needsBackupFolderAfterRestore.collectAsStateWithLifecycle()
 
     val suggestedExportName by remember {
@@ -202,13 +206,28 @@ fun SettingsBackupScreen(
 
             // ── Backup status ──────────────────────────────────────────────────
             item {
+                val decision = BackupHealthRules.decide(
+                    BackupHealthRules.Input(
+                        interval                = autoBackupInterval,
+                        folderSelected          = autoBackupFolderUri != null,
+                        folderPermissionValid   = if (autoBackupFolderUri != null) folderPermissionValid else null,
+                        lastSuccessAtMillis     = lastBackupAtMillis,
+                        lastAutoCheckAtMillis   = lastAutoBackupCheckAtMillis,
+                        lastAutoResult          = lastAutoBackupResult,
+                        lastManualAtMillis      = lastManualAttemptAtMillis,
+                        lastManualResult        = lastManualResult,
+                        folderChangedAtMillis   = folderChangedAtMillis,
+                    ),
+                    nowMillis = System.currentTimeMillis(),
+                )
                 BackupStatusCard(
-                    lastBackupAtMillis           = lastBackupAtMillis,
+                    decision                     = decision,
                     lastAutoBackupCheckAtMillis  = lastAutoBackupCheckAtMillis,
                     lastAutoBackupResult         = lastAutoBackupResult,
                     folderSelected               = autoBackupFolderUri != null,
                     folderName                   = folderDisplayName,
                     interval                     = autoBackupInterval,
+                    onChooseFolder               = { folderPickerLauncher.launch(null) },
                 )
             }
 
@@ -482,21 +501,19 @@ private fun BackupFolderNeededCard(onChooseFolder: () -> Unit) {
 
 // ── Backup status card ─────────────────────────────────────────────────────
 
-private const val RECENT_BACKUP_WINDOW_MS = 8L * 24 * 60 * 60 * 1000 // ~8 days
-
 @Composable
 private fun BackupStatusCard(
-    lastBackupAtMillis: Long,
+    decision: BackupHealthRules.Decision,
     lastAutoBackupCheckAtMillis: Long,
     lastAutoBackupResult: AutoBackupCheckResult?,
     folderSelected: Boolean,
     folderName: String?,
     interval: AutoBackupInterval,
+    onChooseFolder: () -> Unit,
 ) {
-    val hasBackup    = lastBackupAtMillis > 0L
-    val recentBackup = hasBackup &&
-        System.currentTimeMillis() - lastBackupAtMillis < RECENT_BACKUP_WINDOW_MS
-    val healthy = recentBackup && folderSelected
+    val healthy = decision.isHealthy
+    val guidance = BackupHealthPresentation.guidance(decision)
+    val failureLine = BackupHealthPresentation.failureLine(decision, ::formatBackupTime)
 
     Card(
         modifier = Modifier
@@ -512,15 +529,18 @@ private fun BackupStatusCard(
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
-                text  = if (healthy) "Backups are up to date" else "Backup status",
+                text  = BackupHealthPresentation.headline(decision),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(6.dp))
             BackupStatusLine(
-                label = "Last verified backup",
-                value = if (hasBackup) formatBackupTime(lastBackupAtMillis) else "Never",
+                label = "Last saved backup",
+                value = BackupHealthPresentation.lastSavedValue(decision, ::formatBackupTime),
             )
+            if (failureLine != null) {
+                BackupStatusLine(label = "Latest problem", value = failureLine)
+            }
             BackupStatusLine(
                 label = "Last automatic check",
                 value = formatAutoBackupCheckStatus(
@@ -540,17 +560,24 @@ private fun BackupStatusCard(
                 label = "Automatic backup",
                 value = interval.toStatusLabel(),
             )
-            if (!healthy) {
+            BackupHealthPresentation.verificationNote(decision)?.let { note ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+            }
+            if (guidance != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = when {
-                        !folderSelected -> "Choose a backup folder below to protect your stats, playlists, and settings."
-                        !hasBackup      -> "No backup yet. Use Back Up Now below to create your first backup."
-                        else            -> "Your last backup is getting old. Consider running Back Up Now."
-                    },
+                    text = guidance,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                 )
+                if (BackupHealthPresentation.offersFolderAction(decision)) {
+                    TextButton(onClick = onChooseFolder) { Text("Choose backup folder") }
+                }
             }
         }
     }

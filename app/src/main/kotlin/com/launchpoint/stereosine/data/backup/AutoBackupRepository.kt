@@ -83,12 +83,18 @@ class AutoBackupRepository @Inject constructor(
     suspend fun runNow(): Result = withContext(Dispatchers.IO) {
         backupExecutionSerializer.withSerializedBackup {
             val folderUriString = appSettingsRepository.autoBackupFolderUri.first()
-                ?: return@withSerializedBackup Result.NoFolderSelected
+                ?: return@withSerializedBackup Result.NoFolderSelected.also {
+                    appSettingsRepository.setLastManualBackupAttempt(
+                        System.currentTimeMillis(), AutoBackupCheckResult.NO_FOLDER_SELECTED,
+                    )
+                }
             val nowMs = System.currentTimeMillis()
             val result = performBackup(folderUriString)
             AutoBackupDueRules.successfulBackupTimestamp(result, nowMs)?.let { timestamp ->
                 appSettingsRepository.setLastAutoBackupAtMillis(timestamp)
             }
+            // BACKUP-06A: a manual attempt has its own record; the automatic-check record is never overwritten.
+            appSettingsRepository.setLastManualBackupAttempt(nowMs, result.toAutoBackupCheckResult())
             result
         }
     }

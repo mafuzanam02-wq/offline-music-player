@@ -619,6 +619,49 @@ class FolderBackupPublicationTest {
         f.assertOldUnchanged()
     }
 
+    // BACKUP-06A: a manual attempt has its own record and never overwrites the automatic-check record.
+    @Test fun manualAttemptsAreRecordedSeparatelyFromTheAutomaticCheck() = scenario { f ->
+        f.old()
+        assertEquals(0L, f.settings.lastManualBackupAttemptAtMillis.first())
+        assertEquals(null, f.settings.lastManualBackupResult.first())
+        f.settings.setAutoBackupInterval(AutoBackupInterval.DAILY)
+        f.settings.setLastAutoBackupCheck(
+            123L, com.launchpoint.stereosine.data.settings.AutoBackupCheckResult.FOLDER_UNAVAILABLE,
+        )
+
+        assertEquals(AutoBackupRepository.Result.Success, f.repository().runNow())
+
+        assertEquals(com.launchpoint.stereosine.data.settings.AutoBackupCheckResult.SUCCESS, f.settings.lastManualBackupResult.first())
+        assertTrue(f.settings.lastManualBackupAttemptAtMillis.first() > 0)
+        assertEquals("the historical automatic record is untouched", 123L, f.settings.lastAutoBackupCheckAtMillis.first())
+        assertEquals(
+            com.launchpoint.stereosine.data.settings.AutoBackupCheckResult.FOLDER_UNAVAILABLE,
+            f.settings.lastAutoBackupResult.first(),
+        )
+    }
+
+    @Test fun aFailedManualAttemptIsRecordedAndDoesNotMoveTheLastSuccess() = scenario { f ->
+        f.old()
+        repeat(FolderBackupPublisher.MAX_PUBLICATION_CHILDREN - f.provider.children.size) {
+            f.provider.put("full-$it", "full-$it.txt", byteArrayOf())
+        }
+        assertEquals(AutoBackupRepository.Result.FolderAtCapacity, f.repository().runNow())
+        assertEquals(
+            com.launchpoint.stereosine.data.settings.AutoBackupCheckResult.FOLDER_AT_CAPACITY,
+            f.settings.lastManualBackupResult.first(),
+        )
+        assertEquals(0L, f.settings.lastAutoBackupAtMillis.first())
+    }
+
+    @Test fun folderChangeTimeIsRecordedOnlyWhenTheDestinationActuallyChanges() = scenario { f ->
+        val initial = f.settings.autoBackupFolderChangedAtMillis.first()
+        assertTrue(initial > 0)
+        f.settings.setAutoBackupFolderUri(f.provider.tree.toString(), nowMillis = initial + 1_000)
+        assertEquals("re-saving the same folder changes nothing", initial, f.settings.autoBackupFolderChangedAtMillis.first())
+        f.settings.setAutoBackupFolderUri("content://other/tree/x", nowMillis = initial + 2_000)
+        assertEquals(initial + 2_000, f.settings.autoBackupFolderChangedAtMillis.first())
+    }
+
     private suspend fun publishAndCheckPriorBytes(f: Fixture, attempt: Int) {
         val saved = f.provider.children.mapValues { (_, child) -> child.file.readBytes() }
         val outputsBefore = f.provider.outputIds.size

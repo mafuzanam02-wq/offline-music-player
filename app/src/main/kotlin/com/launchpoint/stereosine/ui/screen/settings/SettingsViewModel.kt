@@ -127,6 +127,22 @@ class SettingsViewModel @Inject constructor(
             initialValue = null,
         )
 
+    /** BACKUP-06A: manual "Back up now" outcome, kept apart from the automatic-check record. */
+    val lastManualBackupAttemptAtMillis: StateFlow<Long> =
+        appSettingsRepository.lastManualBackupAttemptAtMillis.stateIn(
+            scope = viewModelScope, started = SharingStarted.WhileSubscribed(5_000), initialValue = 0L,
+        )
+
+    val lastManualBackupResult: StateFlow<AutoBackupCheckResult?> =
+        appSettingsRepository.lastManualBackupResult.stateIn(
+            scope = viewModelScope, started = SharingStarted.WhileSubscribed(5_000), initialValue = null,
+        )
+
+    val autoBackupFolderChangedAtMillis: StateFlow<Long> =
+        appSettingsRepository.autoBackupFolderChangedAtMillis.stateIn(
+            scope = viewModelScope, started = SharingStarted.WhileSubscribed(5_000), initialValue = 0L,
+        )
+
     /** Set by restore when auto-backup was re-enabled but no folder exists on this device. */
     val needsBackupFolderAfterRestore: StateFlow<Boolean> =
         appSettingsRepository.needsAutoBackupFolderSelectionAfterRestore.stateIn(

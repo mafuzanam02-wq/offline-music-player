@@ -212,10 +212,44 @@ class AppSettingsRepository @Inject constructor(
         }
         .map { preferences -> preferences[AUTO_BACKUP_FOLDER_URI_KEY] }
 
-    suspend fun setAutoBackupFolderUri(uri: String?) {
+    suspend fun setAutoBackupFolderUri(uri: String?, nowMillis: Long = System.currentTimeMillis()) {
         dataStore.edit { preferences ->
+            // BACKUP-06A: remember WHEN the destination changed so an earlier failure or success recorded for a
+            // previous folder is never attributed to the new one. Re-saving the same folder changes nothing.
+            if (preferences[AUTO_BACKUP_FOLDER_URI_KEY] != uri) {
+                preferences[AUTO_BACKUP_FOLDER_CHANGED_AT_MILLIS_KEY] = nowMillis
+            }
             if (uri != null) preferences[AUTO_BACKUP_FOLDER_URI_KEY] = uri
             else preferences.remove(AUTO_BACKUP_FOLDER_URI_KEY)
+        }
+    }
+
+    /** BACKUP-06A. Epoch-ms the backup destination last changed on this install; 0 when unknown (never changed / older data). */
+    val autoBackupFolderChangedAtMillis: Flow<Long> = dataStore.data
+        .catch { error ->
+            if (error is IOException) emit(emptyPreferences()) else throw error
+        }
+        .map { preferences -> preferences[AUTO_BACKUP_FOLDER_CHANGED_AT_MILLIS_KEY] ?: 0L }
+
+    /** BACKUP-06A. Epoch-ms of the last user-initiated "Back up now" attempt; 0 if none. Separate from the automatic-check record. */
+    val lastManualBackupAttemptAtMillis: Flow<Long> = dataStore.data
+        .catch { error ->
+            if (error is IOException) emit(emptyPreferences()) else throw error
+        }
+        .map { preferences -> preferences[LAST_MANUAL_BACKUP_ATTEMPT_AT_MILLIS_KEY] ?: 0L }
+
+    val lastManualBackupResult: Flow<AutoBackupCheckResult?> = dataStore.data
+        .catch { error ->
+            if (error is IOException) emit(emptyPreferences()) else throw error
+        }
+        .map { preferences ->
+            preferences[LAST_MANUAL_BACKUP_RESULT_KEY]?.toAutoBackupCheckResult()
+        }
+
+    suspend fun setLastManualBackupAttempt(attemptedAtMillis: Long, result: AutoBackupCheckResult) {
+        dataStore.edit { preferences ->
+            preferences[LAST_MANUAL_BACKUP_ATTEMPT_AT_MILLIS_KEY] = attemptedAtMillis
+            preferences[LAST_MANUAL_BACKUP_RESULT_KEY] = result.name
         }
     }
 
@@ -583,6 +617,9 @@ class AppSettingsRepository @Inject constructor(
         val LAST_AUTO_BACKUP_AT_MILLIS_KEY          = longPreferencesKey("last_auto_backup_at_millis")
         val LAST_AUTO_BACKUP_CHECK_AT_MILLIS_KEY    = longPreferencesKey("last_auto_backup_check_at_millis")
         val LAST_AUTO_BACKUP_RESULT_KEY             = stringPreferencesKey("last_auto_backup_result")
+        val AUTO_BACKUP_FOLDER_CHANGED_AT_MILLIS_KEY    = longPreferencesKey("auto_backup_folder_changed_at_millis")
+        val LAST_MANUAL_BACKUP_ATTEMPT_AT_MILLIS_KEY    = longPreferencesKey("last_manual_backup_attempt_at_millis")
+        val LAST_MANUAL_BACKUP_RESULT_KEY               = stringPreferencesKey("last_manual_backup_result")
         val BACKUP_FILE_MODE_KEY                    = stringPreferencesKey("backup_file_mode")
         val NOTIFICATION_CONTROLS_KEY               = stringPreferencesKey("notification_controls")
         val PREVIOUS_BUTTON_BEHAVIOR_KEY            = stringPreferencesKey("previous_button_behavior")
