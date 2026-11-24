@@ -8,6 +8,7 @@ import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,7 +20,9 @@ import com.launchpoint.stereosine.playback.PlayerController
 import com.launchpoint.stereosine.ui.components.SongDeletionHost
 import com.launchpoint.stereosine.ui.navigation.StereoSineNavGraph
 import com.launchpoint.stereosine.ui.components.LocalProgressPlayer
+import com.launchpoint.stereosine.ui.theme.ApplySystemBarStyle
 import com.launchpoint.stereosine.ui.theme.StereoSineTheme
+import com.launchpoint.stereosine.ui.theme.resolveUseDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -41,6 +44,8 @@ class MainActivity : ComponentActivity() {
             val accentColor by appSettingsRepository.accentColor
                 .collectAsStateWithLifecycle(initialValue = AccentColor.MIDNIGHT_VIOLET)
             val progressPlayer by playerController.progressPlayer.collectAsStateWithLifecycle()
+            // UI-05E: system-bar icon contrast follows the app's Light/Dark/System choice, not only the phone's own mode.
+            ApplySystemBarStyle(resolveUseDarkTheme(themeMode, isSystemInDarkTheme()))
             StereoSineTheme(themeMode = themeMode, accentColor = accentColor) {
                 CompositionLocalProvider(LocalProgressPlayer provides progressPlayer) {
                     // UI-READABILITY-03D: one deletion host for every song row's "Delete from device".

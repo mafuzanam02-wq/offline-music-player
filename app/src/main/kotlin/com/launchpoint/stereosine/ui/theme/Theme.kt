@@ -104,11 +104,7 @@ fun StereoSineTheme(
     accentColor: AccentColor = AccentColor.MIDNIGHT_VIOLET,
     content: @Composable () -> Unit,
 ) {
-    val useDark = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT  -> false
-        ThemeMode.DARK   -> true
-    }
+    val useDark = resolveUseDarkTheme(themeMode, isSystemInDarkTheme())
 
     val pc = accentColor.toPrimaryColors()
 

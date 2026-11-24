@@ -263,6 +263,7 @@ fun HomeScreen(
                     onWrappedClick           = onWrappedClick,
                     onAlbumClick             = onAlbumClick,
                     onArtistClick            = onArtistClick,
+                    onFolderClick            = onFolderClick,
                     onReportsAndInsightsClick = onReportsAndInsightsClick,
                     onSongClick              = viewModel::playSong,
                     onRecentlyPlayedSongClick = viewModel::playRecentlyPlayedSong,
@@ -521,6 +522,7 @@ private fun HomeDashboardContent(
     onWrappedClick: () -> Unit,
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
+    onFolderClick: (String) -> Unit,
     onReportsAndInsightsClick: () -> Unit,
     onSongClick: (Song) -> Unit,
     onRecentlyPlayedSongClick: (Song) -> Unit,
@@ -604,6 +606,7 @@ private fun HomeDashboardContent(
                         onShare = onShare,
                         onAlbumClick = onAlbumClick,
                         onArtistClick = onArtistClick,
+                        onFolderClick = onFolderClick,
                         actionLabel = "View insights",
                         onActionClick = onReportsAndInsightsClick,
                     )
@@ -624,6 +627,7 @@ private fun HomeDashboardContent(
                         onShare = onShare,
                         onAlbumClick = onAlbumClick,
                         onArtistClick = onArtistClick,
+                        onFolderClick = onFolderClick,
                         actionLabel = "View insights",
                         onActionClick = onReportsAndInsightsClick,
                     )
@@ -709,7 +713,7 @@ private fun HomeDashboardContent(
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.dashboardSection(
+internal fun androidx.compose.foundation.lazy.LazyListScope.dashboardSection(
     title: String,
     songs: List<Song>,
     emptyText: String,
@@ -724,6 +728,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dashboardSection(
     onShare: (Song) -> Unit,
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
+    onFolderClick: (String) -> Unit,
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
 ) {
@@ -752,6 +757,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dashboardSection(
                 onShare          = { onShare(song) },
                 onAlbumClick     = onAlbumClick,
                 onArtistClick    = onArtistClick,
+                onViewFolder     = song.validFolderKey()?.let { key -> { onFolderClick(key) } },
                 modifier         = Modifier.fillMaxWidth(),
             )
             HorizontalDivider(
@@ -1332,7 +1338,7 @@ private fun SongListContent(
     }
 }
 
-private fun Song.validFolderKey(): String? {
+internal fun Song.validFolderKey(): String? {
     val hasFolderMetadata = !folderPath
         ?.trim()
         ?.trim('/', '\\')
