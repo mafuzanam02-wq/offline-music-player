@@ -28,6 +28,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
@@ -94,7 +96,8 @@ import com.launchpoint.stereosine.ui.components.LoadingStateContent
 import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
 import com.launchpoint.stereosine.ui.components.PlaylistArtworkCollage
-import com.launchpoint.stereosine.ui.components.metadataNavigationKey
+import com.launchpoint.stereosine.ui.components.SongActionMenuItems
+import com.launchpoint.stereosine.ui.components.SongMenuItem
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
 import com.launchpoint.stereosine.ui.viewmodel.PlaylistActionsViewModel
 import kotlinx.coroutines.delay
@@ -892,7 +895,7 @@ private fun formatPlaylistDate(epochMs: Long): String =
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PlaylistSongRow(
+internal fun PlaylistSongRow(
     entry: PlaylistSongItem,
     isFirst: Boolean,
     isLast: Boolean,
@@ -929,8 +932,6 @@ private fun PlaylistSongRow(
     }
     val accentColor = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent
     var menuExpanded by remember { mutableStateOf(false) }
-    val albumKey = metadataNavigationKey(song.album, "Unknown Album")
-    val artistKey = metadataNavigationKey(song.artist, "Unknown Artist")
     val compact = LocalCompactMode.current
     val verticalPadding = if (compact) 8.dp else 12.dp
     val artworkSize = if (compact) 44.dp else 48.dp
@@ -1037,60 +1038,40 @@ private fun PlaylistSongRow(
         }
         Box {
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Playlist song options")
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "Playlist song options",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                )
             }
             DropdownMenu(
                 expanded         = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
             ) {
-                DropdownMenuItem(
-                    text    = { Text("Play next") },
-                    onClick = { menuExpanded = false; onPlayNext() },
-                )
-                DropdownMenuItem(
-                    text    = { Text("Add to queue") },
-                    onClick = { menuExpanded = false; onAddToQueue() },
-                )
-                DropdownMenuItem(
-                    text    = { Text("Add to playlist") },
-                    onClick = { menuExpanded = false; onAddToPlaylist() },
-                )
-                if (artistKey != null) {
-                    DropdownMenuItem(
-                        text = { Text("Go to artist") },
-                        onClick = { menuExpanded = false; onArtistClick(artistKey) },
-                    )
+                SongActionMenuItems(
+                    song             = song,
+                    isFavorite       = isFavorite,
+                    onDismiss        = { menuExpanded = false },
+                    onPlay           = onClick,
+                    onPlayNext       = onPlayNext,
+                    onAddToQueue     = onAddToQueue,
+                    onAddToPlaylist  = onAddToPlaylist,
+                    onToggleFavorite = onToggleFavorite,
+                    onTrackDetails   = onOpenDetails,
+                    onArtistClick    = onArtistClick,
+                    onAlbumClick     = onAlbumClick,
+                    onShare          = onShare,
+                    hasScreenActions = true,
+                    // The drag preview is a visual copy of the row: it must never start a physical deletion.
+                    allowDelete      = !isDragPreview,
+                ) {
+                    if (allowMove) {
+                        SongMenuItem("Move up", Icons.Default.ArrowUpward, { menuExpanded = false; onMoveUp() }, enabled = !isFirst)
+                        SongMenuItem("Move down", Icons.Default.ArrowDownward, { menuExpanded = false; onMoveDown() }, enabled = !isLast)
+                    }
+                    // Removes ONLY this playlist entry. Physical deletion is the separate "Delete from device" item below.
+                    SongMenuItem("Remove from playlist", Icons.Default.Delete, { menuExpanded = false; onRemove() }, destructive = true)
                 }
-                if (albumKey != null) {
-                    DropdownMenuItem(
-                        text = { Text("Go to album") },
-                        onClick = { menuExpanded = false; onAlbumClick(albumKey) },
-                    )
-                }
-                DropdownMenuItem(
-                    text    = { Text("Track details") },
-                    onClick = { menuExpanded = false; onOpenDetails() },
-                )
-                DropdownMenuItem(
-                    text    = { Text("Share") },
-                    onClick = { menuExpanded = false; onShare() },
-                )
-                if (allowMove) {
-                    DropdownMenuItem(
-                        text    = { Text("Move up") },
-                        enabled = !isFirst,
-                        onClick = { menuExpanded = false; onMoveUp() },
-                    )
-                    DropdownMenuItem(
-                        text    = { Text("Move down") },
-                        enabled = !isLast,
-                        onClick = { menuExpanded = false; onMoveDown() },
-                    )
-                }
-                DropdownMenuItem(
-                    text    = { Text("Remove from playlist", color = MaterialTheme.colorScheme.error) },
-                    onClick = { menuExpanded = false; onRemove() },
-                )
             }
         }
     }

@@ -70,8 +70,9 @@ import com.launchpoint.stereosine.ui.components.ArtworkImage
 import com.launchpoint.stereosine.ui.components.LoadingStateContent
 import com.launchpoint.stereosine.ui.components.LocalCompactMode
 import com.launchpoint.stereosine.ui.components.MiniPlayer
+import com.launchpoint.stereosine.ui.components.SONG_TITLE_MAX_LINES
+import com.launchpoint.stereosine.ui.components.SongActionMenuItems
 import com.launchpoint.stereosine.ui.components.SongRowWithOverflow
-import com.launchpoint.stereosine.ui.components.metadataNavigationKey
 import com.launchpoint.stereosine.ui.viewmodel.PlaybackControlsViewModel
 import com.launchpoint.stereosine.ui.viewmodel.PlaylistActionsViewModel
 import kotlinx.coroutines.launch
@@ -499,7 +500,7 @@ private fun MostPlayedEmptyRow(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MostPlayedSongRow(
+internal fun MostPlayedSongRow(
     summary: SongStatsSummary,
     isCurrent: Boolean,
     isFavorite: Boolean,
@@ -517,8 +518,6 @@ private fun MostPlayedSongRow(
     val rowColor    = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent
     val accentColor = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent
     var menuExpanded by remember { mutableStateOf(false) }
-    val albumKey = metadataNavigationKey(summary.song.album, "Unknown Album")
-    val artistKey = metadataNavigationKey(summary.song.artist, "Unknown Artist")
     val compact = LocalCompactMode.current
     val verticalPadding = if (compact) 8.dp else 12.dp
     val artworkSize = if (compact) 44.dp else 48.dp
@@ -560,7 +559,7 @@ private fun MostPlayedSongRow(
                     style    = MaterialTheme.typography.titleMedium,
                     color    = if (isCurrent) MaterialTheme.colorScheme.primary
                                else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = SONG_TITLE_MAX_LINES,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
@@ -601,28 +600,20 @@ private fun MostPlayedSongRow(
                 expanded         = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
             ) {
-                DropdownMenuItem(text = { Text("Play") },             onClick = { menuExpanded = false; onClick() })
-                DropdownMenuItem(text = { Text("Play next") },        onClick = { menuExpanded = false; onPlayNext() })
-                DropdownMenuItem(text = { Text("Add to queue") },     onClick = { menuExpanded = false; onAddToQueue() })
-                DropdownMenuItem(text = { Text("Add to playlist") },  onClick = { menuExpanded = false; onAddToPlaylist() })
-                DropdownMenuItem(
-                    text    = { Text(if (isFavorite) "Remove from Favorites" else "Add to Favorites") },
-                    onClick = { menuExpanded = false; onToggleFavorite() },
+                SongActionMenuItems(
+                    song             = summary.song,
+                    isFavorite       = isFavorite,
+                    onDismiss        = { menuExpanded = false },
+                    onPlay           = onClick,
+                    onPlayNext       = onPlayNext,
+                    onAddToQueue     = onAddToQueue,
+                    onAddToPlaylist  = onAddToPlaylist,
+                    onToggleFavorite = onToggleFavorite,
+                    onTrackDetails   = onOpenDetails,
+                    onArtistClick    = onArtistClick,
+                    onAlbumClick     = onAlbumClick,
+                    onShare          = onShare,
                 )
-                if (artistKey != null) {
-                    DropdownMenuItem(
-                        text = { Text("Go to artist") },
-                        onClick = { menuExpanded = false; onArtistClick(artistKey) },
-                    )
-                }
-                if (albumKey != null) {
-                    DropdownMenuItem(
-                        text = { Text("Go to album") },
-                        onClick = { menuExpanded = false; onAlbumClick(albumKey) },
-                    )
-                }
-                DropdownMenuItem(text = { Text("Track details") },    onClick = { menuExpanded = false; onOpenDetails() })
-                DropdownMenuItem(text = { Text("Share") },            onClick = { menuExpanded = false; onShare() })
             }
         }
     }
