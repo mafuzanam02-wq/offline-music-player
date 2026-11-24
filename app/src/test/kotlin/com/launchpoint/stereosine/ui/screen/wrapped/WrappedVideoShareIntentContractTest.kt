@@ -2,6 +2,7 @@ package com.launchpoint.stereosine.ui.screen.wrapped
 
 import android.content.Intent
 import android.net.Uri
+import com.launchpoint.stereosine.share.APP_SHARE_CACHE_DIR
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,16 +45,19 @@ class WrappedVideoShareIntentContractTest {
 
     private fun projectFile(rel: String): File = listOf(File(rel), File("app/$rel")).first { it.exists() }
 
-    @Test fun fileProviderMapsOnlyTheShareDirectoryAndTheDedicatedVideoDirectory() {
+    @Test fun fileProviderMapsOnlyTheThreeAuthorisedDirectories() {
         val paths = projectFile("src/main/res/xml/file_paths.xml").readText()
-        val roots = Regex("<([a-z-]+-path) name=\"([^\"]+)\" path=\"([^\"]+)\"").findAll(paths).map { it.groupValues }.toList()
+        val roots = Regex("<([a-z-]+-path)\\s+name=\"([^\"]+)\"\\s+path=\"([^\"]+)\"").findAll(paths).map { it.groupValues }.toList()
         assertEquals(
-            "exactly the image share path and the dedicated video path",
-            listOf("wrapped_share/", "wrapped_video_export/"),
+            "exactly the image share, dedicated video and offline APK share directories",
+            listOf("wrapped_share/", "wrapped_video_export/", "app_share/"),
             roots.map { it[3] },
         )
-        assertTrue("both are cache-path (app-private)", roots.all { it[1] == "cache-path" })
+        assertEquals("every element is parsed (no unnamed or extra path element)", roots.size, Regex("<[a-z-]+-path[\\s>]").findAll(paths).count())
+        assertTrue("all are cache-path (app-private)", roots.all { it[1] == "cache-path" })
+        assertEquals("mapping names are closed", listOf("wrapped_share", "wrapped_video", "app_share"), roots.map { it[2] })
         assertEquals("the video path is the one the exporter writes to", "$WRAPPED_VIDEO_DIR/", roots[1][3])
+        assertEquals("the APK path is the one the APK share writes to", "$APP_SHARE_CACHE_DIR/", roots[2][3])
         assertFalse("the slide-export directory must never be shareable", paths.contains("wrapped_slide_export"))
         assertTrue("every mapping is a named sub-directory, never the cache root", roots.all { it[3].trim('/').isNotEmpty() && it[3] != "." })
         assertFalse(paths.contains("external-"))
