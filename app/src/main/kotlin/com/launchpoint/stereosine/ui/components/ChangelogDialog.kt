@@ -19,6 +19,34 @@ private sealed interface ChangelogEntry {
     data class Item(val text: String) : ChangelogEntry
 }
 
+private val BETA_11_ENTRIES: List<ChangelogEntry> = listOf(
+    ChangelogEntry.Section("Share StereoSine"),
+    ChangelogEntry.Item("Use the Share button in Settings to send a copy of this app to another Android device through Android's share options, such as Quick Share."),
+    ChangelogEntry.Item("It isn't available for every kind of installation, and there is no download link yet."),
+
+    ChangelogEntry.Section("Wrapped Videos"),
+    ChangelogEntry.Item("Export a Wrapped story that has listening data as an MP4 video, made on your device."),
+    ChangelogEntry.Item("Video export depends on your device's video encoder, so it may not work on every phone."),
+
+    ChangelogEntry.Section("More Sound Control"),
+    ChangelogEntry.Item("Keep separate Equalizer settings for Speaker, Wired and Bluetooth, and save named headphone presets."),
+    ChangelogEntry.Item("You choose the profile yourself; StereoSine doesn't detect your output. EQ depends on your device and isn't included in backups."),
+
+    ChangelogEntry.Section("Safer Backups"),
+    ChangelogEntry.Item("Backup Verification checks the newest usable backup in your folder and refreshes after a backup or folder change."),
+    ChangelogEntry.Item("Backup status now shows when a backup failed or the folder is unavailable, and suggests how to recover."),
+    ChangelogEntry.Item("A saved backup isn't the same as a verified one, and automatic backups are best-effort. New backups can't be read by older app versions."),
+
+    ChangelogEntry.Section("Search and Navigation"),
+    ChangelogEntry.Item("Global Search remembers recent searches on your device only. You can clear them at any time."),
+    ChangelogEntry.Item("Search and song menus are more consistent, and the main tabs open with one tap."),
+
+    ChangelogEntry.Section("Reliability and Polish"),
+    ChangelogEntry.Item("More accurate listening statistics and clearer music-access recovery."),
+    ChangelogEntry.Item("Readability and accessibility fixes across several screens."),
+    ChangelogEntry.Item("New library tools: scan exclusions, Save queue as playlist and M3U8 export. Not every new feature has been tested on every device."),
+)
+
 private val BETA_10_ENTRIES: List<ChangelogEntry> = listOf(
     ChangelogEntry.Section("Crossfade"),
     ChangelogEntry.Item("Smooth transitions between songs are now available in Settings > Playback (off by default, 2 to 12 seconds)."),
@@ -206,8 +234,8 @@ private fun fullBeta5Entries(): List<ChangelogEntry> = listOf(
 @Composable
 fun ChangelogDialog(onDismiss: () -> Unit) {
     ChangelogEntriesDialog(
-        title = "What's new in Beta 10",
-        entries = BETA_10_ENTRIES,
+        title = "What's new in Beta 11",
+        entries = BETA_11_ENTRIES,
         onDismiss = onDismiss,
     )
 }
@@ -217,6 +245,8 @@ fun FullChangelogDialog(onDismiss: () -> Unit) {
     ChangelogEntriesDialog(
         title = "StereoSine Changelog",
         entries = buildList {
+            add(ChangelogEntry.Section("Beta 11 — Sharing, Wrapped Videos, Sound Profiles & Backup Health"))
+            addAll(BETA_11_ENTRIES)
             add(ChangelogEntry.Section("Beta 10 — Crossfade, Lyrics & Playback Reliability"))
             addAll(BETA_10_ENTRIES)
             add(ChangelogEntry.Section("Beta 9 — Equalizer, Listening Settings & Backup Protection"))

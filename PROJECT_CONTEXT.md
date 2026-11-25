@@ -16,7 +16,7 @@ EQ/profile settings remain outside explicit backups. See docs/ARCHITECTURE.md fo
 Concise handoff/state document. For technical depth see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); for
 decisions and backlog see [ENGINEERING_BACKLOG_AND_DECISIONS.md](ENGINEERING_BACKLOG_AND_DECISIONS.md).
 
-**Implementation baseline:** post-Beta 10 engineering after WC-10 (Wave C closed) and library access & scan recovery UX and large-queue interactive latency hardening (physical QA pending). Update this paragraph when the project state changes materially.
+**Implementation baseline:** Beta 11 release-candidate preparation (RELEASE-11A: version identity, release notes and in-app What's New only; no final signed APK assembled, no distribution) on top of post-Beta 10 engineering after WC-10 (Wave C closed) and library access & scan recovery UX and large-queue interactive latency hardening (physical QA pending). Update this paragraph when the project state changes materially.
 
 ## What is StereoSine?
 
@@ -30,7 +30,7 @@ Wavdrop Desktop import. Naming history: `Lyra` -> `EchoVault` -> `Wavdrop` -> **
 | Item | Value |
 |---|---|
 | Application ID / namespace | `com.launchpoint.stereosine` (debug: `com.launchpoint.stereosine.debug`); root Gradle project `StereoSine` |
-| Version | `0.1.0-beta10`, versionCode 10 (Beta 10.0) |
+| Version | `0.1.0-beta11`, versionCode 11 (Beta 11 release candidate; not yet distributed). Last published tester release: Wavdrop Beta 10.0 (`0.1.0-beta10`, versionCode 10) |
 | minSdk / compileSdk / targetSdk | 26 / 36 / 36 |
 | Room | `wavdrop.db` (legacy file name, deliberately kept for data continuity), schema **13** (migrations 1 -> 13, schemas in `app/schemas`) |
 | Playback stack | Media3 `MediaLibraryService` + ExoPlayer (versions in `gradle/libs.versions.toml`) |

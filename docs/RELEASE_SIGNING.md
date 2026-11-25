@@ -109,7 +109,7 @@ release-only validation, debug without credentials, no debug-key fallback).
 
 ## versionCode / package notes
 
-- Current values in `app/build.gradle.kts`: `versionCode = 10`, `versionName = "0.1.0-beta10"`,
+- Current values in `app/build.gradle.kts`: `versionCode = 11`, `versionName = "0.1.0-beta11"`,
   `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`. Each Play upload needs a unique, monotonically increasing
   `versionCode` — bump before every new upload.
 - `applicationId = com.launchpoint.stereosine` (debug builds add `.debug`) — this is **permanent** once first

@@ -2,8 +2,8 @@
 
 > **Naming.** Entries below are the historical record of the *Wavdrop* beta releases and keep the product name that
 > applied when they shipped. The app was later renamed **StereoSine** (application ID `com.launchpoint.stereosine`).
-> No StereoSine-branded release has been published yet, so there is no StereoSine release entry; the rebrand work is
-> tracked in `docs/development/BRAND-01-INVENTORY.md`.
+> No StereoSine-branded release has been published yet. The `0.1.0-beta11` entry below is the first StereoSine-branded
+> release *candidate*; it is not yet distributed. The rebrand work is tracked in `docs/development/BRAND-01-INVENTORY.md`.
 
 Historical record of completed and shipped work. Newest changes first. Each version entry reflects what was
 true when it shipped; do not rewrite old entries to match later behaviour. The current user-facing summary
@@ -11,9 +11,103 @@ is `WHATS_NEW.md`.
 
 ---
 
-## Post-Beta 10 engineering note: statistics reliability (not part of any published release)
+## 0.1.0-beta11 (release candidate; NOT yet distributed)
 
-Internal engineering work on `master` after the Beta 10.0 checkpoint (P5-STATS-19A to 19D). It has not shipped in a published release, and the app version is unchanged (`0.1.0-beta10`, `versionCode` 10). This is a record of engineering state, not a user-facing release claim.
+StereoSine Beta 11 (`versionName` `0.1.0-beta11`, `versionCode` 11, application ID `com.launchpoint.stereosine`). Still a beta.
+This is the first StereoSine-branded release candidate and covers the work on `master` since the Wavdrop Beta 10.0 checkpoint
+(`b560637`, 123 commits).
+
+### Release status (read this before relying on the notes)
+
+| Stage | Status |
+|---|---|
+| Version identity (`versionCode` 11 / `0.1.0-beta11`) | Done in source |
+| Final signed release APK assembled | **No** (deliberately not part of RELEASE-11A; source review comes first) |
+| Installed on a device / tested through Quick Share | **No.** The earlier `0.1.0-beta10` StereoSine build was installed on an A15, transferred to an S21 with Quick Share and installed there; that is QA evidence for the Beta 10 build only, not for Beta 11 |
+| Distributed to external testers | **No** |
+| Published publicly | **No** |
+| Published through Google Play / Play App Signing enrolled | **No** / unconfirmed (see `docs/RELEASE_SIGNING.md`) |
+
+**New application identity.** StereoSine installs as `com.launchpoint.stereosine`, a different app from the earlier *Wavdrop*
+(`com.launchpoint.wavdrop`). It cannot update a Wavdrop install in place; move your data with Backup & Migration.
+
+### 1. New user-visible capabilities
+
+- **Share StereoSine (Settings, share icon).** Shares a verified copy of the installed app package through Android's share sheet so
+  another Android device can receive it with whatever local-transfer target it offers (for example Quick Share). Not available for
+  split / App Bundle installs, a debug build is labelled as a test build, and no official download link exists yet. The share was
+  exercised with Quick Share between two phones, but with the receiving phone online; it has **not** been demonstrated with both
+  devices offline.
+- **Wrapped story as a video.** A Wrapped report that has listening data can be exported as a 720x1280 H.264 MP4, rendered on the
+  device with progress, cancel and retry, then shared. Finished exports are pruned after seven days. It depends on the device's video
+  encoder, so it can fail on some devices (a failure message and Retry are shown). No device-validation section exists for this feature in
+  `QA_CHECKLIST.md`.
+- **Manual output EQ profiles and headphone presets.** Global, Speaker, Wired and Bluetooth each keep their own EQ settings, and a
+  Headphones library stores up to 32 named custom EQ curves that can be applied to the Wired or Bluetooth profile. You choose the
+  profile yourself: StereoSine does not detect the connected output, does not switch the audio route, and does not change system
+  volume. EQ availability depends on the device. EQ profiles and headphone presets are **not** included in backups, and the Equalizer
+  being on still disables crossfade.
+- **Recent searches.** Global Search keeps up to 30 recent searches for 90 days, on the device only (not backed up, never uploaded),
+  with a confirmed Clear all.
+- **Library controls.** Preset scan exclusions (Telegram, Signal, Messenger, Downloads, Recordings; all off by default), custom folder
+  exclusions (Folder Details, Settings -> Library & Scanning), Save queue as playlist, device-local M3U8 playlist export, and Delete from
+  device in the song menu (permanent; Android has no recycle bin, and listening history may be kept).
+- **Playback controls.** Optional transport fades for play, pause and skip controls (Settings -> Playback), and a Sleep Timer
+  "Finish current track" option.
+- **Home.** Pull to refresh rescans the library; the home-screen widget has per-widget appearance settings and responsive layouts.
+
+### 2. Improvements to existing capabilities
+
+- **Backups.** New backups use the durable `.wdbk` container; older `.json` backups (v1 and v2) still import. Backup Verification
+  finds the newest *usable* backup in the chosen folder, skipping damaged, empty or unsupported files, and its result is refreshed after a
+  backup or a folder change instead of showing a stale "Verified". Recovery restore (replaces current recoverable data with the backup)
+  takes and verifies an app-private safety snapshot first. **Older app versions cannot read `.wdbk` files.** Creating and verifying a
+  `.wdbk` backup has been confirmed on one physical device; restoring from one has not yet been validated on a device (see section 5).
+- **Backup health.** Settings -> Backup reports "up to date" only when a backup exists for the current folder, is within its interval and
+  no later failure is unresolved. A failed automatic check or an unavailable folder shows what failed, keeps the last successful backup
+  visible and gives recovery steps. A saved backup is not the same as an independent verification; the screen points to Backup
+  Verification for that. Automatic backups remain best-effort background work.
+- **Search and navigation.** One consistent search entry across Albums, Artists, Folders, Playlists and Songs; primary tabs are single-tap
+  destinations; song menus are the same everywhere and anchored to their row.
+- **Readability and accessibility.** Better text contrast and readable layouts across Wrapped, Insights, Reports, song and detail screens,
+  landscape Now Playing, Sleep Timer and permission actions; system bars follow the theme; Wrapped story pages announce their position.
+- **Playback at scale.** Large queues use a bounded playback window intended to keep Next, Previous and queue edits responsive. This is
+  covered by automated tests but has not yet been validated on a device with a very large queue.
+
+### 3. Reliability fixes
+
+- **Listening statistics.** Each counted play or skip carries a stable occurrence id applied at most once, writes are delivered through a
+  bounded retry queue, and restore keeps distinct listening events instead of merging them (see the engineering note below).
+- **Library access.** The app distinguishes first run, denied and revoked music access ("Music access was turned off") and keeps the
+  existing library and history when a scan cannot complete.
+- Backup restore no longer matches songs by an unsafe MediaStore URI or by contradictory artists; singular/plural labels and destructive
+  confirmations are consistent; Wrapped all-time labels and story advancement were corrected.
+
+### 4. Internal implementation work (no user-facing claim)
+
+Statistics aggregation bounded for large histories, reduced text-normalisation allocation, Media3 unstable-API opt-ins scoped,
+StereoSine package/symbol/backup-name migration, upload-signing configuration migration, privacy-policy and disclosure text updates.
+
+### 5. Known limitations and validation status
+
+- **Physical validation passed (owner, real device):** Recovery restore with safety snapshot (validated before the `.wdbk` container
+  existed, so not a `.wdbk` restore), Sleep Timer Finish current track, public privacy-policy page, 9 of 9 controlled statistics checks.
+- **`.wdbk` backup: partly validated on a device.** On a physical Galaxy A15 (DEVICE-QA-06C) a manual backup created a `.wdbk` file in a
+  dedicated backup folder, and Backup Verification independently read it and reported verified integrity with a complete folder search;
+  the existing music library and app data were preserved. **Not validated on any device:** a full restore from a `.wdbk` backup,
+  recovery of a `.wdbk` backup on a different device, folder-change behaviour, and a scheduled automatic backup run (**not tested**).
+- **Implemented but physical validation pending** (see `QA_CHECKLIST.md`): preset and custom scan exclusions, Save queue as playlist,
+  library-access recovery screens, large-queue latency, Wrapped video export, headphone EQ presets.
+- A cosmetic defect is known on the Backup Verification detail screen: the "Backup file" label wraps vertically.
+- Statistics delivery is in-process only: queued work and unflushed listening time are lost if the process is killed.
+- A fresh install shows the "What's new" dialog once after onboarding; this is existing behaviour, not a new onboarding flow.
+- Android force-stop is respected; nothing here promises playback resumes after a user force-stop.
+
+---
+
+## Post-Beta 10 engineering note: statistics reliability (included in the 0.1.0-beta11 candidate)
+
+Internal engineering work on `master` after the Beta 10.0 checkpoint (P5-STATS-19A to 19D). It was not part of any published release when written and is now included in the unreleased `0.1.0-beta11` candidate above. This is a record of engineering state, not a user-facing release claim.
 
 - Each counted play or skip now carries a stable occurrence id, applied at most once in a single database transaction; repeated attempts cannot double-count, and last-played / last-listened times never move backwards.
 - Statistics writes are delivered through a bounded, serialized, in-process retry queue that retries temporary database failures and no longer blocks playback callbacks.

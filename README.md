@@ -3,10 +3,12 @@
 An offline-first, local-first Android music player built with Kotlin, Jetpack Compose, and Media3.
 No account, no ads, no cloud, no analytics. The app declares no `INTERNET` permission.
 
-StereoSine (formerly Wavdrop) - application ID `com.launchpoint.stereosine` (debug: `com.launchpoint.stereosine.debug`) - root Gradle project `StereoSine` - version `0.1.0-beta10` (versionCode 10) - minSdk 26, compileSdk /
+StereoSine (formerly Wavdrop) - application ID `com.launchpoint.stereosine` (debug: `com.launchpoint.stereosine.debug`) - root Gradle project `StereoSine` - version `0.1.0-beta11` (versionCode 11) - minSdk 26, compileSdk /
 targetSdk 36 - Room schema 13.
 
-> **Status.** The app was previously published to testers as *Wavdrop*. The StereoSine identity (new application ID,
+> **Status.** `0.1.0-beta11` is the first StereoSine-branded release *candidate*: version identity and release notes are
+> prepared, but no final signed APK has been assembled, distributed to testers or published from it. The app was previously
+> published to testers as *Wavdrop* (last published: Wavdrop Beta 10.0, `0.1.0-beta10`). The StereoSine identity (new application ID,
 > source packages and backup file names) is the current development state; no StereoSine-branded release has been
 > published. A StereoSine upload key exists and is locally verified, but Google Play App Signing enrollment is unconfirmed
 > (see [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md)).

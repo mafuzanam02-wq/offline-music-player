@@ -230,7 +230,7 @@ class RecoveryRestoreRulesTest {
         assertTrue("version      = 13" in src("data/local/StereoSineDatabase.kt"))
         assertEquals(2, StereoSineBackupParser.SUPPORTED_VERSION)
         val gradle = File("build.gradle.kts").readText()
-        assertTrue("versionCode = 10" in gradle && "versionName = \"0.1.0-beta10\"" in gradle)
+        assertTrue("versionCode = 11" in gradle && "versionName = \"0.1.0-beta11\"" in gradle)
     }
 
     private companion object {
