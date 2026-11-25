@@ -103,6 +103,21 @@ internal object TestMediaSource {
         }
     }
 
+    /**
+     * Bounded wait on a specific expected condition: idles the main looper until [condition] holds or [timeoutMs] elapses.
+     * Returns the final result instead of throwing so the caller's own assertion reports the real observed value.
+     */
+    fun settleUntil(timeoutMs: Long = 10_000L, condition: () -> Boolean): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (condition()) return true
+            Thread.sleep(5)
+        }
+        shadowOf(Looper.getMainLooper()).idle()
+        return condition()
+    }
+
     /** Idles the main looper until [condition] holds (the real playback thread posts back asynchronously). */
     fun awaitCondition(timeoutMs: Long = 10_000L, condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + timeoutMs

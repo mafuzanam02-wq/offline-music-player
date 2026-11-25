@@ -37,6 +37,12 @@ class BoundedIntegrationMatrixTest {
     private fun queue(n: Int) = List(n) { RealMedia3QueueRig.song(it + 1L) }
 
     /** The agreement check: logical index == playing song == controller view; every physical playlist is bounded. */
+    /** The logical index is mirrored to the controller state asynchronously: wait (bounded) for the expected value, then assert it. */
+    private fun assertLogicalIndex(r: EngineChainRig, expected: Int) {
+        TestMediaSource.settleUntil { r.pc.nowPlayingState.value.currentIndex == expected }
+        assertEquals(expected, r.pc.nowPlayingState.value.currentIndex)
+    }
+
     private fun assertConsistent(r: EngineChainRig, q: List<Song>, label: String) {
         val state = r.pc.nowPlayingState.value
         val logical = state.currentIndex
@@ -74,10 +80,10 @@ class BoundedIntegrationMatrixTest {
         resume(r, snapshot(25_000, 12_345, positionMs = 20_000L), q)
         assertConsistent(r, q, "after restore")
         r.pc.skipToNext(); r.quiesce()
-        assertEquals(12_346, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 12_346)
         r.prepareNext()
         assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
-        assertEquals(12_347, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 12_347)
         assertConsistent(r, q, "restore, next, promotion")
     }
 
@@ -98,7 +104,7 @@ class BoundedIntegrationMatrixTest {
         assertEquals("a ring window keeps the wrapped successor physically contiguous", key.fromPlaybackIndex + 1, key.toPlaybackIndex)
         assertEquals("1", all.engine.nextPlayer.currentMediaItem?.mediaId)
         assertTrue(all.promoteAndSettle() is PromotionOutcome.Completed)
-        assertEquals(0, all.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(all, 0)
         assertConsistent(all, q, "wrap by crossfade under repeat ALL")
     }
 
@@ -117,7 +123,7 @@ class BoundedIntegrationMatrixTest {
         assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
         val grown = q + RealMedia3QueueRig.song(99_999L)
         assertConsistent(r, grown, "after logical-only append")
-        assertEquals(12_001, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 12_001)
     }
 
     @Test fun aPlayNextInsideTheWindowBecomesTheCrossfadeTargetExactly() {
@@ -131,7 +137,7 @@ class BoundedIntegrationMatrixTest {
         assertEquals("99999", r.engine.nextPlayer.currentMediaItem?.mediaId)
         assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
         assertEquals("99999", r.engine.currentPlayer.currentMediaItem?.mediaId)
-        assertEquals(12_001, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 12_001)
         assertEquals(25_001, r.controller.mediaItemCount)
     }
 
@@ -149,7 +155,7 @@ class BoundedIntegrationMatrixTest {
         r.prepareNext()
         assertEquals("20002", r.engine.nextPlayer.currentMediaItem?.mediaId)
         assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
-        assertEquals(20_001, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 20_001)
         assertConsistent(r, q, "jump outside window with NEXT ready")
     }
 
@@ -165,7 +171,7 @@ class BoundedIntegrationMatrixTest {
         r.prepareNext()
         assertEquals("the former successor's successor", "12003", r.engine.nextPlayer.currentMediaItem?.mediaId)
         assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
-        assertEquals(12_001, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 12_001)
         assertEquals("12003", r.engine.currentPlayer.currentMediaItem?.mediaId)
         assertEquals(24_999, r.controller.mediaItemCount)
     }
@@ -178,12 +184,12 @@ class BoundedIntegrationMatrixTest {
         r.pc.handleSongDeleted(12_001L) // the current song (id = index + 1)
         r.quiesce()
         TestMediaSource.awaitCondition { r.engine.currentPlayer.currentMediaItem?.mediaId == "12002" }
-        assertEquals(12_000, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 12_000)
         assertEquals(24_999, r.controller.mediaItemCount)
         TestMediaSource.awaitCondition { r.engine.currentPlayer.playbackState == Player.STATE_READY }
         r.prepareNext()
         assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
-        assertEquals(12_001, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 12_001)
         assertEquals("12003", r.engine.currentPlayer.currentMediaItem?.mediaId)
     }
 
@@ -218,7 +224,7 @@ class BoundedIntegrationMatrixTest {
         r.quiesce()
         assertConsistent(r, q, "external seek to 20000")
         repeat(70) { r.pc.skipToNext(); r.quiesce() } // the window shifts and refills
-        assertEquals(20_070, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 20_070)
         ext.seekToPreviousMediaItem()
         TestMediaSource.awaitCondition { ext.currentMediaItemIndex == 20_069 }
         r.quiesce()
@@ -237,7 +243,7 @@ class BoundedIntegrationMatrixTest {
         TestMediaSource.awaitCondition { r.pc.nowPlayingState.value.repeatMode == RepeatMode.ALL }
         r.quiesce()
         repeat(7) { r.pc.skipToNext(); r.quiesce() }
-        assertEquals((24_995 + 7) % 25_000, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, (24_995 + 7) % 25_000)
         assertEquals(Player.REPEAT_MODE_ALL, ext.repeatMode)
         assertConsistent(r, q, "external repeat ALL at ring boundary")
     }
@@ -255,7 +261,7 @@ class BoundedIntegrationMatrixTest {
         TestMediaSource.awaitCondition { r.engine.currentPlayer.playbackState == Player.STATE_READY || r.engine.currentPlayer.playbackState == Player.STATE_BUFFERING }
         assertTrue(installsBefore == 0)
         assertNotNull(r.adapter.active)
-        assertEquals(5_000, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 5_000)
         assertTrue("position kept (${r.engine.currentPlayer.currentPosition})", r.engine.currentPlayer.currentPosition >= 39_000L)
         assertConsistent(r, q, "play during restore")
     }
@@ -272,7 +278,7 @@ class BoundedIntegrationMatrixTest {
         r.quiesce()
         r.connectAppController()
         r.quiesce()
-        assertEquals(20_000, r.pc.nowPlayingState.value.currentIndex)
+        assertLogicalIndex(r, 20_000)
         assertNotNull(r.adapter.active)
         assertConsistent(r, q, "disconnect during in-flight re-anchor")
     }
@@ -289,7 +295,12 @@ class BoundedIntegrationMatrixTest {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) { events += "timeline($reason,${timeline.windowCount})" }
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) { events += "transition(${mediaItem?.mediaId},$reason)" }
         })
-        repeat(5) { r.prepareNext(); assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed) }
+        repeat(5) { step ->
+            r.prepareNext(); assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
+            // The subscriber is on the far side of the session IPC: let it observe THIS promotion before the next one starts, so two
+            // promotions are never delivered to it as one batched update (which a controller reports as a single transition).
+            TestMediaSource.settleUntil { ext.currentMediaItemIndex == 8_001 + step }
+        }
         val auto = Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
         assertEquals(events.toString(), 5, events.count { it.endsWith(",$auto)") && it.startsWith("transition(") })
         assertFalse(events.toString(), events.any { it.startsWith("timeline(0,") })
@@ -307,7 +318,7 @@ class BoundedIntegrationMatrixTest {
         repeat(10) { step ->
             r.prepareNext()
             assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
-            assertEquals(1_001 + step, r.pc.nowPlayingState.value.currentIndex)
+            assertLogicalIndex(r, 1_001 + step)
             assertTrue("each occurrence has its own identity", seen.add(ext.currentTimeline.getWindow(ext.currentMediaItemIndex, window).uid))
         }
         assertEquals(1_010, ext.currentMediaItemIndex)
@@ -346,7 +357,7 @@ class BoundedIntegrationMatrixTest {
             assertEquals("CURRENT holds the WHOLE queue", size, r.engine.currentPlayer.mediaItemCount)
             assertEquals("NEXT mirrors the WHOLE queue", size, r.engine.nextPlayer.mediaItemCount)
             assertTrue(r.promoteAndSettle() is PromotionOutcome.Completed)
-            assertEquals(51, r.pc.nowPlayingState.value.currentIndex)
+            assertLogicalIndex(r, 51)
             assertEquals(size, r.controller.mediaItemCount)
             assertNull("Full mode never builds a bounded mapping", r.adapter.active)
             assertSame(r.p2, r.engine.currentPlayer)

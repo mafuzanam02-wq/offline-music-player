@@ -143,20 +143,33 @@ internal class EngineChainRig(bounded: Boolean = true, private val eventWriter: 
         return engine.nextPreparation.state as NextSlotState.Ready
     }
 
-    /** Makes the fade window due on CURRENT and lets the runtime promote; then completes the overlap on the fake clock. */
+    /**
+     * Makes the fade window due on CURRENT and lets the runtime promote; then completes the overlap on the fake clock.
+     *
+     * The runtime's `evaluate()` is a silent no-op until CURRENT's REPORTED position reaches the fade start, and in production a
+     * periodic poll repeats it. The real playback thread applies the seek asynchronously, so one `evaluate()` after a fixed sleep
+     * could run before the seek landed, do nothing, and hand back the PREVIOUS promotion's stale `Completed`. This waits for the seek
+     * to be reported, polls `evaluate()` (bounded) like the production pulse, and returns only THIS promotion's outcome
+     * (null when none arrived), so a promotion that did not happen fails the caller's assertion instead of passing falsely.
+     */
     fun promoteAndSettle(): PromotionOutcome? {
+        val before = runtime.lastOutcome
         val current = engine.currentPlayer
         val duration = current.duration
-        current.seekTo(current.currentMediaItemIndex, duration - 6_500L)
-        TestMediaSource.settle(60)
-        runtime.evaluate()
+        val target = duration - 6_500L
+        current.seekTo(current.currentMediaItemIndex, target)
+        TestMediaSource.settleUntil { current.currentPosition >= target }
+        TestMediaSource.settleUntil {
+            runtime.evaluate()
+            runtime.lastOutcome !== before || runtime.state is PromotionOverlapState.Overlap
+        }
         if (runtime.state is PromotionOverlapState.Overlap) {
             now += 10_000L
             runtime.tick()
         }
-        TestMediaSource.settle(120)
+        TestMediaSource.settleUntil { runtime.lastOutcome !== before && runtime.state !is PromotionOverlapState.Overlap }
         quiesce()
-        return runtime.lastOutcome
+        return runtime.lastOutcome.takeIf { it !== before }
     }
 
     fun ids(p: Player) = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).mediaId }

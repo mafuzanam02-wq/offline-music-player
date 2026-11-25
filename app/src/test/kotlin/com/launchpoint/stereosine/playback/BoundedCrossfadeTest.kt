@@ -121,20 +121,30 @@ class BoundedCrossfadeTest {
             return engine.nextPreparation.state as NextSlotState.Ready
         }
 
-        /** Makes the fade window due on CURRENT and lets the runtime promote; then completes the overlap on the fake clock. */
+        /**
+         * Makes the fade window due on CURRENT and lets the runtime promote; then completes the overlap on the fake clock.
+         * `evaluate()` is a silent no-op until CURRENT's REPORTED position reaches the fade start (production polls it again), so this
+         * waits for the seek to be reported, polls `evaluate()` (bounded), and returns only THIS promotion's outcome (null if none),
+         * never the previous promotion's stale `Completed`. Same contract as `EngineChainRig.promoteAndSettle`.
+         */
         fun promoteAndSettle(): PromotionOutcome? {
+            val before = runtime.lastOutcome
             val current = engine.currentPlayer
             val duration = current.duration
-            current.seekTo(current.currentMediaItemIndex, duration - 6_500L)
-            TestMediaSource.settle(60)
-            runtime.evaluate()
+            val target = duration - 6_500L
+            current.seekTo(current.currentMediaItemIndex, target)
+            TestMediaSource.settleUntil { current.currentPosition >= target }
+            TestMediaSource.settleUntil {
+                runtime.evaluate()
+                runtime.lastOutcome !== before || runtime.state is PromotionOverlapState.Overlap
+            }
             if (runtime.state is PromotionOverlapState.Overlap) {
                 now += 10_000L
                 runtime.tick()
             }
-            TestMediaSource.settle(120)
+            TestMediaSource.settleUntil { runtime.lastOutcome !== before && runtime.state !is PromotionOverlapState.Overlap }
             quiesce()
-            return runtime.lastOutcome
+            return runtime.lastOutcome.takeIf { it !== before }
         }
 
         fun release() {
@@ -182,6 +192,7 @@ class BoundedCrossfadeTest {
         assertTrue("outcome=$outcome", outcome is PromotionOutcome.Completed)
         assertSame("the promoted player is CURRENT", r.p2, r.engine.currentPlayer)
         assertSame("the port follows CURRENT", r.p2, r.port.owner)
+        TestMediaSource.settleUntil { r.pc.nowPlayingState.value.currentIndex == 12_001 }
         assertEquals(12_001, r.pc.nowPlayingState.value.currentIndex)
         assertEquals("12002", r.controller.currentMediaItem?.mediaId)
         assertEquals(12_001, r.controller.currentMediaItemIndex)
@@ -202,6 +213,7 @@ class BoundedCrossfadeTest {
             val outcome = r.promoteAndSettle()
             assertTrue("step $step: $outcome", outcome is PromotionOutcome.Completed)
             expected++
+            TestMediaSource.settleUntil { r.pc.nowPlayingState.value.currentIndex == expected }
             assertEquals("step $step logical", expected, r.pc.nowPlayingState.value.currentIndex)
             assertEquals("step $step song", (expected + 1).toString(), r.engine.currentPlayer.currentMediaItem?.mediaId)
             assertEquals(expected, r.controller.currentMediaItemIndex)
